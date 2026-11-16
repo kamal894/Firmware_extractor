@@ -229,6 +229,10 @@ caiman/
   - **M3: XNU's text console on the panel**, read back from the frame buffer
   - **First user-space process**: `hello` as process 1 ("Hello from user space on Darwin!")
 
+  - **UFS from bare metal** (`probe-boot-ufs.img`): cold start of the controller and the device,
+    READ(10) of every LUN's GPT, and `super`'s dynamic-partition (LP) metadata, matching `lpdump`
+    ([plan](docs/m4-system-image-plan.md))
+
   Next: iOS's own user space, which needs your IPSW and a way to get its ~2.5 GB system image to the kernel.
 
 When the log comes back, record the frame buffer address and the entry EL

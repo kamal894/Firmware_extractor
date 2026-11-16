@@ -164,12 +164,14 @@ static void dump_utrl(u64 utrl, u32 nutrs, u32 doorbell)
 #define UFS_MAX_BLOCKS	64u
 
 /* our own lists and one command descriptor (slot 0), in the image's BSS */
-static u8 utrl[32 * 32] __attribute__((aligned(1024)));
-static u8 utmrl[32 * 8] __attribute__((aligned(1024)));
-static u8 ucd[96 + 16 * UFS_MAX_BLOCKS] __attribute__((aligned(128)));
+#define UTRL_BYTES	(32 * 32)
+#define UTMRL_BYTES	(32 * 8)
+#define UCD_BYTES	(96 + 16 * UFS_MAX_BLOCKS)
+static u8 q_utrl[UTRL_BYTES] __attribute__((aligned(1024)));
+static u8 q_utmrl[UTMRL_BYTES] __attribute__((aligned(1024)));
+static u8 q_ucd[UCD_BYTES] __attribute__((aligned(128)));
 /* data lands below 4 GiB: Google's driver gives this controller a 32-bit DMA mask */
 static u8 iobuf[UFS_MAX_BLOCKS * UFS_BLOCK] __attribute__((aligned(4096)));
-static u8 tag;
 static u32 mclk_hz, unipro_prd, lanes = 2;
 
 static void put_be32(u8 *p, u32 v)
@@ -201,6 +203,21 @@ static u64 le64(const volatile u8 *p)
 static u32 le32(const volatile u8 *p)
 {
 	return p[0] | (u32)p[1] << 8 | (u32)p[2] << 16 | (u32)p[3] << 24;
+}
+
+/*
+ * Clean and invalidate [p, p+n) to the point of coherency (VA = PA, MMU off; 64-byte lines,
+ * CTR_EL0 DminLine 4). The controller is IO-coherent (sysreg IOCC 0x13): its DMA snoops the CPU
+ * caches, while our D-cache-off accesses go straight to RAM. Lines the bootloader left over our
+ * buffers would hand the controller stale descriptors and hide its answers from us.
+ */
+static void dc_civac(const void *p, u64 n)
+{
+	u64 a = (u64)(uptr)p & ~63ull, end = (u64)(uptr)p + n;
+
+	for (; a < end; a += 64)
+		__asm__ volatile("dc civac, %0" :: "r"(a) : "memory");
+	dsb_sy();
 }
 
 static u32 rd_or(u64 a, u32 dflt)
@@ -431,10 +448,10 @@ static int link_startup(void)
 static int lists_run(void)
 {
 	const u64 hci = PLAT_UFS_HCI;
-	u64 a = (u64)(uptr)utrl, b = (u64)(uptr)utmrl;
+	u64 a = (u64)(uptr)q_utrl, b = (u64)(uptr)q_utmrl;
 
-	memset(utrl, 0, sizeof(utrl));
-	memset(utmrl, 0, sizeof(utmrl));
+	memset(q_utrl, 0, UTRL_BYTES);
+	memset(q_utmrl, 0, UTMRL_BYTES);
 	wr32(hci + IE, 0);			/* polled */
 	wr32(hci + UTRLBA, (u32)a);
 	wr32(hci + UTRLBAU, (u32)(a >> 32));
@@ -459,8 +476,8 @@ static int lists_run(void)
 static int request(u32 dd, u32 nblocks, u32 ms)
 {
 	const u64 hci = PLAT_UFS_HCI;
-	volatile u32 *utrd = (volatile u32 *)(uptr)utrl;
-	u64 ucd_pa = (u64)(uptr)ucd, start;
+	volatile u32 *utrd = (volatile u32 *)(uptr)q_utrl;
+	u64 ucd_pa = (u64)(uptr)q_ucd, start;
 
 	if (rd32(hci + UTRLDBR) & 1)
 		return -2;
@@ -472,26 +489,40 @@ static int request(u32 dd, u32 nblocks, u32 ms)
 	utrd[5] = (u32)(ucd_pa >> 32);
 	utrd[6] = (8u << 16) | 16u;		/* response UPIU at dword 8, 16 dwords */
 	utrd[7] = (24u << 16) | nblocks;	/* PRDT at dword 24 */
-	dsb_sy();
+	/*
+	 * exynos_ufs_set_nexus_t_xfer_req(): the slot's nexus bit says what answer to expect, 1 for a
+	 * SCSI COMMAND (RESPONSE UPIU), 0 for NOP OUT and QUERY. With it left at 1 the controller
+	 * rejected the NOP IN (IS UTPES, HCS UTPEC 2) and never completed the request.
+	 */
+	if (q_ucd[0] == 0x01)
+		wr32(PLAT_UFS_VS + VS_UTRL_NEXUS, rd32(PLAT_UFS_VS + VS_UTRL_NEXUS) | 1u);
+	else
+		wr32(PLAT_UFS_VS + VS_UTRL_NEXUS, rd32(PLAT_UFS_VS + VS_UTRL_NEXUS) & ~1u);
+	dc_civac(q_utrl, 32);
+	dc_civac(q_ucd, UCD_BYTES);
 	wr32(hci + IS, IS_UTRCS);
 	wr32(hci + UTRLDBR, 1);
 	start = timer_ticks();
 	while (rd32(hci + UTRLDBR) & 1) {
 		if (timer_ticks() - start > timer_freq() / 1000 * ms) {
 			wr32(hci + UTRLCLR, ~1u);	/* give slot 0 up */
+			dc_civac(q_utrl, 32);
+			dc_civac(q_ucd, UCD_BYTES);
 			return -3;
 		}
 	}
+	dc_civac(q_utrl, 32);
+	dc_civac(q_ucd, UCD_BYTES);
 	return (utrd[2] & 0xff) ? -4 : 0;
 }
 
 static void upiu_header(u8 type, u8 flags, u8 lun)
 {
-	memset(ucd, 0, 96);
-	ucd[0] = type;
-	ucd[1] = flags;
-	ucd[2] = lun;
-	ucd[3] = ++tag;
+	memset(q_ucd, 0, 96);
+	q_ucd[0] = type;
+	q_ucd[1] = flags;
+	q_ucd[2] = lun;
+	q_ucd[3] = 0;		/* task tag = slot, as Linux does: the controller rejected tag 1 in slot 0 (UTPES, HCS TTAGUTPE 1) */
 }
 
 static int nop_out(void)
@@ -501,11 +532,22 @@ static int nop_out(void)
 	for (i = 0; i < 5 && r; i++) {
 		upiu_header(0x00, 0, 0);	/* NOP OUT */
 		r = request(0, 0, 50);
-		if (!r && ucd[32] != 0x20)
+		if (!r && q_ucd[32] != 0x20)
 			r = -5;
 	}
 	pr("ufs:   NOP OUT: %s after %d tries (answer 0x%02x, OCS 0x%02x)\n", r ? "FAILED" : "NOP IN", i,
-	   ucd[32], ((volatile u32 *)(uptr)utrl)[2] & 0xff);
+	   q_ucd[32], ((volatile u32 *)(uptr)q_utrl)[2] & 0xff);
+	if (r) {
+		const u64 hci = PLAT_UFS_HCI;
+
+		/* -3: doorbell never cleared; -4: cleared with OCS != 0; IS bit 16/17: fatal errors */
+		pr("ufs:   last try %d (-3 timeout, -4 OCS, -5 wrong answer): IS 0x%08x UTRLDBR 0x%08x HCS 0x%08x\n",
+		   r, rd32(hci + IS), rd32(hci + UTRLDBR), rd32(hci + HCS));
+		pr("ufs:   UIC errors: PA 0x%08x DL 0x%08x N 0x%08x T 0x%08x DME 0x%08x\n", rd32(hci + 0x38),
+		   rd32(hci + 0x3c), rd32(hci + 0x40), rd32(hci + 0x44), rd32(hci + 0x48));
+		dump_words("UTRD", (u64)(uptr)q_utrl, 8);
+		dump_words("UCD", (u64)(uptr)q_ucd, 24);
+	}
 	return r;
 }
 
@@ -515,15 +557,15 @@ static int query_flag(u8 fn, u8 op, u8 idn, u32 *val)
 	int r;
 
 	upiu_header(0x16, 0, 0);
-	ucd[5] = fn;
-	ucd[12] = op;
-	ucd[13] = idn;
+	q_ucd[5] = fn;
+	q_ucd[12] = op;
+	q_ucd[13] = idn;
 	r = request(0, 0, 100);
 	if (r)
 		return r;
-	if (ucd[32] != 0x36 || ucd[32 + 6])
+	if (q_ucd[32] != 0x36 || q_ucd[32 + 6])
 		return -6;
-	*val = ucd[32 + 23] & 1;
+	*val = q_ucd[32 + 23] & 1;
 	return 0;
 }
 
@@ -558,13 +600,13 @@ static int ufs_read(u32 lun, u32 lba, u32 nblocks, u64 dst)
 		return -1;
 	for (tries = 0; tries < 3; tries++) {
 		upiu_header(0x01, 0x40, (u8)lun);	/* COMMAND, R */
-		put_be32(ucd + 12, len);
-		ucd[16] = 0x28;				/* READ(10) */
-		put_be32(ucd + 18, lba);
-		ucd[23] = (u8)(nblocks >> 8);
-		ucd[24] = (u8)nblocks;
+		put_be32(q_ucd + 12, len);
+		q_ucd[16] = 0x28;				/* READ(10) */
+		put_be32(q_ucd + 18, lba);
+		q_ucd[23] = (u8)(nblocks >> 8);
+		q_ucd[24] = (u8)nblocks;
 		for (i = 0; i < nblocks; i++) {
-			u8 *e = ucd + 96 + 16 * i;
+			u8 *e = q_ucd + 96 + 16 * i;
 			u64 a = dst + (u64)i * UFS_BLOCK;
 
 			put_le32(e, (u32)a);
@@ -572,15 +614,17 @@ static int ufs_read(u32 lun, u32 lba, u32 nblocks, u64 dst)
 			put_le32(e + 8, 0);
 			put_le32(e + 12, UFS_BLOCK - 1);
 		}
+		dc_civac((const void *)(uptr)dst, len);
 		r = request(2, nblocks, 2000);
+		dc_civac((const void *)(uptr)dst, len);
 		if (r)
 			return r;
-		if (ucd[32] == 0x21 && !ucd[32 + 5] && !ucd[32 + 7])
+		if (q_ucd[32] == 0x21 && !q_ucd[32 + 5] && !q_ucd[32 + 7])
 			return 0;
 		pr("ufs:   read lun %u lba %u x%u: response UPIU 0x%02x response 0x%02x status 0x%02x%s\n", lun,
-		   lba, nblocks, ucd[32], ucd[32 + 5], ucd[32 + 7],
-		   ucd[32 + 7] == 0x02 ? " (CHECK CONDITION: retrying)" : "");
-		if (ucd[32 + 7] != 0x02)
+		   lba, nblocks, q_ucd[32], q_ucd[32 + 5], q_ucd[32 + 7],
+		   q_ucd[32 + 7] == 0x02 ? " (CHECK CONDITION: retrying)" : "");
+		if (q_ucd[32 + 7] != 0x02)
 			return -4;
 	}
 	return -4;
@@ -630,6 +674,11 @@ static int ufs_cold_start(void)
 		unipro_prd = (u32)(16000000000ULL / mclk_hz);
 	pr("ufs: bootloader's timing: 1us = %u UniPro clocks, UniPro period value %u; IOCC 0x%08x"
 	   " GPIO_OUT 0x%08x\n", cnt_1us, unipro_prd, rd_or(PLAT_UFS_IOCC, 0xdead), rd_or(vs + VS_GPIO_OUT, 0xdead));
+	/* before anything writes them: no stale lines may be written back over our descriptors later */
+	dc_civac(q_utrl, UTRL_BYTES);
+	dc_civac(q_utmrl, UTMRL_BYTES);
+	dc_civac(q_ucd, UCD_BYTES);
+	dc_civac(iobuf, sizeof(iobuf));
 	board_power();
 	log_flush();
 	for (tries = 1; tries <= 3; tries++) {
@@ -656,7 +705,184 @@ static int ufs_cold_start(void)
 	return 0;
 }
 
-/* The GPT of each LUN, and in super the LP (dynamic partitions) metadata header. */
+/*
+ * liblp (system/core/fs_mgr/liblp/include/liblp/metadata_format.h): super starts with 4096 reserved
+ * bytes, the geometry (block 1) and its backup (block 2); metadata slot 0 follows at block 3. Header:
+ * magic, version, header_size @8, tables_size @44, then {offset, num_entries, entry_size} for the
+ * partitions @80, extents @92, groups @104 and block devices @116; table offsets count from the end
+ * of the header. Extents are in 512-byte sectors from the start of super.
+ */
+#define LP_GEOMETRY_MAGIC	0x616c4467u
+#define LP_METADATA_MAGIC	0x414c5030u
+#define LP_SECTOR		512u
+#define LP_PART_SIZE		52u	/* name[36], attributes, first_extent_index, num_extents, group_index */
+#define LP_EXTENT_SIZE		24u	/* num_sectors u64, target_type u32, target_data u64, target_source u32 */
+#define LP_BDEV_SIZE		64u	/* first_logical_sector u64, alignment, alignment_offset, size u64 @16, ... */
+
+/* An extent of a logical partition, where it is on the UFS LUN. */
+struct lp_extent {
+	u64 lba;		/* UFS block (4 KiB) */
+	u64 blocks;
+};
+
+/*
+ * Read metadata slot 0 of super into iobuf and check it. Returns the header size (the tables follow
+ * it in iobuf) or 0, and sets *tables_out to the tables' size.
+ */
+static u32 lp_read_metadata(u32 lun, u64 super_lba, u32 *tables_out)
+{
+	const volatile u8 *b = (const volatile u8 *)(uptr)iobuf;
+	u32 max, hdr, tables, blocks;
+
+	if (ufs_read(lun, (u32)super_lba + 1, 1, (u64)(uptr)iobuf) || le32(b) != LP_GEOMETRY_MAGIC) {
+		pr("ufs: super: no LP geometry at block 1 (magic 0x%08x)\n", le32(b));
+		return 0;
+	}
+	max = le32(b + 40);
+	pr("ufs: super geometry: struct %u, metadata max %u, slots %u, logical block %u\n", le32(b + 4), max,
+	   le32(b + 44), le32(b + 48));
+	if (ufs_read(lun, (u32)super_lba + 3, 1, (u64)(uptr)iobuf) || le32(b) != LP_METADATA_MAGIC) {
+		pr("ufs: super: no LP metadata at block 3 (magic 0x%08x)\n", le32(b));
+		return 0;
+	}
+	hdr = le32(b + 8);
+	tables = le32(b + 44);
+	pr("ufs: super metadata slot 0: version %u.%u, header %u bytes, tables %u bytes, flags 0x%x\n",
+	   le32(b + 4) & 0xffff, le32(b + 4) >> 16, hdr, tables, hdr >= 132 ? le32(b + 128) : 0);
+	if (hdr < 128 || hdr > 4096 || !tables || hdr + tables > max || max > UFS_MAX_BLOCKS * UFS_BLOCK) {
+		pr("ufs: super: metadata sizes out of range\n");
+		return 0;
+	}
+	blocks = (hdr + tables + UFS_BLOCK - 1) / UFS_BLOCK;
+	if (blocks > 1 && ufs_read(lun, (u32)super_lba + 3, blocks, (u64)(uptr)iobuf)) {
+		pr("ufs: super: metadata (%u blocks) not read\n", blocks);
+		return 0;
+	}
+	*tables_out = tables;
+	return hdr;
+}
+
+/* A table descriptor in the header: the entries' address in iobuf, or 0 if it does not fit. */
+static const volatile u8 *lp_table(u32 hdr, u32 tables, u32 desc, u32 want_size, u32 *n)
+{
+	const volatile u8 *b = (const volatile u8 *)(uptr)iobuf;
+	u32 off = le32(b + desc), num = le32(b + desc + 4), esz = le32(b + desc + 8);
+
+	if (esz != want_size || (u64)off + (u64)num * esz > tables)
+		return 0;
+	*n = num;
+	return b + hdr + off;
+}
+
+static void lp_name(const volatile u8 *p, char *name)
+{
+	int k;
+
+	for (k = 0; k < 36; k++) {
+		name[k] = (p[k] >= 0x20 && p[k] < 0x7f) ? (char)p[k] : 0;
+		if (!p[k])
+			break;
+	}
+	name[36] = 0;
+}
+
+/*
+ * Find the logical partition `want` in super (lun, super_lba) and return up to max of its extents
+ * as UFS blocks. Returns the number of extents, or -1. With want == 0, prints every partition and
+ * super's free space instead (and returns 0).
+ */
+static int lp_find(u32 lun, u64 super_lba, u64 super_blocks, const char *want, struct lp_extent *out,
+		   int max)
+{
+	const u64 limit = super_blocks * (UFS_BLOCK / LP_SECTOR);
+	const volatile u8 *parts, *exts, *bdevs;
+	u32 hdr, tables = 0, np, ne, nb, i, j;
+	u64 end = 0;
+
+	hdr = lp_read_metadata(lun, super_lba, &tables);
+	if (!hdr)
+		return -1;
+	parts = lp_table(hdr, tables, 80, LP_PART_SIZE, &np);
+	exts = lp_table(hdr, tables, 92, LP_EXTENT_SIZE, &ne);
+	bdevs = lp_table(hdr, tables, 116, LP_BDEV_SIZE, &nb);
+	if (!parts || !exts || !bdevs || nb < 1) {
+		pr("ufs: super: LP tables do not fit (partitions %p extents %p block devices %p)\n", parts, exts,
+		   bdevs);
+		return -1;
+	}
+	if (!want)
+		pr("ufs: super: %u logical partitions, %u extents, %u block device(s); super is %llu sectors\n",
+		   np, ne, nb, le64(bdevs + 16) / LP_SECTOR);
+	for (i = 0; i < np; i++) {
+		const volatile u8 *p = parts + i * LP_PART_SIZE;
+		u32 first = le32(p + 40), n = le32(p + 44);
+		char name[37];
+		int found;
+
+		lp_name(p, name);
+		found = want && !strcmp(name, want);
+		if (want && !found)
+			continue;
+		if ((u64)first + n > ne) {
+			pr("ufs: super: %s: extents %u+%u out of range\n", name, first, n);
+			return -1;
+		}
+		if (!want)
+			pr("ufs:   %-20s attr 0x%x, %u extent(s)\n", name, le32(p + 36), n);
+		for (j = 0; j < n; j++) {
+			const volatile u8 *e = exts + (first + j) * LP_EXTENT_SIZE;
+			u64 sectors = le64(e), start = le64(e + 12);
+			u32 type = le32(e + 8), src = le32(e + 20);
+
+			if (!want)
+				pr("ufs:     %s %llu sectors at super sector %llu = lun %u lba %llu..%llu%s\n",
+				   type ? "zero  " : "linear", sectors, start, lun,
+				   super_lba + start / 8, super_lba + (start + sectors) / 8 - 1,
+				   (start | sectors) % 8 ? " (NOT 4 KiB aligned)" : "");
+			if (type == 0 && start + sectors > end)
+				end = start + sectors;
+			if (!found)
+				continue;
+			if (type || src || (start | sectors) % 8 || start + sectors > limit || j >= (u32)max) {
+				pr("ufs: super: %s: extent %u is not a plain 4 KiB-aligned range of super\n", name, j);
+				return -1;
+			}
+			out[j].lba = super_lba + start / 8;
+			out[j].blocks = sectors / 8;
+		}
+		if (found)
+			return (int)n;
+	}
+	if (want) {
+		pr("ufs: super: no logical partition named %s\n", want);
+		return -1;
+	}
+	pr("ufs: super: used up to sector %llu; free after it: %llu sectors (%llu MiB)\n", end,
+	   limit > end ? limit - end : 0, limit > end ? ((limit - end) * LP_SECTOR) >> 20 : 0);
+	return 0;
+}
+
+static void lp_list(u32 lun, u64 super_lba, u64 super_blocks)
+{
+	struct lp_extent ext[4];
+	int n, i;
+
+	if (lp_find(lun, super_lba, super_blocks, 0, 0, 0))
+		return;
+	/* the loader's path: look one partition up by name, as it will look up xnusys */
+	n = lp_find(lun, super_lba, super_blocks, "system_a", ext, 4);
+	for (i = 0; i < n; i++)
+		pr("ufs: lookup system_a: extent %d = lun %u lba %llu, %llu blocks\n", i, lun, ext[i].lba,
+		   ext[i].blocks);
+	if (n > 0 && !ufs_read(lun, (u32)ext[0].lba, 1, (u64)(uptr)iobuf)) {
+		const volatile u8 *b = (const volatile u8 *)(uptr)iobuf;
+
+		pr("ufs: system_a block 0: %02x %02x %02x %02x ... ext4 magic at 0x438: 0x%02x%02x (want 0xef53)\n",
+		   b[0], b[1], b[2], b[3], b[0x439], b[0x438]);
+	}
+}
+
+/* The GPT of each LUN, and in super the LP (dynamic partitions) metadata. */
 static void ufs_read_test(void)
 {
 	const u64 buf = (u64)(uptr)iobuf;
@@ -729,14 +955,7 @@ static void ufs_read_test(void)
 	}
 	pr("ufs: super is lun %u lba %llu, %llu blocks (%llu bytes)\n", super_lun, super_lba, super_blocks,
 	   super_blocks * UFS_BLOCK);
-	/* liblp: 4096 reserved bytes, the geometry (block 1), its backup, then metadata slot 0 (block 3) */
-	if (!ufs_read(super_lun, (u32)super_lba + 1, 1, buf))
-		pr("ufs: super geometry: magic 0x%08x (want 0x616c4467) struct %u, metadata max %u, slots %u,"
-		   " logical block %u\n", le32(b), le32(b + 4), le32(b + 40), le32(b + 44), le32(b + 48));
-	if (!ufs_read(super_lun, (u32)super_lba + 3, 1, buf))
-		pr("ufs: super metadata slot 0: magic 0x%08x (want 0x414c5030) version %u.%u, header %u bytes,"
-		   " tables %u bytes\n", le32(b), le32(b + 4) & 0xffff, le32(b + 4) >> 16, le32(b + 8),
-		   le32(b + 44));
+	lp_list(super_lun, super_lba, super_blocks);
 }
 #endif
 

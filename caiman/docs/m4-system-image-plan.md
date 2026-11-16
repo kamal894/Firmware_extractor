@@ -124,3 +124,46 @@ What Linux's ufshcd core and Google's Tensor driver do at every boot, in `probe/
 
 The timing values (`1US_TO_CNT` = 178, so mclk ≈ 178.5 MHz, and the UniPro period value) are read
 from what the bootloader programmed, before the reset clears them.
+
+### Runs 11-14: NOP OUT, and the nexus bit
+
+Run 11 (the cold start): link start-up works (both lanes, 57 + 5 CAL entries), but NOP OUT never
+completes: the response stays empty and OCS keeps the 0x0f we put there.
+
+- Run 12 added cache maintenance (`dc civac` around every buffer the controller touches: the
+  controller is IO-coherent, sysreg IOCC = 0x13, so its DMA snoops caches our D-cache-off accesses
+  bypass) and a register dump. It showed `IS 0x1004` (UTP error) and `HCS 0x0001200f`: UTP error
+  code 2 on task tag 1. The controller sent the NOP OUT and rejected the answer.
+- Run 13: task tag 0 for slot 0 (as Linux: tag = slot). Same error, now on tag 0.
+- Run 14: lists and descriptor moved to where the bootloader kept its own (0xf8c99000...). Same
+  error, so it is not where the memory is.
+
+The cause: Google's `exynos_ufs_set_nexus_t_xfer_req()` sets the slot's bit in vendor
+`HCI_UTRL_NEXUS_TYPE` (+0x40) before every request, 1 for a SCSI COMMAND and 0 for NOP OUT and
+QUERY. `exynos_ufs_config_host()` sets all 32 bits to 1, and the bootloader had left 0xfffffffe
+(slot 0, its query slot, at 0). With the bit at 1 the controller expects a RESPONSE UPIU and
+rejects a NOP IN or QUERY RESPONSE. `request()` now sets the bit from the UPIU type.
+
+### Run 15: **UFS works**, and super's LP metadata is parsed
+
+```
+ufs:   NOP OUT: NOP IN after 1 tries (answer 0x20, OCS 0x00)
+ufs:   SET FLAG fDeviceInit: accepted (0)
+ufs:   fDeviceInit reads 0 after 0 ms (device ready)
+ufs: lun 0: GPT, 34 entries ... super lba 367078 .. 2449893 (8136 MiB)
+ufs: lun 1/2: bl1, pbl, bl2, abl, bl31, tzsw, gsa, ldfw ... (_a, _b);  lun 3: devinfo, pinfo, blenv, mfg_data
+ufs: super metadata slot 0: version 10.2, header 256 bytes, tables 616 bytes, flags 0x1
+ufs:   system_a             attr 0x1, 1 extent(s)
+ufs:     linear 2012328 sectors at super sector 2048 = lun 0 lba 367334..618874
+...
+ufs:   vendor_dlkm_a        attr 0x1, 1 extent(s)
+ufs:     linear 49560 sectors at super sector 12827648 = lun 0 lba 1970534..1976728
+ufs: super: used up to sector 12877208; free after it: 3785320 sectors (1848 MiB)
+ufs: lookup system_a: extent 0 = lun 0 lba 367334, 251541 blocks
+ufs: system_a block 0: 00 00 00 00 ... ext4 magic at 0x438: 0xef53 (want 0xef53)
+```
+
+All six partitions, their extents and the free space match `lpdump` on the phone exactly. The first
+READ(10) on each LUN gets CHECK CONDITION (UNIT ATTENTION after the reset) and the retry succeeds.
+`lp_find()` is what the loader will use to find `xnusys`. Still PWM-G1 (slow): HS gear is next,
+before reading ~1.9 GB.
