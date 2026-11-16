@@ -216,7 +216,10 @@ caiman/
   - the bootloader leaves the watchdog running
   - the pstore log works
 
-  Next test: `probe-boot-paint.img` (colour bars on screen).
+  - `probe-boot-paint.img` puts colour bars on the screen (frame trigger works)
+  - the watchdog period is ~60 s
+
+  Next: the M2 stage-1 loader.
 
 When the log comes back, record the frame buffer address and the entry EL
 in `probe/platform_caiman.h` and in the plan's progress log. This probe is

@@ -10,6 +10,9 @@
  * 0xfd3ff000, boot frame buffer 0xfac00000 1280x2856 BGRA8888 stride 5120
  * on DMA L0 / DECON window 5, DECON0 in command mode (hw TE trigger),
  * cluster-0 watchdog left running, PSCI 1.1 over SMC.
+ * Run 3: SCTLR_EL2 at entry 0x30c50990 (MMU and caches off); watchdog period
+ * ~60 s (WTCON 0x0001af39, WTDAT 0xffaf); unmasking the DECON TE trigger
+ * gives 60 Hz refresh and the painted colour bars appear on the panel.
  * Sources (copies in caiman/reference/google/):
  *   zumapro.dtsi        serial_0 uart@10870000, GICv3, /chosen earlycon
  *   zumapro-rmem.dtsi   ramoops_mem@fd3ff000, bldr_log_reserved@fd800000

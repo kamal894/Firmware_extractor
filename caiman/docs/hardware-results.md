@@ -43,19 +43,40 @@ What this establishes:
 | UART | TX not enabled ("console is disabled") | optional; `fastboot oem uart enable` + cable if ever needed |
 | SoC | Product ID 0x09875 (Tensor G4) rev A1, 16 GiB Samsung DDR, MTE off | |
 
-## Next: `probe-boot-paint.img`
+## Run 3: `probe-boot-paint.img` (b191a4e): colour bars on screen
 
-Paints colour bars into 0xfac00000. It then does what the display driver
-does to send a frame in command mode: a shadow update request, then
-unmasking the TE trigger. It keeps the watchdog fed for 10 s so the bars
-stay up, then reboots. Expected log lines:
+The user confirmed the bars were visible on the phone. Probe output (grep of
+the pstore log):
 
 ```
+entry: EL2 SCTLR=0x30c50990 MMU=off D-cache=off I-cache=off
+wdt: WTCON=0x0001af39 WTDAT=0x0000ffaf WTCNT=0x0000df3c: RUNNING, reset on expiry ON, irq off
+wdt: counts at 1090 Hz (if the input clock is 24576000 Hz): period 60050 ms, 52429 ms left
 paint: colour bars into 0xfac00000 (1280x2856, stride 5120)
-kick: TRIG_CON=0x........ (hw trigger, masked) FRAME_COUNT=N
-kick: TRIG_CON now 0x........; FRAME_COUNT N -> M in 200 ms (frames are going out ...)
-wdt: WTCON=... RUNNING ...
+kick: TRIG_CON=0x00003070 (hw trigger, masked) FRAME_COUNT=5
+kick: TRIG_CON now 0x00003061; FRAME_COUNT 5 -> 17 in 200 ms (frames are going out: the bars should be on screen)
+watchdog     : RUNNING (bootloader left it armed), period 60050 ms, 52429 ms left at probe time
+finish: done; rebooting in 10000 ms (PSCI SYSTEM_RESET2 warm)
 ```
 
-Bars on screen means **M3's display path works from bare metal**: same
-buffer, same trigger, no DPU driver needed.
+The next boot's bootloader reported `RST_STAT: 0x80 - SYSTEM_SWRESET_SYSTEM`,
+so the probe rebooted the phone itself: the watchdog never fired, and DRAM
+survived the PSCI SYSTEM_RESET2 warm reset.
+
+| Item | Finding | Consequence |
+|---|---|---|
+| Pixels on glass from bare metal | **works**: write BGRA8888 into 0xfac00000, `dc civac` the lines, set `SHD_REG_UP_REQ` global+CMP (DECON0 +0x50), then clear `HW_TRIG_MASK_DECON` and set `HW_TRIG_EN` in `TRIG_CON` (+0x30) | the M3 path is proven with no DPU driver. XNU's framebuffer can be a plain buffer at 0xfac00000 once the trigger is unmasked |
+| Refresh rate | 12 frames in 200 ms = **60 Hz** with the TE trigger unmasked; the bootloader had sent only 5 frames | the panel then refreshes continuously from the buffer, like video mode |
+| CPU state at entry | SCTLR_EL2 = 0x30c50990: **MMU, D-cache and I-cache all off** (as the Linux boot protocol says) | the loader starts with flat physical addressing |
+| Watchdog | WTCON 0x0001af39: prescaler 176, /128, ~1090 Hz. **Period ~60 s**; 52 s left when the probe ran. Reloading `WTCNT` from `WTDAT` keeps it quiet | the loader has under a minute before reset unless it kicks or stops the watchdog. XNU needs a driver or a timer that kicks it |
+| Log loss in run 1 | caches were off, yet run 1's log vanished and runs 2–3 (with `dc civac` after each write) survived | likely explanation: Tensor's system-level cache (SLC) holds non-cacheable writes and drops them at reset. **Always clean to PoC before a reset**, even with the MMU off. Not proven |
+
+## Next
+
+M2: the stage-1 loader, based on this probe. It needs to:
+
+- keep the watchdog fed
+- drop from EL2 to EL1
+- build the memory map, avoiding the image/DTB/initrd, the secure ranges and 0xfac00000
+- load XNU with an Apple device tree and boot args, as HackiOS's loader does
+- log to pstore
