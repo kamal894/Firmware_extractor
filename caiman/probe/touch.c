@@ -446,7 +446,7 @@ static void spi_identify(void)
 }
 #endif
 
-#if PROBE_TOUCH >= 3
+#if PROBE_TOUCH == 3
 /*
  * Read-only: where is GPB10 (the touch SPI's pads, Google's zuma-caimito-common-touch.dtsi)? Not in
  * any pin controller Android registers: look at the 64 KiB slots of HSI0's address range that no
@@ -482,6 +482,37 @@ static void hsi0_scan(void)
 }
 #endif
 
+#if PROBE_TOUCH == 4
+/*
+ * Read-only: the three buttons (Android's gpio_keys; GPIO_ALIVE 0x154d0000, whose banks are gpa4 at
+ * +0x80 and gpa6 at +0xa0 in this phone's pinctrl table): power gpa4-0, volume down gpa4-1, volume up
+ * gpa6-2, all low while pressed. 20 s of looking, each change logged.
+ */
+static void buttons_watch(void)
+{
+	const u64 gpa4 = 0x154d0000ULL + 0x80, gpa6 = 0x154d0000ULL + 0xa0;
+	u32 last = 0xff, now, ms;
+	int ok;
+
+	pr("touch: buttons: gpa4 CON 0x%08x DAT 0x%08x PUD 0x%08x; gpa6 CON 0x%08x DAT 0x%08x PUD 0x%08x\n",
+	   safe_rd32(gpa4, &ok), rd32(gpa4 + 4), rd32(gpa4 + 8), rd32(gpa6), rd32(gpa6 + 4), rd32(gpa6 + 8));
+	pr("touch: buttons: watching for 20 s (press them now; short presses)\n");
+	log_flush();
+	for (ms = 0; ms < 20000; ms += 10) {
+		now = (rd32(gpa4 + 4) & 3) | ((rd32(gpa6 + 4) >> 2 & 1) << 2);
+		if (now != last) {
+			pr("touch: buttons at %u ms: power %s, volume down %s, volume up %s\n", ms, now & 1 ? "up" : "DOWN",
+			   now & 2 ? "up" : "DOWN", now & 4 ? "up" : "DOWN");
+			log_flush();
+			last = now;
+		}
+		if (!(ms % 1000))
+			wdt_kick();
+		delay_us(10000);
+	}
+}
+#endif
+
 void touch_probe(void)
 {
 	u32 ipc_channels, ap_max, ch_off, i;
@@ -489,7 +520,10 @@ void touch_probe(void)
 
 	pr("\n--- touch screen (read-only) ---\n");
 	log_flush();
-#if PROBE_TOUCH >= 3
+#if PROBE_TOUCH == 4
+	buttons_watch();
+	return;
+#elif PROBE_TOUCH >= 3
 	hsi0_scan();
 	return;
 #endif

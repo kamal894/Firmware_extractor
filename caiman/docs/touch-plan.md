@@ -154,3 +154,22 @@ controller clocks into nothing. Loopback works because it never leaves the contr
     tree; Android's kernel does not expose `clk_summary` or `/dev/mem`), or the pads (the two PMIC writes above), reset it, and read its identify report over SPI
    (USI SPI: clocks, USI mode, FIFO, polled).
 3. A kernel driver feeding `/dev/hakios-touch`, in a HackiOS kernel built on the Mac.
+
+## Buttons first (2026-11-16)
+
+Android's `gpio_keys`: power `gpa4-0`, volume down `gpa4-1`, volume up `gpa6-2`, all on GPIO_ALIVE
+(0x154d0000; gpa4 at +0x80, gpa6 at +0xa0 in this phone's pinctrl table), active low, function 0xf
+(external interrupt) under Android. `PROBE_TOUCH=4` reads them (read-only) for 20 s:
+
+```
+touch: buttons: gpa4 CON 0x00000000 DAT 0x00000003 PUD 0x00000033; gpa6 CON 0x00000000 DAT 0x0000002f PUD 0x00010013
+touch: buttons at 0 ms: power up, volume down up, volume up up
+```
+
+All three read released, pulled up, as they should. (No presses were made in that run.)
+
+Getting them to iOS needs kernel code: `/dev/hakios-touch`'s reader sleeps until a driver calls
+`wakeup()`, so another core writing into the queue would not be seen, and HackiOS's
+`hakios.buttons.c` is the POCO X5 Pro's (Qualcomm PMIC over SPMI). A caiman driver that polls these
+three bits is small; it needs the kernel built here (`xnu-deps/setup.sh`, `xnu/apply.sh`,
+`xnu-build.sh`).
