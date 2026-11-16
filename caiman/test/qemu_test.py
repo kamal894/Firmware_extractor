@@ -208,8 +208,14 @@ def machine(scenario):
 
 
 def qemu_size(scenario):
-    # xnu: XNU's 4 GiB window at 0x80000000 and a second core for the watcher
-    return ["-smp", "2", "-m", "6G"] if scenario == "xnu" else ["-m", RAM]
+    # xnu: XNU's 4 GiB window at 0x80000000 and a second core for the watcher. Two NUMA nodes
+    # make QEMU list RAM as two adjacent ranges with XNU's window across the seam, as the Pixel
+    # lists its high bank as seven adjacent 2 GiB ranges.
+    if scenario == "xnu":
+        return ["-smp", "2", "-m", "6G",
+                "-object", "memory-backend-ram,id=m0,size=3G", "-numa", "node,memdev=m0",
+                "-object", "memory-backend-ram,id=m1,size=3G", "-numa", "node,memdev=m1"]
+    return ["-m", RAM]
 
 
 def make_dtb(work, scenario):
@@ -318,6 +324,7 @@ SCENARIOS = {
         "fb (DT)      : no handover memory-region", "=== caiman-probe end ===",
     ],
     "xnu": COMMON + EL2 + [
+        "dt: memory 0x40000000 - 0x100000000", "dt: memory 0x100000000 - 0x1c0000000",
         "xnu: kernel 16809112 bytes, ramdisk 0 bytes, XNU memory 0x80000000 + 0x100000000",
         "xnu: console -> loader_log (vmapple_uart transmit patched, receive off)",
         "loader_log found", "xnu: boot-args: debug=0x8 serial=3 cpus=1 -v",

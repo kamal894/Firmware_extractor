@@ -44,6 +44,15 @@ Goal (plan's M2): XNU prints its first log lines on caiman, read back from pstor
 | 4 cores, watcher on core 7 | start with `cpus=1` (CPU 0, A520). The watcher on another core (e.g. Aff1=1) |
 | `XNU_PHYS_BASE` 0xc0000000 | **0x880000000**, 4 GiB to start. The DT memory map (run 3 log) is 0x80000000–0x100000000 (2 GiB, full of reserved regions) plus **0x880000000–0xc00000000 (14 GiB, nothing reserved)**. The loader, DTB, initrd, framebuffer and pstore all stay in the low bank, outside XNU's range |
 
+## Status (2026-11-16)
+
+- Loader written (`make LOADER=1`: `probe/xnu.c`, `probe/watcher.c`, `probe/handoff.S`; `tools/mkxnuimg.py`).
+- **QEMU: works.** The `xnu` scenario of `test/qemu_test.py` boots HackiOS's prebuilt kernel through
+  the loader: GICv3, EL2 entry, PSCI SMC, RAM split into two ranges like the Pixel's. XNU's log is
+  read back from pstore only (the UART stays silent). It runs from `Darwin Kernel Version 22.5.0`
+  through IOKit, NVRAM, the framebuffer driver and BSD, and stops at `Waiting on ... IOMedia` (no root disk).
+- Phone: `prebuilt/xnu-boot.img`, not run yet.
+
 ## Steps
 
 1. ~~**Memory map.**~~ Done: XNU at 0x880000000 (see the table).

@@ -17,14 +17,26 @@ int overlaps(u64 a, u64 as, u64 b, u64 bs)
 	return as && bs && a < b + bs && b < a + as;
 }
 
+/*
+ * Is all of [base, base+size) DRAM by the device tree? The ranges may be split (caiman lists its
+ * high bank as seven adjacent 2 GiB ranges), so walk from range to range.
+ */
 int addr_in_dram(u64 base, u64 size)
 {
-	int i;
+	u64 at = base, end = base + size;
+	int i, progress = 1;
 
-	for (i = 0; i < g.nmem; i++)
-		if (base >= g.mem[i].base && base + size <= g.mem[i].base + g.mem[i].size)
-			return 1;
-	return 0;
+	while (at < end && progress) {
+		progress = 0;
+		for (i = 0; i < g.nmem; i++) {
+			if (at >= g.mem[i].base && at < g.mem[i].base + g.mem[i].size) {
+				at = g.mem[i].base + g.mem[i].size;
+				progress = 1;
+				break;
+			}
+		}
+	}
+	return at >= end;
 }
 
 static void hexdump(u64 addr, u32 len)

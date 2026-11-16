@@ -127,6 +127,7 @@ decon mode   : video|command, N frames in 100 ms
 | `probe-boot.img` | default: reboot 3 s after finishing (PSCI warm reset if available) |
 | `probe-boot-lz4.img` | same, kernel lz4-compressed, in case the bootloader wants that |
 | `probe-boot-hang.img` | `PROBE_FINISH=2`: stays in a loop at the end; you force-restart |
+| `xnu-boot.img` | **M2**: `LOADER=1`. Probes as usual, then starts HackiOS's prebuilt XNU (see `NOTICE`) at EL1 with the `-v` text console on the panel. A second core keeps the watchdog fed and copies XNU's log into pstore; it resets after 45 s |
 | `probe-boot-paint.img` | `PROBE_PAINT=1`: paints colour bars into the frame buffer, sends the frame (command-mode panel), feeds the watchdog and holds them 10 s before rebooting |
 
 `SHA256SUMS` lists their hashes.
