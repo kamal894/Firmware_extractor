@@ -85,6 +85,190 @@ static void dump_utrl(u64 utrl, u32 nutrs, u32 doorbell)
 	}
 }
 
+#if PROBE_UFS >= 2
+/*
+ * Our own READ(10)s through slot 0 of the request list the bootloader left running, in the layout
+ * its own descriptors use (run 7): UTRD CT=1, DD=device-to-host, response UPIU at UCD+8 dwords
+ * (16 dwords long), PRDT at UCD+24 dwords, 16-byte PRDT entries of 4 KiB. READ only: the opcode and
+ * the data direction below are fixed.
+ */
+#define UFS_BLOCK	4096u
+#define UFS_MAX_BLOCKS	64u
+
+static u8 ucd[96 + 16 * UFS_MAX_BLOCKS] __attribute__((aligned(128)));
+static u64 utrl_slot0;
+static u8 tag;
+
+static void put_be32(u8 *p, u32 v)
+{
+	p[0] = (u8)(v >> 24);
+	p[1] = (u8)(v >> 16);
+	p[2] = (u8)(v >> 8);
+	p[3] = (u8)v;
+}
+
+static void put_le32(u8 *p, u32 v)
+{
+	p[0] = (u8)v;
+	p[1] = (u8)(v >> 8);
+	p[2] = (u8)(v >> 16);
+	p[3] = (u8)(v >> 24);
+}
+
+static u64 le64(const volatile u8 *p)
+{
+	u64 v = 0;
+	int i;
+
+	for (i = 7; i >= 0; i--)
+		v = (v << 8) | p[i];
+	return v;
+}
+
+static u32 le32(const volatile u8 *p)
+{
+	return p[0] | (u32)p[1] << 8 | (u32)p[2] << 16 | (u32)p[3] << 24;
+}
+
+/* Read nblocks (<= 64) 4 KiB blocks of a LUN into dst. 0 on success. */
+static int ufs_read(u32 lun, u32 lba, u32 nblocks, u64 dst)
+{
+	const u64 hci = PLAT_UFS_HCI;
+	volatile u32 *utrd = (volatile u32 *)(uptr)utrl_slot0;
+	u64 ucd_pa = (u64)(uptr)ucd, start;
+	u32 i, len = nblocks * UFS_BLOCK, ocs, dbr;
+
+	if (!nblocks || nblocks > UFS_MAX_BLOCKS)
+		return -1;
+	if (rd32(hci + UTRLDBR) & 1)
+		return -2;		/* slot 0 busy */
+	memset(ucd, 0, sizeof(ucd));
+	ucd[0] = 0x01;			/* COMMAND UPIU */
+	ucd[1] = 0x40;			/* flags: R (read) */
+	ucd[2] = (u8)lun;
+	ucd[3] = ++tag;
+	put_be32(ucd + 12, len);	/* expected data transfer length */
+	ucd[16] = 0x28;			/* CDB: READ(10) */
+	put_be32(ucd + 18, lba);
+	ucd[23] = (u8)(nblocks >> 8);
+	ucd[24] = (u8)nblocks;
+	for (i = 0; i < nblocks; i++) {
+		u8 *e = ucd + 96 + 16 * i;
+		u64 a = dst + (u64)i * UFS_BLOCK;
+
+		put_le32(e, (u32)a);
+		put_le32(e + 4, (u32)(a >> 32));
+		put_le32(e + 12, UFS_BLOCK - 1);	/* data byte count - 1 */
+	}
+	utrd[0] = 0x15000000u;		/* CT=UFS storage, DD=device to host, I */
+	utrd[1] = 0;
+	utrd[2] = 0x0f;			/* OCS: invalid until the controller writes it */
+	utrd[3] = 0;
+	utrd[4] = (u32)ucd_pa;
+	utrd[5] = (u32)(ucd_pa >> 32);
+	utrd[6] = (8u << 16) | 16u;		/* response UPIU at dword 8, 16 dwords */
+	utrd[7] = (24u << 16) | nblocks;	/* PRDT at dword 24 */
+	dsb_sy();
+	wr32(hci + IS, 1);		/* clear UTRCS (write 1 to clear) */
+	wr32(hci + UTRLDBR, 1);		/* ring slot 0 */
+	start = timer_ticks();
+	do {
+		dbr = rd32(hci + UTRLDBR);
+		if (timer_ticks() - start > timer_freq()) {
+			wr32(hci + UTRLCLR, ~1u);	/* give slot 0 up */
+			return -3;
+		}
+	} while (dbr & 1);
+	ocs = utrd[2] & 0xff;
+	if (ocs || ucd[32] != 0x21 || ucd[32 + 5] || ucd[32 + 7]) {
+		pr("ufs:   read lun %u lba %u x%u: OCS 0x%02x, response UPIU %02x response %02x status %02x\n",
+		   lun, lba, nblocks, ocs, ucd[32], ucd[32 + 5], ucd[32 + 7]);
+		return -4;
+	}
+	return 0;
+}
+
+/* The GPT of each LUN, and in super the LP (dynamic partitions) metadata header. */
+static void ufs_read_test(u64 utrl)
+{
+	const u64 buf = PLAT_UFS_SCRATCH;
+	const volatile u8 *b = (const volatile u8 *)(uptr)buf;
+	u32 lun, super_lun = 0xff;
+	u64 super_lba = 0, super_blocks = 0;
+
+	utrl_slot0 = utrl;
+	pr("\n--- ufs read test (READ(10) only, through the bootloader's request list) ---\n");
+	log_flush();
+	for (lun = 0; lun < 4; lun++) {
+		u64 entries_lba;
+		u32 n, esz, i, blocks;
+		int r;
+
+		wdt_kick();
+		r = ufs_read(lun, 1, 1, buf);	/* the GPT header: LBA 1 */
+		if (r) {
+			pr("ufs: lun %u: read failed (%d)\n", lun, r);
+			continue;
+		}
+		if (memcmp((const void *)(uptr)buf, "EFI PART", 8)) {
+			pr("ufs: lun %u: no GPT at LBA 1\n", lun);
+			continue;
+		}
+		entries_lba = le64(b + 72);
+		n = le32(b + 80);
+		esz = le32(b + 84);
+		pr("ufs: lun %u: GPT, %u entries of %u bytes at LBA %llu, last usable LBA %llu\n", lun, n,
+		   esz, entries_lba, le64(b + 48));
+		if (esz < 128 || esz > 512 || n > 256)
+			continue;
+		blocks = (n * esz + UFS_BLOCK - 1) / UFS_BLOCK;
+		if (blocks > UFS_MAX_BLOCKS || ufs_read(lun, (u32)entries_lba, blocks, buf)) {
+			pr("ufs: lun %u: entries not read\n", lun);
+			continue;
+		}
+		for (i = 0; i < n; i++) {
+			const volatile u8 *e = b + (u64)i * esz;
+			u64 first = le64(e + 32), last = le64(e + 40);
+			char name[37];
+			int k;
+
+			if (!first)
+				continue;
+			for (k = 0; k < 36; k++) {
+				u8 c = e[56 + 2 * k];
+
+				name[k] = (c >= 0x20 && c < 0x7f) ? (char)c : 0;
+				if (!c)
+					break;
+			}
+			name[36] = 0;
+			pr("ufs:   %-24s lba %8llu .. %8llu  %6llu MiB\n", name, first, last,
+			   ((last - first + 1) * UFS_BLOCK) >> 20);
+			if (!strcmp(name, "super")) {
+				super_lun = lun;
+				super_lba = first;
+				super_blocks = last - first + 1;
+			}
+		}
+		log_flush();
+	}
+	if (super_lun == 0xff) {
+		pr("ufs: no partition named super found\n");
+		return;
+	}
+	pr("ufs: super is lun %u lba %llu, %llu blocks (%llu bytes)\n", super_lun, super_lba, super_blocks,
+	   super_blocks * UFS_BLOCK);
+	/* liblp: 4096 reserved bytes, the geometry (block 1), its backup, then metadata slot 0 (block 3) */
+	if (!ufs_read(super_lun, (u32)super_lba + 1, 1, buf))
+		pr("ufs: super geometry: magic 0x%08x (want 0x616c4467) struct %u, metadata max %u, slots %u,"
+		   " logical block %u\n", le32(b), le32(b + 4), le32(b + 40), le32(b + 44), le32(b + 48));
+	if (!ufs_read(super_lun, (u32)super_lba + 3, 1, buf))
+		pr("ufs: super metadata slot 0: magic 0x%08x (want 0x414c5030) version %u.%u, header %u bytes,"
+		   " tables %u bytes\n", le32(b), le32(b + 4) & 0xffff, le32(b + 4) >> 16, le32(b + 8),
+		   le32(b + 44));
+}
+#endif
+
 void ufs_probe(void)
 {
 	const u64 hci = PLAT_UFS_HCI;
@@ -140,6 +324,10 @@ void ufs_probe(void)
 	   (hce & 1) && (hcs & 0xf) == 0xf ? "UP: the bootloader left the link running; a loader can issue reads"
 	   : (hce & 1) ? "enabled but not all lists ready: needs (re)starting the lists"
 		       : "OFF: a loader must bring the controller and the link up itself");
+#if PROBE_UFS >= 2
+	if ((hce & 1) && (hcs & 0xf) == 0xf && (rsr & 1) && utrl)
+		ufs_read_test(utrl);
+#endif
 }
 
 #endif

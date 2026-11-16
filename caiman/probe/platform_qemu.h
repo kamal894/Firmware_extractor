@@ -53,6 +53,7 @@
 /* UFS: no such controller on virt; the test points it at the fake register RAM */
 #define PLAT_UFS_HCI		0x50300000ULL
 #define PLAT_UFS_VS		0x50301100ULL
+#define PLAT_UFS_SCRATCH	0x70000000ULL
 
 #define PLAT_PANEL_W		1280
 #define PLAT_PANEL_H		2856

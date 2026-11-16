@@ -39,3 +39,30 @@ still programmed. Those show the exact UTRD/UCD/PRDT layout this controller uses
 quirks). The verdict line says whether the link is still up (then a loader only issues SCSI
 READs), or off (then the loader has to start the controller and the UniPro link itself, which is
 much more work).
+
+### Result (run 7, `probe-boot-ufs.img` built with PROBE_UFS=1): **UFS is up**
+
+```
+ufs: CAP 0x1383ff1f (32 transfer slots, 4 task slots, 64-bit yes) VER 0x00000300 PID 0x00000106 MID 0x000001ce
+ufs: HCE 0x00000001 (enabled)  HCS 0x0000010f: device present, UTRL ready, UTMRL ready, UIC cmd ready, power mode 1
+ufs: UTRLBA 0x00000000f8c99000  doorbell 0x00000000  run 0x00000001   UTMRLBA 0xf8c97000 run 0x00000001
+ufs: verdict: UP: the bootloader left the link running; a loader can issue reads
+```
+
+The bootloader's last requests, decoded from its own descriptors (in its reserved memory, abl@f8800000):
+
+- slot 2: `UTRD 15000000 ... 00080010 00180fff`. CT=UFS storage, DD=device to host, interrupt. The
+  response UPIU is at UCD+8 dwords (16 dwords long), and the PRDT at UCD+24 dwords with 4095 entries.
+  Command UPIU: LUN 0, expected length 0x00fff000, CDB `28 00 00 02 ff 84 00 0f ff 00` =
+  **READ(10)** LBA 0x2ff84, 4095 blocks of 4 KiB.
+- PRDT entries: 16 bytes each (`a78fe000 00000000 00000000 00000fff`), 4 KiB per entry. This is
+  standard UFSHCI 3.0: no Exynos byte-granularity quirk, no inline-crypto fields.
+- slot 1: START STOP UNIT (power condition ACTIVE) to the UFS Device W-LUN (0xD0); slot 0: a
+  query request.
+
+So the loader can issue its own READ(10)s through slot 0 of that running list, with no controller or
+link bring-up. The next probe (PROBE_UFS=2) does exactly that, read-only: every LUN's GPT, the
+`super` partition, and the LP geometry and metadata header inside it.
+
+The IPSW is on Apple's CDN (`updates.cdn-apple.com/2023SpringFCS/fullrestores/032-85130/6AB0D10A-8AF9-4F6C-8CF5-A1B315CABE88/`),
+SHA-1 `6ee6e5b447902dbb36a3991ca20d032d6b4cc759` (per ipsw.me's index).

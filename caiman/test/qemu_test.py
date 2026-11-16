@@ -17,7 +17,8 @@ Scenarios:  default | el1 (entered at EL1, PSCI over HVC) |
             hello (the same with HackiOS's raw-syscall `hello` as the RAM disk: process 1 in user
                    space, then the kernel's panic when it exits; needs HAKIOS_HELLO) |
             bare-dt (no caiman nodes in the DT: built-in fallbacks) |
-            ufs (PROBE_UFS=1: the read-only UFS look, against a fake running controller) |
+            ufs (PROBE_UFS=2: the UFS look and read test, against a fake controller that never
+                 completes a request: exercises the timeout path) |
             paint (PROBE_PAINT=1) | crash (PROBE_CRASHTEST=1)
 
 Needs: qemu-system-aarch64, dtc, clang, ld.lld, llvm-objcopy.
@@ -201,7 +202,7 @@ def build(scenario, work):
              "crash": ["PROBE_CRASHTEST=1"],
              "xnu": ["LOADER=1", "PROBE_XNU_SECONDS=40"],
              "hello": ["LOADER=1", "PROBE_XNU_SECONDS=40"],
-             "ufs": ["PROBE_UFS=1"]}[scenario]
+             "ufs": ["PROBE_UFS=2"]}[scenario]
     run(["make", "-s", "-C", PROBE, "PLATFORM=qemu", f"OUT={out}", "PROBE_FINISH_DELAY_MS=100"]
         + flags, stdout=subprocess.DEVNULL)
     image = os.path.join(PROBE, out, "probe.Image")
@@ -383,6 +384,9 @@ SCENARIOS = {
         "ufs:   command UPIU @ 0x50381000: 00000001",
         "ufs:   PRDT @dw @ 0x50381220: 50390000 00000000 00000000 00000fff",
         "ufs: verdict: UP: the bootloader left the link running",
+        "--- ufs read test (READ(10) only, through the bootloader's request list) ---",
+        "ufs: lun 0: read failed (-3)",       # the fake controller never completes a request
+        "ufs: no partition named super found",
         "=== caiman-probe end ===",
     ],
     "paint": COMMON + EL2 + ["paint: colour bars into 0x58000000 (1280x2856, stride 5120)", "paint: done",
