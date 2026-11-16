@@ -8,6 +8,7 @@ mkdir -p "$dest"
 
 build() { # name, make args...
 	local name=$1; shift
+	rm -rf "out/pb-$name"
 	make -s OUT="out/pb-$name" "$@" >/dev/null
 	cp "out/pb-$name/probe-boot.img" "$dest/$name.img"
 }
