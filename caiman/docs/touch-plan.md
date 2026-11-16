@@ -92,9 +92,31 @@ its USIs reach PERIC0/1 pads as a pin function (`hsi2c@111F0000`, HSI0's USI4, u
 USI2 is not in Android's device tree: something else (the AOC firmware, which the touch offload
 `goog,offload-enabled` uses, or the bootloader) must set them.
 
+### The pads, from Google's own device-tree source
+
+A scan of every 4-pin USI pad group of PERIC0/1 (`uartN_bus_single`: gpp2, 4, 6, 8, 10, 12, 16,
+19-0, 19-4, 20, 21-0, 21-4, 22, 23) with functions 2, 3 and 4, each restored after its try, found no
+group where the clock gets out. Google's source for this phone's touch
+(`kernel/devices/google/caimito`, `dts/zuma-caimito-common-touch.dtsi`) says why:
+
+```
+/* Touch is connected to spi_20, pins:
+ *   CLK=GPB10[4], MOSI=GPB10[5], MISO=GPB10[6], CS=GPB10[7]
+ * TS1_RESET_L = XAPC_USI11_RTSn_DI = GPP1[1] = <&gpp1 1 0>
+ * TS1_INT_L = AOC_APM_TS1_INT_L_R1 / XAOC_GPIO0 = GPN0[0] = <&gpn0 0 0>
+...
+&spi_20 { ... pinctrl-0 = <>; /* TODO: pinctrl */
+```
+
+GPB10 is not a bank of any pin controller Android registers on this phone (the bank tables in
+`pinctrl-exynos-gs.ko` have gpb0 and gpb1 only, for other SoCs), and Google's own DT leaves the SPI's
+pinctrl as a TODO: the pads are set up somewhere else, or need nothing on a normal boot.
+
 ## Next
 
-2c. Find HSI0 USI2's pads (by reading the GPIO banks while Android runs the touch screen, or from the
+2c. Find GPB10's registers (a GPIO block of HSI0 that Linux does not register: read-only look at the
+    blocks around 0x11000000-0x111fffff), put pins 4-7 on the USI, and read the identify report.
+    Earlier idea, now settled: HSI0 USI2's pads (by reading the GPIO banks while Android runs the touch screen, or from the
     AOC side), set them, and read the identify report. Earlier idea, now settled: the USI2 clock source (its CAL tables are not in the public google-modules
     tree; Android's kernel does not expose `clk_summary` or `/dev/mem`), or the pads (the two PMIC writes above), reset it, and read its identify report over SPI
    (USI SPI: clocks, USI mode, FIFO, polled).

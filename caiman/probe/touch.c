@@ -353,6 +353,66 @@ static u32 spi_read(u8 *buf, u32 n)
 	return got;
 }
 
+/*
+ * Which pads carry HSI0's USI2? Android's device tree does not say (the SPI's pinctrl-0 is empty and
+ * HSI0 has no GPIO block). HSI0's USIs reach PERIC0/1 pads as a pin function (HSI0's USI4 uses gpp2,
+ * function 3). Try every 4-pin USI pad group of PERIC0/1 (the uartN_bus_single groups) with functions
+ * 2, 3 and 4: bytes coming back means the clock reaches those pads; 0xa5 first is the chip. Every pin
+ * is put back as it was after each try. Bank addresses: the banks' order in the device tree, 0x20 each.
+ */
+static const struct { u64 bank; u32 first; char name[8]; } pad_groups[] = {
+	{ 0x10840000ULL + 2 * 0x20, 0, "gpp2" },   { 0x10840000ULL + 4 * 0x20, 0, "gpp4" },
+	{ 0x10840000ULL + 6 * 0x20, 0, "gpp6" },   { 0x10840000ULL + 8 * 0x20, 0, "gpp8" },
+	{ 0x10840000ULL + 10 * 0x20, 0, "gpp10" }, { 0x10840000ULL + 12 * 0x20, 0, "gpp12" },
+	{ 0x10840000ULL + 17 * 0x20, 0, "gpp16" },
+	{ 0x10c40000ULL + 0 * 0x20, 0, "gpp19" },  { 0x10c40000ULL + 0 * 0x20, 4, "gpp19" },
+	{ 0x10c40000ULL + 1 * 0x20, 0, "gpp20" },  { 0x10c40000ULL + 2 * 0x20, 0, "gpp21" },
+	{ 0x10c40000ULL + 2 * 0x20, 4, "gpp21" },  { 0x10c40000ULL + 4 * 0x20, 0, "gpp22" },
+	{ 0x10c40000ULL + 5 * 0x20, 0, "gpp23" },
+};
+
+static int spi_pad_scan(void)
+{
+	u8 buf[8];
+	u32 g, f, got, i;
+	int ok;
+
+	pr("touch: scanning pad groups for HSI0 USI2 (functions 2, 3, 4; restored after each try)\n");
+	for (g = 0; g < sizeof(pad_groups) / sizeof(pad_groups[0]); g++) {
+		u64 b = pad_groups[g].bank;
+		u32 con = safe_rd32(b, &ok), pud, m = 0xffffu << (4 * pad_groups[g].first);
+
+		if (!ok) {
+			pr("touch:   %s: not readable\n", pad_groups[g].name);
+			continue;
+		}
+		pud = rd32(b + 8);
+		for (f = 2; f <= 4; f++) {
+			wr32(b + 8, pud & ~m);
+			wr32(b, (con & ~m) | ((f * 0x1111u) << (4 * pad_groups[g].first)));
+			memset(buf, 0, sizeof(buf));
+			got = spi_read(buf, sizeof(buf));
+			wr32(b, con);
+			wr32(b + 8, pud);
+			if (got) {
+				pr("touch:   %s-%u..%u function %u: %u bytes:", pad_groups[g].name, pad_groups[g].first,
+				   pad_groups[g].first + 3, f, got);
+				for (i = 0; i < got; i++)
+					pr(" %02x", buf[i]);
+				pr("%s\n", buf[0] == 0xa5 ? "  <- the touch chip" : "");
+				if (buf[0] == 0xa5) {
+					/* leave these pads on the USI */
+					wr32(b + 8, pud & ~m);
+					wr32(b, (con & ~m) | ((f * 0x1111u) << (4 * pad_groups[g].first)));
+					return 0;
+				}
+			}
+		}
+	}
+	pr("touch: no pad group gave the clock a way out\n");
+	return -1;
+}
+
 static void spi_identify(void)
 {
 	u8 buf[48];
@@ -380,6 +440,8 @@ static void spi_identify(void)
 		}
 		delay_us(20000);
 	}
+	if (t == 3)
+		spi_pad_scan();
 	pin("interrupt (after SPI)", PIN_IRQ_BANK, PIN_IRQ);
 }
 #endif
