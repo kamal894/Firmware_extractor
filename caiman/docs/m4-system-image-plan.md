@@ -199,3 +199,33 @@ need it (they carry their own clock), HS gears do. With the pin back on function
 23.6 MB/s is far below what HS-G4 x2 can do (one 256 KiB READ(10) at a time, ~11 ms each), but it
 reads ~1.9 GB in about 80 s, which is enough to go on with. Queueing several requests (32 slots)
 and longer transfers are the obvious improvements, later.
+
+## Step 3: the system image, built on the owner's Mac (2026-11-16)
+
+HackiOS (`oosexgang/hakios-xnu-kernel` at 63fc2b4, cloned to `~/caiman-work/hakios-xnu-kernel`):
+
+1. `sysimage/unpack.sh <the owner's IPSW>`: 43,230 files of the root (2.8 GB), the cryptexes, and the
+   dyld shared cache (2.5 GB). On macOS it needs 7-Zip 23+ (`brew install sevenzip`, as `7z`).
+2. `PREBUILT=1 userland/build.sh` (HackiOS's prebuilt `stage0`, `init` and libraries; no cross
+   toolchain): `system.apfs`, **2,476,720,128 bytes (2362 MiB)**. On macOS it needs GNU `stat`
+   (`brew install coreutils`, as `stat`).
+
+That is 514 MiB more than super has free (3,785,320 sectors after sector 12,877,208: 1,938,083,840
+bytes, or 1,937,768,448 from the next 1 MiB boundary). `tools/trim_sysimage.py` with
+`sysimage/trim.txt` moves what caiman leaves out to `sysimage/trimmed/` (nothing is deleted;
+`--undo` puts it back) and drops it from `system.manifest`; then `SYSTEM=1 PREBUILT=1
+userland/build.sh` again.
+
+| | image |
+|---|---|
+| HackiOS's selection | 2362 MiB |
+| round 1: 23 applications (Maps, Music, Books, App Store ...), wallpapers, sounds, those applications' framework resources, document fonts | 2025 MiB |
+| round 2: Health, Chinese/Japanese/Korean fonts, ringtones, more framework resources, one emoji strike (64 px) | **1835 MiB** |
+
+**1,924,599,808 bytes: fits, 12 MiB spare.** Kept: Calculator, Calendar, Clock, Compass, Contacts,
+Files, Notes, Reminders, Weather, Settings, and the system's own services. Gurmukhi (MuktaMahee.ttc)
+and the other non-CJK scripts stay. zlib is already at level 9 in `mkapfs.py`; the dyld shared cache
+(about 1.1 GB of the image) cannot be trimmed.
+
+Next: `xnusys` in super (fastbootd's `create-logical-partition`, then `flash`), which changes the
+phone's storage and waits for the owner's go-ahead; then the loader reads it with `lp_find()`.

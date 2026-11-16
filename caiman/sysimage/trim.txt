@@ -1,0 +1,64 @@
+# What caiman leaves out of HackiOS's system image (tools/trim_sysimage.py), so that it fits the
+# ~1848 MiB free at the end of super (docs/m4-system-image-plan.md). Paths from the image's root.
+
+# applications: kept are Calculator, Calendar, Clock, Compass, Contacts, Files, Notes,
+# Reminders, Weather, Settings and the system's own services
+Applications/AppleTV.app
+Applications/Books.app
+Applications/Bridge.app
+Applications/FaceTime.app
+Applications/FindMy.app
+Applications/Fitness.app
+Applications/Freeform.app
+Applications/Home.app
+Applications/Magnifier.app
+Applications/Maps.app
+Applications/Measure.app
+Applications/MobileMail.app
+Applications/MobileStore.app
+Applications/Music.app
+Applications/News.app
+Applications/Passbook.app
+Applications/Podcasts.app
+Applications/SequoiaTranslator.app
+Applications/Shortcuts.app
+Applications/Stocks.app
+Applications/Tips.app
+Applications/VoiceMemos.app
+Applications/AppStore.app
+
+# wallpapers and sounds
+Library/Wallpaper
+Library/Audio
+
+# resources of frameworks only those applications use (their code is in the dyld shared cache)
+System/Library/PrivateFrameworks/CameraEffectsKit.framework
+System/Library/PrivateFrameworks/HomeUI.framework
+System/Library/PrivateFrameworks/BridgePreferences.framework
+System/Library/PrivateFrameworks/WorkflowKit.framework
+System/Library/PrivateFrameworks/iWorkImport.framework
+System/Library/PrivateFrameworks/VideosUI.framework
+
+# fonts only documents use
+System/Library/Fonts/AppFonts
+
+# second round (the first left the image at 2025 MiB)
+Applications/Health.app
+System/Library/Health
+System/Library/PrivateFrameworks/SleepHealthUI.framework
+# Chinese, Japanese and Korean fonts (Gurmukhi, MuktaMahee.ttc, stays)
+System/Library/Fonts/Core/HiraginoKakuGothic.ttc
+System/Library/Fonts/Core/AppleSDGothicNeo.ttc
+System/Library/Fonts/CoreUI/HiraginoMaruGothProN.ttc
+System/Library/Fonts/LanguageSupport/PingFang.ttc
+# ringtones and alert tones
+System/Library/PrivateFrameworks/ToneLibrary.framework
+# resources of frameworks of applications already left out: Wallet, Siri, Game Center, Podcasts, App Store
+System/Library/PrivateFrameworks/PassKitUI.framework
+System/Library/PrivateFrameworks/DigitalTouchShared.framework
+System/Library/PrivateFrameworks/VoiceTriggerUI.framework
+System/Library/PrivateFrameworks/GameCenterUI.framework
+System/Library/PrivateFrameworks/PodcastsFoundation.framework
+System/Library/PrivateFrameworks/StoreKitUI.framework
+# colour emoji: one strike (64 px), scaled for the other sizes
+!emoji 64
