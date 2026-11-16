@@ -180,6 +180,7 @@ struct region {
 struct probe_state {
 	u32 el;			/* CurrentEL at entry: 1 or 2 */
 	u64 load_base;		/* where the bootloader put us */
+	u64 entry_ticks;	/* the counter at entry (the loader dates the kernel from it) */
 	u64 image_size;		/* text+data+bss+stack */
 	u64 dtb;		/* x0 at entry */
 	int have_fdt;

@@ -378,6 +378,8 @@ static void dt_identity(struct dt_writer *w, const struct identity_prop *props, 
 }
 #endif
 
+static u64 boot_epoch;	/* xnu_boot(): seconds since 1970 now, 0 if unknown */
+
 static u32 build_adt(u64 dt_pa, u64 rd_pa, u64 rd_size, u64 res_pa, u64 res_size)
 {
 	static u8 nvram[NVRAM_BANK_SIZE];
@@ -428,6 +430,8 @@ static u32 build_adt(u64 dt_pa, u64 rd_pa, u64 rd_size, u64 res_pa, u64 res_size
 	dt_u32(&w, "display-scale", 3);
 	dt_u32(&w, "display-rotation", 0);
 	dt_str(&w, "psci-method", g.psci_hvc ? "hvc" : "smc");
+	if (boot_epoch)
+		dt_u64(&w, "boot-epoch", boot_epoch);
 	dt_u64(&w, "unique-chip-id", 0x000043414930001ULL);
 	dt_u32(&w, "chip-id", 0x8015);
 	dt_u32(&w, "board-id", 0x06);
@@ -544,6 +548,52 @@ static u32 build_adt(u64 dt_pa, u64 rd_pa, u64 rd_size, u64 res_pa, u64 res_size
 
 /* ---- boot ------------------------------------------------------------------ */
 
+/*
+ * "epoch=SECONDS" in the payload's command line is the host's clock when it sent the image (the run
+ * script writes it just before fastboot boot). The kernel takes epoch= before the device tree's
+ * boot-epoch and as the time at its start, so the loader drops it from the boot-args and dates the
+ * kernel itself: that time plus the ~90 s spent here (mostly reading xnusys).
+ */
+static u64 payload_epoch(const char *c)
+{
+	u64 v = 0;
+
+	for (; c && *c; c++) {
+		if (!strncmp(c, "epoch=", 6)) {
+			for (c += 6; *c >= '0' && *c <= '9'; c++)
+				v = v * 10 + (u64)(*c - '0');
+			return v;
+		}
+		while (*c && *c != ' ')
+			c++;
+		if (!*c)
+			break;
+	}
+	return 0;
+}
+
+/* Append s without its epoch= word. */
+static u32 append_no_epoch(char *dst, u32 n, const char *s)
+{
+	while (*s && n < BOOT_LINE_LENGTH - 1) {
+		if (!strncmp(s, "epoch=", 6)) {
+			while (*s && *s != ' ')
+				s++;
+			while (*s == ' ')
+				s++;
+			continue;
+		}
+		while (*s && *s != ' ' && n < BOOT_LINE_LENGTH - 1)
+			dst[n++] = *s++;
+		while (*s == ' ' && n < BOOT_LINE_LENGTH - 1)
+			dst[n++] = *s++;
+	}
+	while (n && dst[n - 1] == ' ')
+		n--;
+	dst[n] = 0;
+	return n;
+}
+
 static u32 append(char *dst, u32 n, const char *s)
 {
 	while (*s && n < BOOT_LINE_LENGTH - 1)
@@ -647,6 +697,13 @@ void xnu_boot(void)
 	}
 	/* everything up to topOfKernelData is the kernel's static region: it must cover xnusys too */
 	dt_pa = res_size ? res_pa + res_size : rd_pa + rd_size;
+	boot_epoch = payload_epoch(pl.cmdline);
+	if (boot_epoch) {
+		u64 here = (timer_ticks() - g.entry_ticks) / timer_freq();
+
+		boot_epoch += here + 1;		/* + the image's transfer before we started */
+		pr("xnu: time: payload epoch + %llu s here = %llu\n", here + 1, boot_epoch);
+	}
 	dt_len = build_adt(dt_pa, rd_pa, rd_size, res_pa, res_size);
 	if (!dt_len)
 		return;
@@ -677,7 +734,7 @@ void xnu_boot(void)
 		n = append(ba->commandLine, n, " rd=md0");
 	if (pl.cmdline && pl.cmdline[0]) {
 		n = append(ba->commandLine, n, " ");
-		n = append(ba->commandLine, n, pl.cmdline);
+		n = append_no_epoch(ba->commandLine, n, pl.cmdline);
 	}
 	pr("xnu: device tree 0x%llx (%u bytes), boot_args 0x%llx, top 0x%llx\n", dt_pa, dt_len, ba_pa,
 	   top);

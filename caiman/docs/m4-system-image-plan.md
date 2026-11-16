@@ -353,3 +353,12 @@ last look, and `tools/screen_dump.py LOG OUT.png` decodes it:
 
 The icons and their names are there. The date is THU 1 (1 January 1970: nothing gives the kernel the
 time yet); the search pill and the dock are flat white (no GPU, so no blur).
+
+### The time
+
+`tools/run_darwin.sh LOADER_IMAGE KERNEL ROOT_APFS [LOG]` makes the boot image in fastboot, with
+`epoch=$(date +%s)` in the payload's command line, boots it, waits for Android and fetches the log and
+the picture. The loader drops that `epoch=` from the boot-args (the kernel would take it first, as the
+time at its own start) and puts `boot-epoch` = epoch + its own time (106 s, mostly reading xnusys) in
+`/chosen`. The home screen now has Calendar on MON 16 and the status bar the time -- in UTC: no time
+zone is set yet.

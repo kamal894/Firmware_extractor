@@ -407,6 +407,7 @@ void c_entry(u64 dtb, u64 load_base, u64 cur_el)
 	struct region def;
 
 	g.el = (u32)(cur_el >> 2) & 3;
+	g.entry_ticks = timer_ticks();
 	g.load_base = load_base;
 	g.image_size = (u64)(__image_end - __image_start);
 	g.dtb = dtb;
