@@ -79,7 +79,12 @@
 #define PLAT_UFS_VS		0x13201100ULL
 #define PLAT_UFS_UNIPRO		0x13280000ULL
 #define PLAT_UFS_PHY		0x13204000ULL		/* PMA: common at +0, lane n at +0x800 * n */
-#define PLAT_UFS_SCRATCH	0x900000000ULL		/* read-test buffer: free high-bank DRAM */
+#define PLAT_UFS_PMU_BASE	0x15460000ULL		/* PMU (zumapro.dtsi); writes go through EL3 */
+#define PLAT_UFS_PMU_ISO_OFF	0x3ec0			/* zuma-ufs.dtsi ufs-phy-iso: bit 0 = 1 bypass */
+#define PLAT_UFS_PMU_ISO	(PLAT_UFS_PMU_BASE + PLAT_UFS_PMU_ISO_OFF)
+#define PLAT_UFS_IOCC		0x13020710ULL		/* sysreg_ufs + ufs-iocc offset (read only) */
+#define PLAT_UFS_VCC_BANK	0x10840000ULL		/* GPIO_PERIC0 gpp0 (CON +0, DAT +4): "ufs-vcc" */
+#define PLAT_UFS_VCC_PIN	1
 
 /* Panel (s6e3hc3), for sanity-checking what the registers say. */
 #define PLAT_PANEL_W		1280

@@ -139,9 +139,16 @@ def fake_mmio():
     w32(0x300050, MMIO_BASE + 0x380000)       # UTRLBA
     w32(0x300060, 1)                          # UTRLRSR
     w32(0x300090, 0x17)                       # UICCMD: DME_HIBER_ENTER, as the Pixel's bootloader leaves it
+    w32(0x30110c, 0xb2)                       # vendor 1US_TO_CNT_VAL: 178 (caiman's bootloader)
+    w32(0x320044, 90)                         # UniPro period value the bootloader's CAL wrote
+    w32(0x313ec0, 1)                          # PMU ufs-phy-iso: bypassed
+    w32(0x319000, 0x10)                       # gpp0 CON: pin 1 output
+    w32(0x319004, 0)                          # gpp0 DAT: VCC off, as after "shutdown complete"
     w32(0x3011b0, 0x17)                       # vendor CLKSTOP_CTRL: internal clocks stopped (Hibern8)
     w32(0x3011b4, 0xde0)                      # vendor FORCE_HCS: CLK_STOP_CTRL_EN_ALL
     w32(0x323080, 2)                          # UniPro PA_AvailTxDataLanes (PLAT_UFS_UNIPRO on qemu)
+    w32(0x323184, 2)                          # PA_ConnectedTxDataLanes
+    w32(0x323204, 2)                          # PA_ConnectedRxDataLanes
     w32(0x304000, 0x51)                       # PHY common 0x000 after the CAL's post_h8_enter
     for lane in (0, 1):
         w32(0x304000 + 0x800 * lane + 0x9f4, 0x08)
@@ -393,19 +400,23 @@ SCENARIOS = {
         "ufs:   command UPIU @ 0x50381000: 00000001",
         "ufs:   PRDT @dw @ 0x50381220: 50390000 00000000 00000000 00000fff",
         "ufs: verdict: UP: the bootloader left the link running",
-        "--- ufs read test (READ(10) only, through the bootloader's request list) ---",
-        "ufs: last UIC command 0x17 (DME_HIBER_ENTER: the link is in Hibern8)",
-        "ufs: before wake: CLKSTOP_CTRL 0x00000017 FORCE_HCS 0x00000de0",
-        "ufs: clocks on: CLKSTOP_CTRL 0x00000000 FORCE_HCS 0x000009c0",
-        "ufs: UniPro: available tx lanes 2",
-        "ufs: PHY before: common 0x000=0x51  lane 0: 0x9f4=0x08 0xa00=0x3a 0xb64=0x33  lane 1: 0x9f4=0x08 0xa00=0x3a 0xb64=0x33",
-        "ufs: PHY after : common 0x000=0x11  lane 0: 0x9f4=0x00 0xa00=0x30 0xb64=0x22  lane 1: 0x9f4=0x00 0xa00=0x30 0xb64=0x22",
-        "ufs: sending DME_HIBER_EXIT",
-        # (fake registers are RAM: the write-1-to-clear of IS leaves the bits set, so the UIC
-        # command seems to complete; the request list still never does)
-        "ufs: DME_HIBER_EXIT: result 0",
-        "ufs: lun 0: read failed (-3)",
-        "ufs: no partition named super found",
+        "--- ufs cold start (the bootloader left the device powered down) ---",
+        "ufs: bootloader's timing: 1us = 178 UniPro clocks, UniPro period value 90",
+        "ufs: PHY isolation register (PMU) 0x00000001 (bypassed: PHY powered)",
+        "ufs: device VCC (gpp0-1): CON 0x00000010 (function 1) DAT 0x00000000: OFF",
+        "ufs: device VCC switched on: DAT 0x00000002",
+        "ufs: try 1",
+        # (fake registers are RAM: the software reset bit never clears, the UIC command seems to
+        # complete because IS keeps what is written, and the request list never runs)
+        "ufs:   host software reset did not finish",
+        "ufs:   host enabled: HCE 0x00000001",
+        "ufs:   pre_link: lane 1 PHY calibration NOT done (0xc74 = 0x00 after 100 polls)",
+        "ufs:   pre_link: 57 entries applied (mclk 178500000 Hz, period 6 ns, UniPro period 90, line reset 178500/571200 ticks)",
+        "ufs:   DME_LINKSTARTUP: answered, result 0 (0 = success)",
+        "ufs:   link up: connected lanes tx 2 rx 2",
+        "ufs:   post_link: 5 entries applied",
+        "ufs:   NOP OUT: FAILED after 5 tries",
+        "ufs: cold start failed after link start-up",
         "=== caiman-probe end ===",
     ],
     "paint": COMMON + EL2 + ["paint: colour bars into 0x58000000 (1280x2856, stride 5120)", "paint: done",

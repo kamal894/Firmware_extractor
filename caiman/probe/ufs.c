@@ -56,11 +56,8 @@
 #define VS_FORCE_HCS		0xb4	/* which clocks the hardware may stop */
 #define  MPHY_APBCLK_STOP_EN	(1u << 10)
 #define  UNIPRO_MCLK_STOP_EN	(1u << 5)
-#define VS_FSM_MONITOR		0xc0
 #define UNIP_PA_AVAILTXDATALANES	0x3080
-#define UNIP_PA_ACTIVETXDATALANES	0x3180
 #define UNIP_PA_CONNECTEDTXDATALANES	0x3184
-#define UNIP_PA_ACTIVERXDATALANES	0x3200
 #define UNIP_PA_CONNECTEDRXDATALANES	0x3204
 #define PMA_LANE		0x800	/* per-lane (TRSV) register stride */
 
@@ -114,17 +111,66 @@ static void dump_utrl(u64 utrl, u32 nutrs, u32 doorbell)
 
 #if PROBE_UFS >= 2
 /*
- * Our own READ(10)s through slot 0 of the request list the bootloader left running, in the layout
- * its own descriptors use (run 7): UTRD CT=1, DD=device-to-host, response UPIU at UCD+8 dwords
- * (16 dwords long), PRDT at UCD+24 dwords, 16-byte PRDT entries of 4 KiB. READ only: the opcode and
- * the data direction below are fixed.
+ * Run 10 settled it: the bootloader does not just park the link in Hibern8. Its last query
+ * (slot 0 above: READ ATTRIBUTE bCurrentPowerMode) answered 0x33, UFS-PowerDown: "shutdown
+ * complete" powers the device down, and no Hibern8 exit can bring that back (power mode status 5,
+ * PWR_FATAL_ERROR, even with the clocks and PHY prepared as Google's driver does).
+ *
+ * So this is a cold start, the way Linux's ufshcd core plus Google's Tensor driver
+ * (google-modules/soc/gs drivers/ufs/ufs-exynos.c, zuma CAL) do it at every boot:
+ *   board:  PHY isolation released (PMU), device VCC on (GPIO gpp0-1, the "ufs-vcc" regulator);
+ *   host:   HCE off, vendor software reset and set-up, device reset pin pulsed, HCE on;
+ *   link:   CAL pre_link table, DME_LINKSTARTUP, CAL post_link table (PWM-G1, both lanes);
+ *   lists:  our own transfer and task-management lists, run;
+ *   device: NOP OUT/IN, fDeviceInit set and waited for.
+ * After that, READ(10)s. The data path stays PWM-G1 (slow, a few MB/s at most): enough for the
+ * GPT and the LP metadata. Changing to HS gears is the next step. Everything is printed.
  */
+#include "ufs_cal_zuma.h"
+
+#define UTRIACR		0x4c
+#define UTMRLDBR	0x78
+#define IS_UTRCS	(1u << 0)
+#define IS_UE		(1u << 2)
+#define IS_ULSS		(1u << 8)
+#define UIC_LINK_STARTUP 0x16
+
+#define VS_TXPRDT		0x00
+#define VS_RXPRDT		0x04
+#define VS_1US_TO_CNT		0x0c
+#define VS_UTRL_NEXUS		0x40
+#define VS_UTMRL_NEXUS		0x44
+#define VS_SW_RST		0x50	/* UNIPRO_SW_RST 1, LINK_SW_RST 0 */
+#define VS_DATA_REORDER		0x60
+#define VS_AXIDMA_BURST		0x6c
+#define VS_GPIO_OUT		0x70	/* bit 0: the device's reset pin (RST_n) */
+#define VS_ERR_EN_DL		0x7c
+#define VS_ERR_EN_N		0x80
+#define VS_ERR_EN_T		0x84
+#define VS_V2P1_CTRL		0x8c
+#define  IA_TICK_SEL		(1u << 16)
+#define  CLK_STOP_CTRL_EN_ALL	0xde0
+#define  HCI_CORECLK_STOP_EN	(1u << 4)
+#define VS_IOP_ACG_DISABLE	0x100
+
+#define UNIP_AXI_AUX		0x040	/* PCS lane select for the next write */
+#define UNIP_DBG_PRD		0x044
+#define UNIP_PA_AVAILRXDATALANES 0x3100
+#define UNIP_PA_MAXRXHSGEAR	0x321c
+#define UNIP_DBG_SUITE1		0x39a8
+#define UNIP_DBG_SUITE2		0x39b4
+
 #define UFS_BLOCK	4096u
 #define UFS_MAX_BLOCKS	64u
 
+/* our own lists and one command descriptor (slot 0), in the image's BSS */
+static u8 utrl[32 * 32] __attribute__((aligned(1024)));
+static u8 utmrl[32 * 8] __attribute__((aligned(1024)));
 static u8 ucd[96 + 16 * UFS_MAX_BLOCKS] __attribute__((aligned(128)));
-static u64 utrl_slot0;
+/* data lands below 4 GiB: Google's driver gives this controller a 32-bit DMA mask */
+static u8 iobuf[UFS_MAX_BLOCKS * UFS_BLOCK] __attribute__((aligned(4096)));
 static u8 tag;
+static u32 mclk_hz, unipro_prd, lanes = 2;
 
 static void put_be32(u8 *p, u32 v)
 {
@@ -157,62 +203,11 @@ static u32 le32(const volatile u8 *p)
 	return p[0] | (u32)p[1] << 8 | (u32)p[2] << 16 | (u32)p[3] << 24;
 }
 
-/* Read nblocks (<= 64) 4 KiB blocks of a LUN into dst. 0 on success. */
-static int ufs_read(u32 lun, u32 lba, u32 nblocks, u64 dst)
+static u32 rd_or(u64 a, u32 dflt)
 {
-	const u64 hci = PLAT_UFS_HCI;
-	volatile u32 *utrd = (volatile u32 *)(uptr)utrl_slot0;
-	u64 ucd_pa = (u64)(uptr)ucd, start;
-	u32 i, len = nblocks * UFS_BLOCK, ocs, dbr;
+	u32 v;
 
-	if (!nblocks || nblocks > UFS_MAX_BLOCKS)
-		return -1;
-	if (rd32(hci + UTRLDBR) & 1)
-		return -2;		/* slot 0 busy */
-	memset(ucd, 0, sizeof(ucd));
-	ucd[0] = 0x01;			/* COMMAND UPIU */
-	ucd[1] = 0x40;			/* flags: R (read) */
-	ucd[2] = (u8)lun;
-	ucd[3] = ++tag;
-	put_be32(ucd + 12, len);	/* expected data transfer length */
-	ucd[16] = 0x28;			/* CDB: READ(10) */
-	put_be32(ucd + 18, lba);
-	ucd[23] = (u8)(nblocks >> 8);
-	ucd[24] = (u8)nblocks;
-	for (i = 0; i < nblocks; i++) {
-		u8 *e = ucd + 96 + 16 * i;
-		u64 a = dst + (u64)i * UFS_BLOCK;
-
-		put_le32(e, (u32)a);
-		put_le32(e + 4, (u32)(a >> 32));
-		put_le32(e + 12, UFS_BLOCK - 1);	/* data byte count - 1 */
-	}
-	utrd[0] = 0x15000000u;		/* CT=UFS storage, DD=device to host, I */
-	utrd[1] = 0;
-	utrd[2] = 0x0f;			/* OCS: invalid until the controller writes it */
-	utrd[3] = 0;
-	utrd[4] = (u32)ucd_pa;
-	utrd[5] = (u32)(ucd_pa >> 32);
-	utrd[6] = (8u << 16) | 16u;		/* response UPIU at dword 8, 16 dwords */
-	utrd[7] = (24u << 16) | nblocks;	/* PRDT at dword 24 */
-	dsb_sy();
-	wr32(hci + IS, 1);		/* clear UTRCS (write 1 to clear) */
-	wr32(hci + UTRLDBR, 1);		/* ring slot 0 */
-	start = timer_ticks();
-	do {
-		dbr = rd32(hci + UTRLDBR);
-		if (timer_ticks() - start > timer_freq()) {
-			wr32(hci + UTRLCLR, ~1u);	/* give slot 0 up */
-			return -3;
-		}
-	} while (dbr & 1);
-	ocs = utrd[2] & 0xff;
-	if (ocs || ucd[32] != 0x21 || ucd[32 + 5] || ucd[32 + 7]) {
-		pr("ufs:   read lun %u lba %u x%u: OCS 0x%02x, response UPIU %02x response %02x status %02x\n",
-		   lun, lba, nblocks, ocs, ucd[32], ucd[32 + 5], ucd[32 + 7]);
-		return -4;
-	}
-	return 0;
+	return rd(a, &v) ? v : dflt;
 }
 
 static int wait_is(u32 bits, u32 ms)
@@ -225,133 +220,454 @@ static int wait_is(u32 bits, u32 ms)
 	return 1;
 }
 
-static u32 rd_or(u64 a, u32 dflt)
+static int wait_reg(u64 a, u32 mask, u32 want, u32 ms)
 {
-	u32 v;
+	u64 start = timer_ticks(), limit = timer_freq() / 1000 * ms;
 
-	return rd(a, &v) ? v : dflt;
+	while ((rd32(a) & mask) != want)
+		if (timer_ticks() - start > limit)
+			return 0;
+	return 1;
 }
 
-static void pma_show(const char *when, u32 lanes)
-{
-	const u64 pma = PLAT_UFS_PHY;
-	u32 l;
+/* ---- the CAL table interpreter (zuma/ufs-cal-if.c ufs_cal_config_uic, PWM tables only) ---- */
 
-	pr("ufs: PHY %s: common 0x000=0x%02x", when, rd_or(pma, 0xdead));
-	for (l = 0; l < lanes; l++)
-		pr("  lane %u: 0x9f4=0x%02x 0xa00=0x%02x 0xb64=0x%02x", l, rd_or(pma + l * PMA_LANE + 0x9f4, 0xdead),
-		   rd_or(pma + l * PMA_LANE + 0xa00, 0xdead), rd_or(pma + l * PMA_LANE + 0xb64, 0xdead));
-	pr("\n");
+static void pcs_write(u32 lane_sel, u32 off, u32 v)
+{
+	const u64 unipro = PLAT_UFS_UNIPRO;
+
+	wr32(unipro + UNIP_AXI_AUX, 0x0f000000u | lane_sel);
+	wr32(unipro + off, v);
+	wr32(unipro + UNIP_AXI_AUX, 0x0f000000u);
 }
 
-/*
- * Run 9: DME_HIBER_EXIT alone came back with power mode status 5 (PWR_FATAL_ERROR). On Tensor the
- * Hibern8 entry is followed by the vendor steps of Google's exynos_ufs_hibern8_notify(): the CAL
- * table post_h8_enter (PHY common 0x000 = 0x51, ...) and the controller's internal clocks stopped.
- * Before an exit the same driver undoes both: exynos_ufs_gate_clk(false), then, inside
- * ufs_call_cal() (PHY APB and UniPro clocks forced on), the zuma table pre_h8_exit. This is that
- * sequence, with every value printed before and after.
- */
-static void hibern8_exit_prepare(void)
+static void pcs_write_lr(u32 lane_sel, u32 off, u32 ticks)
 {
-	const u64 vs = PLAT_UFS_VS, pma = PLAT_UFS_PHY;
-	u32 clkstop, force, lanes, l;
+	pcs_write(lane_sel, off, (ticks >> 16) & 0xff);
+	pcs_write(lane_sel, off + 4, (ticks >> 8) & 0xff);
+	pcs_write(lane_sel, off + 8, ticks & 0xff);
+}
 
-	if (!rd(vs + VS_CLKSTOP_CTRL, &clkstop) || !rd(vs + VS_FORCE_HCS, &force)) {
-		pr("ufs: vendor clock registers not readable; skipping the Tensor wake steps\n");
-		return;
+static int cal_apply(const char *name, const struct cal_cfg *c)
+{
+	const u64 vs = PLAT_UFS_VS, unipro = PLAT_UFS_UNIPRO, pma = PLAT_UFS_PHY;
+	u32 rnd = (1000000000u + mclk_hz / 2) / mclk_hz, n = 0, bad = 0, l, v;
+	u64 rx_lr = (u64)mclk_hz * 1000 / 1000000, tx_lr = (u64)mclk_hz * 3200 / 1000000;
+
+	/* ufs_call_cal(): PHY APB and UniPro clocks forced on around a table */
+	wr32(vs + VS_FORCE_HCS, rd32(vs + VS_FORCE_HCS) & ~(UNIPRO_MCLK_STOP_EN | MPHY_APBCLK_STOP_EN));
+	dsb_sy();
+	for (; c->lyr != CAL_END; c++, n++) {
+		switch (c->lyr) {
+		case CAL_PCS_COMN:
+		case CAL_UNIPRO:
+			wr32(unipro + c->addr, c->val);
+			break;
+		case CAL_UNIPRO_PRD:
+			wr32(unipro + c->addr, unipro_prd);
+			break;
+		case CAL_UNIPRO_ADAPT:
+			v = rd32(unipro + c->addr);
+			if (v & 0x80) {
+				if ((v & 0x7f) < 2)
+					wr32(unipro + c->addr, 0x82);
+			} else if ((v + 1) % 4) {
+				while ((v + 1) % 4)
+					v++;
+				wr32(unipro + c->addr, v);
+			}
+			break;
+		case CAL_PMA_COMN:
+			wr32(pma + c->addr, c->val);
+			break;
+		default:
+			for (l = 0; l < lanes; l++) {
+				switch (c->lyr) {
+				case CAL_PCS_RX:
+					pcs_write(4 + l, c->addr, c->val);
+					break;
+				case CAL_PCS_TX:
+					pcs_write(l, c->addr, c->val);
+					break;
+				case CAL_PCS_RX_RND:
+					pcs_write(4 + l, c->addr, rnd);
+					break;
+				case CAL_PCS_TX_RND:
+					pcs_write(l, c->addr, rnd);
+					break;
+				case CAL_PCS_RX_LR:
+					pcs_write_lr(4 + l, c->addr, (u32)rx_lr);
+					break;
+				case CAL_PCS_TX_LR:
+					pcs_write_lr(l, c->addr, (u32)tx_lr);
+					break;
+				case CAL_PMA_TRSV:
+					wr32(pma + l * PMA_LANE + c->addr, c->val);
+					break;
+				case CAL_EMB_CAL_WAIT: {
+					u32 i;
+
+					for (i = 0; i < 100; i++) {
+						delay_us(40);
+						v = rd32(pma + l * PMA_LANE + c->addr);
+						if ((v & c->val) == c->val)
+							break;
+					}
+					pr("ufs:   %s: lane %u PHY calibration %s (0x%03x = 0x%02x after %u polls)\n",
+					   name, l, i < 100 ? "done" : "NOT done", c->addr, v, i < 100 ? i + 1 : 100);
+					bad += i >= 100;
+					break;
+				}
+				}
+			}
+		}
 	}
-	pr("ufs: before wake: CLKSTOP_CTRL 0x%08x FORCE_HCS 0x%08x FSM 0x%08x\n", clkstop, force,
-	   rd_or(vs + VS_FSM_MONITOR, 0xdead));
-	wr32(vs + VS_CLKSTOP_CTRL, clkstop & ~CLK_STOP_ALL);	/* internal clocks on */
-	wr32(vs + VS_FORCE_HCS, force & ~(UNIPRO_MCLK_STOP_EN | MPHY_APBCLK_STOP_EN));
+	wr32(vs + VS_FORCE_HCS, rd32(vs + VS_FORCE_HCS) | MPHY_APBCLK_STOP_EN);
 	dsb_sy();
-	delay_us(10);
-	pr("ufs: clocks on: CLKSTOP_CTRL 0x%08x FORCE_HCS 0x%08x\n", rd32(vs + VS_CLKSTOP_CTRL),
-	   rd32(vs + VS_FORCE_HCS));
-	log_flush();
-	lanes = rd_or(PLAT_UFS_UNIPRO + UNIP_PA_AVAILTXDATALANES, 0);
-	pr("ufs: UniPro: available tx lanes %u, connected tx %u rx %u\n", lanes,
-	   rd_or(PLAT_UFS_UNIPRO + UNIP_PA_CONNECTEDTXDATALANES, 0xdead),
-	   rd_or(PLAT_UFS_UNIPRO + UNIP_PA_CONNECTEDRXDATALANES, 0xdead));
-	if (lanes < 1 || lanes > 2)
-		lanes = 2;		/* zuma-ufs.dtsi: ufs,pmd-attr-lane = 2 */
-	pma_show("before", lanes);
-	log_flush();
-	/* zuma/ufs-cal.h pre_h8_exit[], entry by entry, each TRSV entry on every lane */
-	wr32(pma + 0x000, 0x11);
-	delay_us(10);
-	for (l = 0; l < lanes; l++)
-		wr32(pma + l * PMA_LANE + 0x9f4, 0x00);
-	for (l = 0; l < lanes; l++)
-		wr32(pma + l * PMA_LANE + 0xa00, 0x30);
-	for (l = 0; l < lanes; l++)
-		wr32(pma + l * PMA_LANE + 0xb64, 0x32);
-	for (l = 0; l < lanes; l++)
-		wr32(pma + l * PMA_LANE + 0xb64, 0x22);
-	dsb_sy();
-	pma_show("after ", lanes);
-	wr32(vs + VS_FORCE_HCS, rd32(vs + VS_FORCE_HCS) | MPHY_APBCLK_STOP_EN);	/* as ufs_call_cal() */
-	dsb_sy();
+	pr("ufs:   %s: %u entries applied (mclk %u Hz, period %u ns, UniPro period %u, line reset %llu/%llu"
+	   " ticks)\n", name, n, mclk_hz, rnd, unipro_prd, rx_lr, tx_lr);
+	return bad ? -1 : 0;
 }
 
-/*
- * Run 8: every READ timed out. Run 7's register dump says why: UICCMD (0x90) held 0x17,
- * DME_HIBER_ENTER, the bootloader's last act before "shutdown complete". The link is in Hibern8
- * and requests wait for ever. DME_HIBER_EXIT wakes it: a link power-state change, no data.
- */
-static int hibern8_exit(void)
+/* ---- host and link ---- */
+
+static int uic_cmd(u32 cmd, u32 arg1, u32 arg2, u32 arg3, u32 ms, u32 *result)
 {
 	const u64 hci = PLAT_UFS_HCI;
-	u32 hcs = rd32(hci + HCS), cmd = rd32(hci + UICCMD) & 0xff, arg2, is;
 
-	pr("ufs: last UIC command 0x%02x%s, HCS 0x%08x\n", cmd,
-	   cmd == UIC_HIBER_ENTER ? " (DME_HIBER_ENTER: the link is in Hibern8)" : "", hcs);
-	if (cmd != UIC_HIBER_ENTER)
-		return 0;
-	if (!(hcs & 8)) {
-		pr("ufs: UIC command interface not ready; not sending DME_HIBER_EXIT\n");
+	if (!wait_reg(hci + HCS, 8, 8, 100)) {
+		pr("ufs:   UIC command 0x%02x: interface not ready (HCS 0x%08x)\n", cmd, rd32(hci + HCS));
 		return -1;
 	}
-	hibern8_exit_prepare();
-	wr32(hci + IS, IS_UCCS | IS_UHXS | IS_UHES | IS_UPMS);
-	wr32(hci + UCMDARG1, 0);
-	wr32(hci + UCMDARG2, 0);
-	wr32(hci + UCMDARG3, 0);
-	pr("ufs: sending DME_HIBER_EXIT\n");
-	log_flush();
-	wr32(hci + UICCMD, UIC_HIBER_EXIT);
-	if (!wait_is(IS_UCCS, 500)) {
-		pr("ufs: DME_HIBER_EXIT: no completion in 500 ms (IS 0x%08x)\n", rd32(hci + IS));
+	wr32(hci + IS, IS_UCCS);
+	wr32(hci + UCMDARG1, arg1);
+	wr32(hci + UCMDARG2, arg2);
+	wr32(hci + UCMDARG3, arg3);
+	wr32(hci + UICCMD, cmd);
+	if (!wait_is(IS_UCCS, ms)) {
+		pr("ufs:   UIC command 0x%02x: no completion in %u ms (IS 0x%08x)\n", cmd, ms, rd32(hci + IS));
 		return -2;
 	}
-	arg2 = rd32(hci + UCMDARG2);
-	wait_is(IS_UHXS, 500);
-	is = rd32(hci + IS);
-	hcs = rd32(hci + HCS);
-	pr("ufs: DME_HIBER_EXIT: result %u (0 = success), IS 0x%08x (exit status %s), HCS 0x%08x "
-	   "(power mode status %u, 1 = done)\n", arg2 & 0xff, is, (is & IS_UHXS) ? "set" : "NOT set",
-	   hcs, (hcs >> 8) & 7);
-	pr("ufs: after exit: UniPro active tx %u rx %u lanes, FSM 0x%08x\n",
-	   rd_or(PLAT_UFS_UNIPRO + UNIP_PA_ACTIVETXDATALANES, 0xdead),
-	   rd_or(PLAT_UFS_UNIPRO + UNIP_PA_ACTIVERXDATALANES, 0xdead), rd_or(PLAT_UFS_VS + VS_FSM_MONITOR, 0xdead));
-	wr32(hci + IS, IS_UCCS | IS_UHXS | IS_UPMS);
-	return (arg2 & 0xff) == 0 && (is & IS_UHXS) && ((hcs >> 8) & 7) == 1 ? 0 : -3;
+	*result = rd32(hci + UCMDARG2) & 0xff;
+	wr32(hci + IS, IS_UCCS);
+	return 0;
+}
+
+/* ufshcd_hba_enable() with exynos_ufs_hce_enable_notify() around it */
+static int hba_enable(u32 cnt_1us)
+{
+	const u64 hci = PLAT_UFS_HCI, vs = PLAT_UFS_VS, unipro = PLAT_UFS_UNIPRO;
+
+	wr32(hci + HCE, 0);
+	if (!wait_reg(hci + HCE, 1, 0, 10))
+		pr("ufs:   HCE did not read 0 after disabling\n");
+	/* PRE_CHANGE: exynos_ufs_init_host() */
+	wr32(vs + VS_SW_RST, 3);
+	if (!wait_reg(vs + VS_SW_RST, 3, 0, 10))
+		pr("ufs:   host software reset did not finish (SW_RST 0x%08x); going on\n", rd32(vs + VS_SW_RST));
+	wr32(vs + VS_FORCE_HCS, rd32(vs + VS_FORCE_HCS) & ~HCI_CORECLK_STOP_EN);
+	wr32(vs + VS_V2P1_CTRL, rd32(vs + VS_V2P1_CTRL) | IA_TICK_SEL);
+	wr32(vs + VS_1US_TO_CNT, cnt_1us & 0x3ff);
+	wr32(vs + VS_DATA_REORDER, 0xa);
+	wr32(vs + VS_TXPRDT, (1u << 31) | 12);		/* PRDT prefetch, 4 KiB per entry */
+	wr32(vs + VS_RXPRDT, 12);
+	wr32(vs + VS_UTRL_NEXUS, 0xffffffffu);
+	wr32(vs + VS_UTMRL_NEXUS, 0xffffffffu);
+	wr32(vs + VS_AXIDMA_BURST, (1u << 31) | (3u << 27) | 3u);
+	wr32(vs + VS_IOP_ACG_DISABLE, rd32(vs + VS_IOP_ACG_DISABLE) & ~1u);
+	wr32(unipro + UNIP_DBG_SUITE1, 0x90913c1c);
+	wr32(unipro + UNIP_DBG_SUITE2, 0xe01c115f);
+	/* exynos_ufs_dev_hw_reset() */
+	wr32(vs + VS_GPIO_OUT, 0);
+	delay_us(5);
+	wr32(vs + VS_GPIO_OUT, 1);
+	delay_us(2000);
+	dsb_sy();
+	wr32(hci + HCE, 1);
+	if (!wait_reg(hci + HCE, 1, 1, 50)) {
+		pr("ufs:   HCE did not read 1 after enabling\n");
+		return -1;
+	}
+	/* POST_CHANGE */
+	wr32(vs + VS_FORCE_HCS, rd32(vs + VS_FORCE_HCS) | CLK_STOP_CTRL_EN_ALL);
+	wr32(vs + VS_CLKSTOP_CTRL, rd32(vs + VS_CLKSTOP_CTRL) & ~CLK_STOP_ALL);
+	dsb_sy();
+	pr("ufs:   host enabled: HCE 0x%08x HCS 0x%08x FORCE_HCS 0x%08x CLKSTOP 0x%08x, lanes tx %u rx %u\n",
+	   rd32(hci + HCE), rd32(hci + HCS), rd32(vs + VS_FORCE_HCS), rd32(vs + VS_CLKSTOP_CTRL),
+	   rd32(unipro + UNIP_PA_AVAILTXDATALANES), rd32(unipro + UNIP_PA_AVAILRXDATALANES));
+	return 0;
+}
+
+static int link_startup(void)
+{
+	const u64 hci = PLAT_UFS_HCI, vs = PLAT_UFS_VS, unipro = PLAT_UFS_UNIPRO;
+	u32 res = 0xff;
+	int r;
+
+	wr32(vs + VS_ERR_EN_DL, (1u << 31) | 0x2020);
+	wr32(vs + VS_ERR_EN_N, (1u << 31) | 0x7);
+	wr32(vs + VS_ERR_EN_T, (1u << 31) | 0x17);
+	wr32(unipro + UNIP_DBG_SUITE1, 0x90913c1c);
+	wr32(unipro + UNIP_DBG_SUITE2, 0xe01c115f);
+	cal_apply("pre_link", cal_pre_link);
+	log_flush();
+	r = uic_cmd(UIC_LINK_STARTUP, 0, 0, 0, 1000, &res);
+	pr("ufs:   DME_LINKSTARTUP: %s, result %u (0 = success), IS 0x%08x HCS 0x%08x (device %s)\n",
+	   r ? "no answer" : "answered", res, rd32(hci + IS), rd32(hci + HCS),
+	   (rd32(hci + HCS) & 1) ? "present" : "NOT present");
+	if (r || res || !(rd32(hci + HCS) & 1)) {
+		pr("ufs:   UIC errors: PA 0x%08x DL 0x%08x N 0x%08x T 0x%08x DME 0x%08x\n", rd32(hci + 0x38),
+		   rd32(hci + 0x3c), rd32(hci + 0x40), rd32(hci + 0x44), rd32(hci + 0x48));
+		return -1;
+	}
+	pr("ufs:   link up: connected lanes tx %u rx %u, max HS gear %u\n",
+	   rd32(unipro + UNIP_PA_CONNECTEDTXDATALANES), rd32(unipro + UNIP_PA_CONNECTEDRXDATALANES),
+	   rd32(unipro + UNIP_PA_MAXRXHSGEAR));
+	cal_apply("post_link", cal_post_link);
+	(void)rd32(hci + 0x38);		/* reading UECPA clears it */
+	return 0;
+}
+
+static int lists_run(void)
+{
+	const u64 hci = PLAT_UFS_HCI;
+	u64 a = (u64)(uptr)utrl, b = (u64)(uptr)utmrl;
+
+	memset(utrl, 0, sizeof(utrl));
+	memset(utmrl, 0, sizeof(utmrl));
+	wr32(hci + IE, 0);			/* polled */
+	wr32(hci + UTRLBA, (u32)a);
+	wr32(hci + UTRLBAU, (u32)(a >> 32));
+	wr32(hci + UTMRLBA, (u32)b);
+	wr32(hci + UTMRLBAU, (u32)(b >> 32));
+	dsb_sy();
+	if ((rd32(hci + HCS) & 0xe) != 0xe) {
+		pr("ufs:   lists not ready (HCS 0x%08x)\n", rd32(hci + HCS));
+		return -1;
+	}
+	wr32(hci + UTMRLRSR, 1);
+	wr32(hci + UTRLRSR, 1);
+	pr("ufs:   lists at 0x%llx / 0x%llx running (UTRLRSR %u UTMRLRSR %u)\n", a, b, rd32(hci + UTRLRSR),
+	   rd32(hci + UTMRLRSR));
+	return 0;
+}
+
+/*
+ * One request through slot 0: ucd[0..31] holds the request UPIU, the response lands at ucd[32..95],
+ * data (reads only) through the PRDT at ucd[96..]. dd: 0 none, 2 device to host. 0 on success.
+ */
+static int request(u32 dd, u32 nblocks, u32 ms)
+{
+	const u64 hci = PLAT_UFS_HCI;
+	volatile u32 *utrd = (volatile u32 *)(uptr)utrl;
+	u64 ucd_pa = (u64)(uptr)ucd, start;
+
+	if (rd32(hci + UTRLDBR) & 1)
+		return -2;
+	utrd[0] = 0x11000000u | (dd << 25);	/* CT = UFS storage, interrupt, data direction */
+	utrd[1] = 0;
+	utrd[2] = 0x0f;				/* OCS: invalid until the controller writes it */
+	utrd[3] = 0;
+	utrd[4] = (u32)ucd_pa;
+	utrd[5] = (u32)(ucd_pa >> 32);
+	utrd[6] = (8u << 16) | 16u;		/* response UPIU at dword 8, 16 dwords */
+	utrd[7] = (24u << 16) | nblocks;	/* PRDT at dword 24 */
+	dsb_sy();
+	wr32(hci + IS, IS_UTRCS);
+	wr32(hci + UTRLDBR, 1);
+	start = timer_ticks();
+	while (rd32(hci + UTRLDBR) & 1) {
+		if (timer_ticks() - start > timer_freq() / 1000 * ms) {
+			wr32(hci + UTRLCLR, ~1u);	/* give slot 0 up */
+			return -3;
+		}
+	}
+	return (utrd[2] & 0xff) ? -4 : 0;
+}
+
+static void upiu_header(u8 type, u8 flags, u8 lun)
+{
+	memset(ucd, 0, 96);
+	ucd[0] = type;
+	ucd[1] = flags;
+	ucd[2] = lun;
+	ucd[3] = ++tag;
+}
+
+static int nop_out(void)
+{
+	int i, r = -1;
+
+	for (i = 0; i < 5 && r; i++) {
+		upiu_header(0x00, 0, 0);	/* NOP OUT */
+		r = request(0, 0, 50);
+		if (!r && ucd[32] != 0x20)
+			r = -5;
+	}
+	pr("ufs:   NOP OUT: %s after %d tries (answer 0x%02x, OCS 0x%02x)\n", r ? "FAILED" : "NOP IN", i,
+	   ucd[32], ((volatile u32 *)(uptr)utrl)[2] & 0xff);
+	return r;
+}
+
+/* Query: flag fDeviceInit (IDN 1). fn 0x81 write / 0x01 read, op 6 SET FLAG / 5 READ FLAG */
+static int query_flag(u8 fn, u8 op, u8 idn, u32 *val)
+{
+	int r;
+
+	upiu_header(0x16, 0, 0);
+	ucd[5] = fn;
+	ucd[12] = op;
+	ucd[13] = idn;
+	r = request(0, 0, 100);
+	if (r)
+		return r;
+	if (ucd[32] != 0x36 || ucd[32 + 6])
+		return -6;
+	*val = ucd[32 + 23] & 1;
+	return 0;
+}
+
+static int device_init(void)
+{
+	u64 start;
+	u32 v = 1;
+	int r;
+
+	r = query_flag(0x81, 0x06, 0x01, &v);
+	pr("ufs:   SET FLAG fDeviceInit: %s (%d)\n", r ? "FAILED" : "accepted", r);
+	if (r)
+		return r;
+	start = timer_ticks();
+	do {
+		r = query_flag(0x01, 0x05, 0x01, &v);
+		if (timer_ticks() - start > timer_freq() * 2)
+			break;
+	} while (!r && v);
+	pr("ufs:   fDeviceInit reads %u after %llu ms (%s)\n", v,
+	   (timer_ticks() - start) * 1000 / timer_freq(), !r && !v ? "device ready" : "NOT ready");
+	return !r && !v ? 0 : -1;
+}
+
+/* READ(10) of nblocks (<= 64) 4 KiB blocks into dst. Retries a UNIT ATTENTION (first command after reset). */
+static int ufs_read(u32 lun, u32 lba, u32 nblocks, u64 dst)
+{
+	u32 i, len = nblocks * UFS_BLOCK;
+	int r = -1, tries;
+
+	if (!nblocks || nblocks > UFS_MAX_BLOCKS)
+		return -1;
+	for (tries = 0; tries < 3; tries++) {
+		upiu_header(0x01, 0x40, (u8)lun);	/* COMMAND, R */
+		put_be32(ucd + 12, len);
+		ucd[16] = 0x28;				/* READ(10) */
+		put_be32(ucd + 18, lba);
+		ucd[23] = (u8)(nblocks >> 8);
+		ucd[24] = (u8)nblocks;
+		for (i = 0; i < nblocks; i++) {
+			u8 *e = ucd + 96 + 16 * i;
+			u64 a = dst + (u64)i * UFS_BLOCK;
+
+			put_le32(e, (u32)a);
+			put_le32(e + 4, (u32)(a >> 32));
+			put_le32(e + 8, 0);
+			put_le32(e + 12, UFS_BLOCK - 1);
+		}
+		r = request(2, nblocks, 2000);
+		if (r)
+			return r;
+		if (ucd[32] == 0x21 && !ucd[32 + 5] && !ucd[32 + 7])
+			return 0;
+		pr("ufs:   read lun %u lba %u x%u: response UPIU 0x%02x response 0x%02x status 0x%02x%s\n", lun,
+		   lba, nblocks, ucd[32], ucd[32 + 5], ucd[32 + 7],
+		   ucd[32 + 7] == 0x02 ? " (CHECK CONDITION: retrying)" : "");
+		if (ucd[32 + 7] != 0x02)
+			return -4;
+	}
+	return -4;
+}
+
+/* PHY isolation (PMU, Google's exynos_ufs_ctrl_phy_pwr) and the device's VCC (gpp0-1) */
+static void board_power(void)
+{
+	u32 iso, con, dat, field;
+	int ok;
+
+	iso = safe_rd32(PLAT_UFS_PMU_ISO, &ok);
+	pr("ufs: PHY isolation register (PMU) 0x%08x%s\n", iso,
+	   !ok ? " (read aborted)" : (iso & 1) ? " (bypassed: PHY powered)" : " (ISOLATED)");
+	if (ok && !(iso & 1)) {
+		/* EL3 owns PMU writes: the atomic set-bit alias (offset | 0xc000), value = bit number */
+		s64 r = psci_call(0x82000504u, PLAT_UFS_PMU_BASE + (PLAT_UFS_PMU_ISO_OFF | 0xc000), 1, 0);
+
+		pr("ufs: PHY isolation bypass via SMC: returned %lld, register now 0x%08x\n", r,
+		   rd_or(PLAT_UFS_PMU_ISO, 0xdead));
+	}
+	con = safe_rd32(PLAT_UFS_VCC_BANK, &ok);
+	dat = ok ? rd_or(PLAT_UFS_VCC_BANK + 4, 0) : 0;
+	field = (con >> (4 * PLAT_UFS_VCC_PIN)) & 0xf;
+	pr("ufs: device VCC (gpp0-%u): CON 0x%08x (function %u) DAT 0x%08x: %s\n", PLAT_UFS_VCC_PIN, con, field,
+	   dat, !ok ? "not readable" : field != 1 ? "pin is not an output; left alone"
+	   : (dat >> PLAT_UFS_VCC_PIN) & 1 ? "ON" : "OFF");
+	if (ok && field == 1 && !((dat >> PLAT_UFS_VCC_PIN) & 1)) {
+		wr32(PLAT_UFS_VCC_BANK + 4, dat | (1u << PLAT_UFS_VCC_PIN));
+		delay_us(10000);
+		pr("ufs: device VCC switched on: DAT 0x%08x\n", rd32(PLAT_UFS_VCC_BANK + 4));
+	}
+}
+
+static int ufs_cold_start(void)
+{
+	const u64 vs = PLAT_UFS_VS;
+	u32 cnt_1us = rd_or(vs + VS_1US_TO_CNT, 0) & 0x3ff;
+	int tries;
+
+	pr("\n--- ufs cold start (the bootloader left the device powered down) ---\n");
+	unipro_prd = rd_or(PLAT_UFS_UNIPRO + UNIP_DBG_PRD, 0);
+	if (cnt_1us < 50 || cnt_1us > 500)
+		cnt_1us = 178;			/* the bootloader's value on caiman */
+	mclk_hz = cnt_1us * 1000000u + 500000u;
+	if (unipro_prd < 30 || unipro_prd > 300)
+		unipro_prd = (u32)(16000000000ULL / mclk_hz);
+	pr("ufs: bootloader's timing: 1us = %u UniPro clocks, UniPro period value %u; IOCC 0x%08x"
+	   " GPIO_OUT 0x%08x\n", cnt_1us, unipro_prd, rd_or(PLAT_UFS_IOCC, 0xdead), rd_or(vs + VS_GPIO_OUT, 0xdead));
+	board_power();
+	log_flush();
+	for (tries = 1; tries <= 3; tries++) {
+		wdt_kick();
+		pr("ufs: try %d\n", tries);
+		if (hba_enable(cnt_1us))
+			continue;
+		lanes = rd32(PLAT_UFS_UNIPRO + UNIP_PA_AVAILTXDATALANES);
+		if (lanes < 1 || lanes > 2)
+			lanes = 2;
+		if (!link_startup())
+			break;
+		log_flush();
+	}
+	if (tries > 3) {
+		pr("ufs: cold start failed at: link start-up\n");
+		return -1;
+	}
+	if (lists_run() || nop_out() || device_init()) {
+		pr("ufs: cold start failed after link start-up\n");
+		return -1;
+	}
+	pr("ufs: cold start done: the device answers (PWM-G1)\n");
+	return 0;
 }
 
 /* The GPT of each LUN, and in super the LP (dynamic partitions) metadata header. */
-static void ufs_read_test(u64 utrl)
+static void ufs_read_test(void)
 {
-	const u64 buf = PLAT_UFS_SCRATCH;
+	const u64 buf = (u64)(uptr)iobuf;
 	const volatile u8 *b = (const volatile u8 *)(uptr)buf;
 	u32 lun, super_lun = 0xff;
 	u64 super_lba = 0, super_blocks = 0;
 
-	utrl_slot0 = utrl;
-	pr("\n--- ufs read test (READ(10) only, through the bootloader's request list) ---\n");
+	if (ufs_cold_start())
+		return;
+	pr("\n--- ufs read test (READ(10) only) ---\n");
 	log_flush();
-	if (hibern8_exit())
-		pr("ufs: the link did not leave Hibern8; reads will likely time out\n");
 	for (lun = 0; lun < 4; lun++) {
 		u64 entries_lba;
 		u32 n, esz, i, blocks;
@@ -480,8 +796,7 @@ void ufs_probe(void)
 	   : (hce & 1) ? "enabled but not all lists ready: needs (re)starting the lists"
 		       : "OFF: a loader must bring the controller and the link up itself");
 #if PROBE_UFS >= 2
-	if ((hce & 1) && (hcs & 0xf) == 0xf && (rsr & 1) && utrl)
-		ufs_read_test(utrl);
+	ufs_read_test();
 #endif
 }
 

@@ -96,3 +96,31 @@ zuma's DT has `fixed-prdt-req_list-ocs`, so the PRDT, UTRLCLR and OCS behave as 
 says (no Exynos byte-granularity quirk), which matches the bootloader's own descriptors.
 
 The next `probe-boot-ufs.img` does steps 1-3, printing every register before and after.
+
+### Run 10: the device is powered down, not just asleep
+
+With the clocks and the PHY prepared exactly as Google's driver does before an exit, DME_HIBER_EXIT
+still ended in power mode status 5. The registers showed why the preparation changed nothing: the
+bootloader had not stopped the clocks (`CLKSTOP_CTRL` 0) nor applied `post_h8_enter` (PHY common
+0x000 was already 0x11). The answer is in run 7's dump: the bootloader's last request (slot 0) was a
+QUERY READ ATTRIBUTE of `bCurrentPowerMode` (IDN 0x02), and the device answered 0x33,
+**UFS-PowerDown**. "shutdown complete" means the device was powered down; the link cannot just be
+woken.
+
+### Step 2: a cold start (`probe-boot-ufs.img`, PROBE_UFS=2, from commit after 225d5cd)
+
+What Linux's ufshcd core and Google's Tensor driver do at every boot, in `probe/ufs.c`:
+
+1. board: PHY isolation (PMU 0x15460000 + 0x3EC0, bit 0 = bypass; written only through EL3's
+   SMC 0x82000504 if it reads isolated), device VCC (`ufs-vcc` = GPIO gpp0-1, 0x10840000 CON/DAT;
+   switched on only if the pin is an output and low);
+2. host: HCE off, vendor software reset (`HCI_SW_RST`), Google's `exynos_ufs_config_host` values,
+   device reset pin (`HCI_GPIO_OUT`) pulsed, HCE on, clock-stop control as in `hce_enable_notify`;
+3. link: zuma CAL `init_cfg` table (58 PHY/PCS/UniPro writes, `probe/ufs_cal_zuma.h`, GPL-2.0),
+   DME_LINKSTARTUP (3 tries), `post_init_cfg`;
+4. our own transfer/task lists (in the image, below 4 GiB: Google gives this controller a 32-bit
+   DMA mask), NOP OUT/IN, fDeviceInit;
+5. READ(10)s at PWM-G1: the GPTs, `super`, the LP geometry and metadata header.
+
+The timing values (`1US_TO_CNT` = 178, so mclk ≈ 178.5 MHz, and the UniPro period value) are read
+from what the bootloader programmed, before the reset clears them.

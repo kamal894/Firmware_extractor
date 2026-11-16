@@ -23,3 +23,9 @@ device tree is a placeholder (no Apple data).
 
 The loader's XNU path (probe/xnu.c, probe/watcher.c, probe/handoff.S) follows HackiOS's
 mtkloader (hakios-mt6768) and xnuloader (hackios-xnu-kernel), MIT, (c) the HakiOS developers.
+
+probe-boot-ufs.img (built with PROBE_UFS=2) contains probe/ufs_cal_zuma.h: UFS PHY/UniPro
+calibration values transcribed from Google's google-modules/soc/gs drivers/ufs/zuma/ufs-cal.h
+(Copyright 2022 Samsung Electronics Co., Ltd., GPL-2.0-only). That image is therefore
+distributed under GPL-2.0-only as a whole; its complete source is this repository's probe/
+directory at the commit it was built from. All other images here do not contain that file.
