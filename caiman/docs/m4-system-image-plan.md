@@ -229,3 +229,32 @@ and the other non-CJK scripts stay. zlib is already at level 9 in `mkapfs.py`; t
 
 Next: `xnusys` in super (fastbootd's `create-logical-partition`, then `flash`), which changes the
 phone's storage and waits for the owner's go-ahead; then the loader reads it with `lp_find()`.
+
+### The emulator: the trimmed image boots (2026-11-16)
+
+Before touching the phone, the trimmed `system.apfs` ran under HackiOS's QEMU target
+(`qemu/run-darwin.sh`; on macOS: `brew install qemu`, `QEMU_EFI=/opt/homebrew/share/qemu/edk2-aarch64-code.fd`,
+`QEMU_VARS=.../edk2-arm-vars.fd`, GNU `timeout`/`cp`/`realpath`/`stat` first in PATH, the loader built
+with `xnuloader/build.sh` from the IPSW's device tree, and `qemu/ram.img` made with a plain sparse
+write since macOS has no `copy_file_range`). Apple logo at 30 s, **home screen at 2 min**: Calendar,
+Photos, Notes, Reminders, Clock, Settings, the dock; 22 Darwin services up, SpringBoard included.
+
+### Step 4: `xnusys` on the phone
+
+```
+fastboot reboot fastboot
+fastboot create-logical-partition xnusys 1924599808     # OKAY; partition-size 0x72B71000
+fastboot flash xnusys system.apfs                       # 8 sparse chunks, 48 s
+```
+
+`lpdump` before and after differ only by the new partition (group `default`, `0 .. 3758983 linear
+super 12877824`); Android's six are untouched and Android boots as before. Remove it before an OTA:
+`fastboot delete-logical-partition xnusys`.
+
+The probe then finds it as the loader will (`lp_find(..., "xnusys")`: lun 0 lba 1976806, 469873
+blocks), sees `NXSB` at byte 32 of block 0, and reads all of it in HS-G4: **CRC-32 0xf8c911e0, the
+same as `zlib.crc32` of the file on the Mac**. (494 s, because the CRC runs over uncached memory;
+the read alone is ~82 s.) That run also found that `wdt_kick()` did nothing during the UFS probe:
+`wdt_report()`, which arms it, ran after `ufs_probe()`. It runs first now.
+
+Next: the loader (`LOADER=1`) reads `xnusys` into XNU's window and hands it over as the RAM disk.

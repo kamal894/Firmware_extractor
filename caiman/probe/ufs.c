@@ -1013,6 +1013,40 @@ static int lp_find(u32 lun, u64 super_lba, u64 super_blocks, const char *want, s
 	return 0;
 }
 
+/*
+ * Read every block of the partition (the loader's path into RAM) and print its CRC-32 (zlib's: the
+ * ARMv8 CRC32 instructions, ID_AA64ISAR0.CRC32 = 1 on caiman) and the rate, for comparison with
+ * python3 -c 'import zlib; print(hex(zlib.crc32(open("system.apfs","rb").read())))' on the build machine.
+ */
+static void xnusys_crc(u32 lun, const struct lp_extent *ext, int n)
+{
+	u64 start = timer_ticks(), total = 0, us;
+	u32 crc = ~0u;
+	int i;
+
+	for (i = 0; i < n; i++) {
+		u64 done;
+
+		for (done = 0; done < ext[i].blocks; done += UFS_MAX_BLOCKS) {
+			u32 cnt = ext[i].blocks - done < UFS_MAX_BLOCKS ? (u32)(ext[i].blocks - done) : UFS_MAX_BLOCKS;
+			const u64 *w = (const u64 *)(uptr)iobuf;
+			u32 k;
+
+			wdt_kick();
+			if (ufs_read(lun, (u32)(ext[i].lba + done), cnt, (u64)(uptr)iobuf)) {
+				pr("ufs: xnusys: read failed at extent %d block %llu\n", i, done);
+				return;
+			}
+			for (k = 0; k < cnt * UFS_BLOCK / 8; k++)
+				__asm__("crc32x %w0, %w0, %x1" : "+r"(crc) : "r"(w[k]));
+			total += cnt;
+		}
+	}
+	us = (timer_ticks() - start) * 1000000 / timer_freq();
+	pr("ufs: xnusys: %llu bytes read in %llu ms (%llu KB/s), CRC-32 0x%08x\n", total * UFS_BLOCK, us / 1000,
+	   us ? total * UFS_BLOCK * 1000 / us : 0, ~crc);
+}
+
 static void lp_list(u32 lun, u64 super_lba, u64 super_blocks)
 {
 	struct lp_extent ext[4];
@@ -1031,8 +1065,20 @@ static void lp_list(u32 lun, u64 super_lba, u64 super_blocks)
 		pr("ufs: system_a block 0: %02x %02x %02x %02x ... ext4 magic at 0x438: 0x%02x%02x (want 0xef53)\n",
 		   b[0], b[1], b[2], b[3], b[0x439], b[0x438]);
 	}
-	if (hs_ok && n > 0 && ext[0].blocks >= 256 * 256)
-		ufs_speed("system_a", lun, (u32)ext[0].lba, 256);
+	/* xnusys, the iOS system image (docs/m4-system-image-plan.md): read all of it, as the loader will */
+	n = lp_find(lun, super_lba, super_blocks, "xnusys", ext, 4);
+	if (n <= 0) {
+		return;
+	}
+	for (i = 0; i < n; i++)
+		pr("ufs: lookup xnusys: extent %d = lun %u lba %llu, %llu blocks\n", i, lun, ext[i].lba, ext[i].blocks);
+	if (!ufs_read(lun, (u32)ext[0].lba, 1, (u64)(uptr)iobuf)) {
+		const volatile u8 *b = (const volatile u8 *)(uptr)iobuf;
+
+		pr("ufs: xnusys block 0: APFS container magic at 32: %c%c%c%c (want NXSB)\n", b[32], b[33], b[34], b[35]);
+	}
+	if (hs_ok)
+		xnusys_crc(lun, ext, n);
 }
 
 /* The GPT of each LUN, and in super the LP (dynamic partitions) metadata. */

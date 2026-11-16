@@ -474,12 +474,14 @@ void c_entry(u64 dtb, u64 load_base, u64 cur_el)
 	bldr_log_copy(dtc.bldr_size ? dtc.bldr_base : PLAT_BLDR_LOG_BASE,
 		      dtc.bldr_size ? dtc.bldr_size : PLAT_BLDR_LOG_SIZE);
 
-#if PROBE_UFS
-	ufs_probe();
-#endif
+	/* before UFS: wdt_kick() works only once wdt_report() has found the watchdog running, and the
+	 * UFS probe's full read of xnusys outlasts the ~51 s the bootloader leaves on it */
 	wdt_report();
 	if (PROBE_WDT_KICK)
 		wdt_kick();
+#if PROBE_UFS
+	ufs_probe();
+#endif
 
 	display_probe();
 
