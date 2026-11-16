@@ -62,7 +62,7 @@ static u32 ch_base, seq;
  * One PMIC register read (exynos_acpm_read_reg). Returns the value, or -1. The channel's *_front and
  * *_rear fields are SRAM offsets of the counters, not the counters (acpm_ipc.c channel_init()).
  */
-static int pmic_read(u32 type, u32 reg)
+static int pmic_req(u32 type, u32 reg, u32 func, u32 val)
 {
 	u32 id = sram32(ch_base + CH_ID), len = sram32(ch_base + CH_Q_LEN), esz = sram32(ch_base + CH_Q_ELEM);
 	u32 txf_at = sram32(ch_base + CH_RX_FRONT), txr_at = sram32(ch_base + CH_RX_REAR);
@@ -86,7 +86,7 @@ static int pmic_read(u32 type, u32 reg)
 		seq = 1;
 	cmd0 = (type << 8) | reg | (MFD_SPEEDY << 12) | (seq << SEQ_SHIFT);
 	wr32(ACPM_SRAM + txb + esz * txf, cmd0);
-	wr32(ACPM_SRAM + txb + esz * txf + 4, 0);	/* FUNC_READ */
+	wr32(ACPM_SRAM + txb + esz * txf + 4, func | (val << 8));	/* FUNC_READ 0, FUNC_WRITE 1 + value */
 	for (i = 8; i < esz; i += 4)
 		wr32(ACPM_SRAM + txb + esz * txf + i, 0);
 	dsb_sy();
@@ -107,16 +107,22 @@ static int pmic_read(u32 type, u32 reg)
 				wr32(ACPM_SRAM + rxr_at, rf);
 				wr32(ACPM_MBOX + AP_INTCR, 1u << id);
 				if ((c1 >> 24) & 0xff) {
-					pr("touch: PMIC read %x:%02x: ACPM returned error %u\n", type, reg, (c1 >> 24) & 0xff);
+					pr("touch: PMIC %s %x:%02x: ACPM returned error %u\n", func ? "write" : "read", type, reg,
+					   (c1 >> 24) & 0xff);
 					return -1;
 				}
 				return (int)((c1 >> 8) & 0xff);
 			}
 		}
 	}
-	pr("touch: PMIC read %x:%02x: no answer from ACPM in 50 ms (INTSR0 0x%08x, rx front %u rear %u)\n", type, reg,
-	   rd32(ACPM_MBOX + AP_INTSR), sram32(rxf_at), sram32(rxr_at));
+	pr("touch: PMIC %s %x:%02x: no answer from ACPM in 50 ms (INTSR0 0x%08x, rx front %u rear %u)\n", func ? "write" : "read",
+	   type, reg, rd32(ACPM_MBOX + AP_INTSR), sram32(rxf_at), sram32(rxr_at));
 	return -1;
+}
+
+static int pmic_read(u32 type, u32 reg)
+{
+	return pmic_req(type, reg, 0, 0);
 }
 
 static void pin(const char *name, u64 bank, u32 n)
@@ -139,6 +145,62 @@ static const char *ldo_state(int v)
 		return "?";
 	return (v >> 6) & 3 ? "ON" : "off";
 }
+
+#if PROBE_TOUCH >= 2
+/*
+ * Power the chip and take it out of reset, as the vendor driver's power-on does (synaptics,power-
+ * delay-ms 200, reset-active-ms 2, reset-delay-ms 50; reset active low), then watch the interrupt
+ * line: the chip pulls it low when it has a report for the host (the identify report after a
+ * reset). Only the enable bits of the two LDOs change; their voltages are as the PMIC has them.
+ */
+static void set_pin(u64 bank, u32 n, u32 func, int level)
+{
+	u32 m = 0xfu << (4 * n);
+
+	wr32(bank + 8, rd32(bank + 8) & ~m);				/* no pull, as Android's ts-irq/ts-reset */
+	if (level >= 0)
+		wr32(bank + 4, (rd32(bank + 4) & ~(1u << n)) | ((u32)level << n));
+	wr32(bank, (rd32(bank) & ~m) | (func << (4 * n)));
+}
+
+static void power_on(int l4, int l25)
+{
+	u64 start, first_low = 0;
+	u32 lows = 0, ms;
+	int v;
+
+	pr("touch: powering the chip: reset held low, LDO25M then LDO4M on\n");
+	set_pin(PIN_IRQ_BANK, PIN_IRQ, 0, -1);			/* input */
+	set_pin(PIN_RESET_BANK, PIN_RESET, 1, 0);		/* output, low: in reset */
+	if (pmic_req(PMIC_PM, PM_L25M_CTRL, 1, (u32)(l25 & 0x3f) | 0xc0) < 0 ||
+	    pmic_req(PMIC_PM, PM_L4M_CTRL, 1, (u32)(l4 & 0x3f) | 0xc0) < 0)
+		return;
+	v = pmic_read(PMIC_PM, PM_L4M_CTRL);
+	pr("touch: LDO4M  CTRL now 0x%02x: %s\n", v, ldo_state(v));
+	v = pmic_read(PMIC_PM, PM_L25M_CTRL);
+	pr("touch: LDO25M CTRL now 0x%02x: %s\n", v, ldo_state(v));
+	delay_us(200000);
+	pin("interrupt (powered, in reset)", PIN_IRQ_BANK, PIN_IRQ);
+	delay_us(2000);
+	set_pin(PIN_RESET_BANK, PIN_RESET, 1, 1);		/* out of reset */
+	start = timer_ticks();
+	for (ms = 0; ms < 1000; ms++) {
+		if (!((rd32(PIN_IRQ_BANK + 4) >> PIN_IRQ) & 1)) {
+			if (!lows)
+				first_low = timer_ticks();
+			lows++;
+		}
+		delay_us(1000);
+	}
+	if (lows)
+		pr("touch: interrupt line LOW %u of 1000 ms, first %llu ms after reset: the chip is up and has a report\n",
+		   lows, (first_low - start) * 1000 / timer_freq());
+	else
+		pr("touch: interrupt line stayed high for 1 s after reset: no sign of the chip\n");
+	pin("interrupt (after)", PIN_IRQ_BANK, PIN_IRQ);
+	pin("reset (after)", PIN_RESET_BANK, PIN_RESET);
+}
+#endif
 
 void touch_probe(void)
 {
@@ -167,10 +229,21 @@ void touch_probe(void)
 		v = pmic_read(PMIC_TOP, TOP_CHIPID);
 		pr("touch: S2MPG14 chip id 0x%02x (the bootloader read 0x10)\n", v);
 		if (v >= 0) {
-			v = pmic_read(PMIC_PM, PM_L4M_CTRL);
-			pr("touch: LDO4M  (TS_AVDD 3.3 V)  CTRL 0x%02x: %s\n", v, ldo_state(v));
-			v = pmic_read(PMIC_PM, PM_L25M_CTRL);
-			pr("touch: LDO25M (TSP_DVDD 1.8 V) CTRL 0x%02x: %s\n", v, ldo_state(v));
+			int l4 = pmic_read(PMIC_PM, PM_L4M_CTRL), l25;
+
+			pr("touch: LDO4M  (TS_AVDD 3.3 V)  CTRL 0x%02x: %s\n", l4, ldo_state(l4));
+			l25 = pmic_read(PMIC_PM, PM_L25M_CTRL);
+			pr("touch: LDO25M (TSP_DVDD 1.8 V) CTRL 0x%02x: %s\n", l25, ldo_state(l25));
+#if PROBE_TOUCH >= 2
+			/* only with the voltages this plan checked (docs/touch-plan.md): 3.3 V and 1.8 V */
+			if ((l4 & 0x3f) == 0x3c && (l25 & 0x3f) == 0x2c) {
+				pin("reset", PIN_RESET_BANK, PIN_RESET);
+				pin("interrupt", PIN_IRQ_BANK, PIN_IRQ);
+				power_on(l4, l25);
+			} else {
+				pr("touch: LDO voltages are not 0x3c/0x2c: not powering anything\n");
+			}
+#endif
 		}
 	}
 	pin("reset", PIN_RESET_BANK, PIN_RESET);

@@ -35,8 +35,26 @@ The touch chip is unpowered. Its supplies already hold the right voltages (LDO4M
 1.8 V + 0x3c x 25 mV = 3.3 V; LDO25M group 4: 0.7 V + 0x2c x 25 mV = 1.8 V), so powering it is
 setting the enable bits 7:6: `0x3c -> 0xfc`, `0x2c -> 0xec` (FUNC_WRITE through ACPM).
 
+## Step 2: power and reset (`PROBE_TOUCH=2`, with the owner's go-ahead), 2026-11-16
+
+Two PMIC writes through ACPM (FUNC_WRITE: the enable bits only, and only if the voltages read back
+as 0x3c/0x2c), the reset pin held low meanwhile, 200 ms, then the reset released; both pins without
+pull as Android's `ts-irq`/`ts-reset`:
+
+```
+touch: LDO4M  CTRL now 0xfc: ON
+touch: LDO25M CTRL now 0xec: ON
+touch: interrupt (powered, in reset) pin 0: function 0, level 1, pull 0
+touch: interrupt line stayed high for 1 s after reset: no sign of the chip
+touch: reset (after) pin 1: function 1, level 1, pull 0
+```
+
+The interrupt line went from 0 (unpowered) to 1 with the supplies on: the chip side of the line is
+powered. It did not pull it low within 1 s of the reset; a TCM chip may wait for the host to read
+before it signals again, so the next answer has to come over SPI.
+
 ## Next
 
-2. Power the chip (the two PMIC writes above), reset it, and read its identify report over SPI
+2b. The SPI bus (the two PMIC writes above), reset it, and read its identify report over SPI
    (USI SPI: clocks, USI mode, FIFO, polled).
 3. A kernel driver feeding `/dev/hakios-touch`, in a HackiOS kernel built on the Mac.
