@@ -126,9 +126,27 @@ So on both phones Linux never touches these pads: they are HSI0 USI2's own pads,
 which should work as they are -- and in loopback the controller does. What stops the pad side may be
 the pads' I/O supply or a pad-level enable that the normal boot sets and this boot path does not.
 
+### The bus belongs to the AOC
+
+Not the power domain: Google's own sequence for it (`hsi0_on` in `cmupmucal.ko`: PMU 0x15460000 +
+0x2a80 bit 0, wait for +0x2a84) is one write, and HSI0 is on. The PMU tables have no pad retention for
+it either.
+
+The touch DT has `tbn { compatible = "touch_bus_negotiator"; tbn,mode = <2>; }`. In Google's
+`kernel/google-modules/touch/common/touch_bus_negotiator.c`, mode 2 is `TBN_MODE_AOC_CHANNEL`: the
+touch SPI is shared between the AP and the AOC (the always-on core, for touch while the AP sleeps),
+and the AP asks the AOC firmware for the bus over an AOC service channel before every use. The pads
+named in the DT comment ("GPB10[4..7]") are not an AP pin bank: they are on the AOC's side (the AOC
+firmware has its own GPIO and pad tables, "`pin_configuration.h enum zuma_pad_name`").
+
+So in this boot, where nothing has started the AOC, the pads are not given to USI2, and the AP's
+controller clocks into nothing. Loopback works because it never leaves the controller.
+
 ## Next
 
-2c. The pads' power and enables (PMU pad retention/isolation for HSI0, the I/O rail) -- or watch
+2c. Either set the AOC pad mux for these four pads ourselves (its register is in the AOC firmware,
+    an Xtensa image, `/vendor/firmware/aoc.bin`: reverse work), or start the AOC and use the TBN
+    channel as Android does (much more). Superseded: the pads' power and enables (PMU pad retention/isolation for HSI0, the I/O rail) -- or watch
     what Android's kernel does to HSI0 USI2 at boot. Superseded: find GPB10's registers (a GPIO block of HSI0 that Linux does not register: read-only look at the
     blocks around 0x11000000-0x111fffff), put pins 4-7 on the USI, and read the identify report.
     Earlier idea, now settled: HSI0 USI2's pads (by reading the GPIO banks while Android runs the touch screen, or from the
