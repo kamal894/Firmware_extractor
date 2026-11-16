@@ -73,9 +73,29 @@ What it rules out and leaves:
 The chip itself: once powered, its interrupt line goes high, and a few seconds after the reset it pulls
 it low (seen after the SPI attempts): it has a report waiting.
 
+### The clock is fine: it is the pins
+
+This phone's own clock tables are in `cmupmucal.ko` of the `vendor_kernel_boot` ramdisk: USI2's mux
+(0x101c) and divider (0x181c) are at zuma's offsets, and it has a Q-channel, `QCH_CON_USI2_HSI0_QCH` at
+CMU_HSI0 + 0x30cc (ENABLE bit 0, CLOCK_REQ bit 1), which reads `0x2`: clock requested, held on.
+
+The controller's internal loopback (`MODE_CFG` bit 3) settles it:
+
+```
+touch: SPI loopback: 16 of 16 bytes back (ff ff ...), STATUS 0x02000000: the clock runs: the pins are the problem
+```
+
+In normal mode the receive side samples on the clock fed back from the pads, which are not muxed to
+the USI. Android's `spi@111D0000` has an empty `pinctrl-0`, and HSI0 has no GPIO block of its own:
+its USIs reach PERIC0/1 pads as a pin function (`hsi2c@111F0000`, HSI0's USI4, uses `spi1_bus`,
+`gpp2-0..2`, function 3, the same function the PERIC USIs' own bus groups use). Which pads carry HSI0's
+USI2 is not in Android's device tree: something else (the AOC firmware, which the touch offload
+`goog,offload-enabled` uses, or the bootloader) must set them.
+
 ## Next
 
-2c. Find the USI2 clock source on Tensor G4 (its CAL tables are not in the public google-modules
+2c. Find HSI0 USI2's pads (by reading the GPIO banks while Android runs the touch screen, or from the
+    AOC side), set them, and read the identify report. Earlier idea, now settled: the USI2 clock source (its CAL tables are not in the public google-modules
     tree; Android's kernel does not expose `clk_summary` or `/dev/mem`), or the pads (the two PMIC writes above), reset it, and read its identify report over SPI
    (USI SPI: clocks, USI mode, FIFO, polled).
 3. A kernel driver feeding `/dev/hakios-touch`, in a HackiOS kernel built on the Mac.

@@ -240,7 +240,8 @@ static void spi_flush(void)
 
 /*
  * CMU_HSI0's clocks of USI2 (the SPI's usi-offset 0x101c is HSI0's third USI), at the offsets of
- * Google's zuma CAL tables (cal-if/zuma/cmucal-sfr.c; Tensor G4's may differ: printed first). A gate:
+ * Google's zuma CAL tables (cal-if/zuma/cmucal-sfr.c); the mux (0x101c), divider (0x181c) and
+ * Q-channel (0x30cc) are the same in this phone's cmupmucal.ko (vendor_kernel_boot). A gate:
  * bit 20 manual, bit 21 the clock's value when manual, bit 28 automatic gating.
  */
 #define CMU_HSI0	0x11000000ULL
@@ -253,6 +254,20 @@ static void usi2_clocks(void)
 {
 	u32 i, v;
 	int ok;
+
+	/*
+	 * The Q-channel of USI2 (QCH_CON_USI2_HSI0_QCH, CMU_HSI0 + 0x30cc in Google's zuma tables and in
+	 * this phone's own cmupmucal.ko): with it enabled and no clock request the hardware may keep
+	 * the USI's clock stopped. Bit 0 ENABLE, bit 1 CLOCK_REQ, bit 2 IGNORE_FORCE_PM_EN.
+	 */
+	v = safe_rd32(CMU_HSI0 + 0x30cc, &ok);
+	if (ok) {
+		pr("touch: CMU_HSI0 +0x30cc QCH USI2         0x%08x (ENABLE %u CLOCK_REQ %u)\n", v, v & 1, (v >> 1) & 1);
+		if (!(v & ~0x7u) && !(v & 2)) {
+			wr32(CMU_HSI0 + 0x30cc, v | 2);
+			pr("touch:   CLOCK_REQ set: 0x%08x\n", rd32(CMU_HSI0 + 0x30cc));
+		}
+	}
 
 	for (i = 0; i < sizeof(usi2_clk) / sizeof(usi2_clk[0]); i++) {
 		v = safe_rd32(CMU_HSI0 + usi2_clk[i].off, &ok);
@@ -345,6 +360,12 @@ static void spi_identify(void)
 
 	if (spi_init())
 		return;
+	/* the controller's own loopback (MODE_CFG bit 3): needs its clock, not the pins */
+	wr32(TOUCH_SPI + SPI_MODE_CFG, rd32(TOUCH_SPI + SPI_MODE_CFG) | (1u << 3));
+	got = spi_read(buf, 16);
+	pr("touch: SPI loopback: %u of 16 bytes back (%02x %02x ...), STATUS 0x%08x: %s\n", got, buf[0], buf[1],
+	   rd32(TOUCH_SPI + SPI_STATUS), got == 16 ? "the clock runs: the pins are the problem" : "the clock does NOT run");
+	wr32(TOUCH_SPI + SPI_MODE_CFG, rd32(TOUCH_SPI + SPI_MODE_CFG) & ~(1u << 3));
 	for (t = 0; t < 3; t++) {
 		memset(buf, 0, sizeof(buf));
 		got = spi_read(buf, sizeof(buf));
