@@ -112,9 +112,24 @@ GPB10 is not a bank of any pin controller Android registers on this phone (the b
 `pinctrl-exynos-gs.ko` have gpb0 and gpb1 only, for other SoCs), and Google's own DT leaves the SPI's
 pinctrl as a TODO: the pads are set up somewhere else, or need nothing on a normal boot.
 
+### Where GPB10 is not
+
+- HSI0's address range: the 64 KiB slots no node claims either abort or hold other devices'
+  registers (`PROBE_TOUCH=3`, read-only); no GPIO block among them.
+- This phone's pin bank table (from `pinctrl-exynos-gs.ko`, the zumapro table: PERIC0 gpp0..gpp16
+  with gpp17 at 0x200 and gpp16 at 0x220, PERIC1 gpp19/20/21/24/22/23 at 0x00..0xa0): no gpb bank,
+  and gpp10 has 4 pins, so "GPB10[4..7]" is not a typo for gpp10.
+- Pixel 8's touch (`shusky`, `zuma-shiba-touch.dtsi`, `zuma-husky-touch.dtsi`) is on `spi_20` too,
+  with no pins either.
+
+So on both phones Linux never touches these pads: they are HSI0 USI2's own pads, not muxed GPIOs,
+which should work as they are -- and in loopback the controller does. What stops the pad side may be
+the pads' I/O supply or a pad-level enable that the normal boot sets and this boot path does not.
+
 ## Next
 
-2c. Find GPB10's registers (a GPIO block of HSI0 that Linux does not register: read-only look at the
+2c. The pads' power and enables (PMU pad retention/isolation for HSI0, the I/O rail) -- or watch
+    what Android's kernel does to HSI0 USI2 at boot. Superseded: find GPB10's registers (a GPIO block of HSI0 that Linux does not register: read-only look at the
     blocks around 0x11000000-0x111fffff), put pins 4-7 on the USI, and read the identify report.
     Earlier idea, now settled: HSI0 USI2's pads (by reading the GPIO banks while Android runs the touch screen, or from the
     AOC side), set them, and read the identify report. Earlier idea, now settled: the USI2 clock source (its CAL tables are not in the public google-modules

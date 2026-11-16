@@ -446,6 +446,42 @@ static void spi_identify(void)
 }
 #endif
 
+#if PROBE_TOUCH >= 3
+/*
+ * Read-only: where is GPB10 (the touch SPI's pads, Google's zuma-caimito-common-touch.dtsi)? Not in
+ * any pin controller Android registers: look at the 64 KiB slots of HSI0's address range that no
+ * device-tree node claims. A GPIO block: banks of 0x20 bytes (CON, DAT, PUD, DRV, CONPDN, PUDPDN).
+ */
+static void hsi0_scan(void)
+{
+	static const u32 slots[] = {
+		0x11010000, 0x11030000, 0x11050000, 0x11060000, 0x11080000, 0x11090000, 0x110a0000, 0x110b0000,
+		0x110c0000, 0x110e0000, 0x11150000, 0x11160000, 0x11170000, 0x11180000, 0x11190000, 0x111a0000,
+	};
+	u32 i, j, v;
+	int ok;
+
+	pr("touch: HSI0 slots no node claims (read-only):\n");
+	for (i = 0; i < sizeof(slots) / sizeof(slots[0]); i++) {
+		pr("touch:   0x%08x:", slots[i]);
+		for (j = 0; j < 0x40; j += 4) {
+			v = safe_rd32(slots[i] + j, &ok);
+			if (!ok) {
+				pr(" (aborted at +0x%x)", j);
+				break;
+			}
+			pr(" %08x", v);
+		}
+		if (ok) {
+			v = safe_rd32(slots[i] + 0x700, &ok);
+			pr(ok ? "  +0x700 %08x" : "  +0x700 aborted", v);
+		}
+		pr("\n");
+		log_flush();
+	}
+}
+#endif
+
 void touch_probe(void)
 {
 	u32 ipc_channels, ap_max, ch_off, i;
@@ -453,6 +489,10 @@ void touch_probe(void)
 
 	pr("\n--- touch screen (read-only) ---\n");
 	log_flush();
+#if PROBE_TOUCH >= 3
+	hsi0_scan();
+	return;
+#endif
 	ipc_channels = sram32(ACPM_INITDATA + 8);
 	ap_max = sram32(ACPM_INITDATA + 24);
 	pr("touch: ACPM initdata: %u plugins, ipc_channels at 0x%x, %u channels, %u for the AP\n",
