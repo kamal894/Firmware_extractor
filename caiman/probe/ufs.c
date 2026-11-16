@@ -174,6 +174,8 @@ static u8 q_ucd[UCD_BYTES] __attribute__((aligned(128)));
 static u8 iobuf[UFS_MAX_BLOCKS * UFS_BLOCK] __attribute__((aligned(4096)));
 static u32 mclk_hz, unipro_prd, lanes = 2;
 static int hs_ok;			/* the link is in HS gear */
+static u32 super_lun_g = 0xff;		/* where ufs_read_test() found super */
+static u64 super_lba_g, super_blocks_g;
 
 static void put_be32(u8 *p, u32 v)
 {
@@ -1013,15 +1015,10 @@ static int lp_find(u32 lun, u64 super_lba, u64 super_blocks, const char *want, s
 	return 0;
 }
 
-/*
- * Read every block of the partition (the loader's path into RAM) and print its CRC-32 (zlib's: the
- * ARMv8 CRC32 instructions, ID_AA64ISAR0.CRC32 = 1 on caiman) and the rate, for comparison with
- * python3 -c 'import zlib; print(hex(zlib.crc32(open("system.apfs","rb").read())))' on the build machine.
- */
-static void xnusys_crc(u32 lun, const struct lp_extent *ext, int n)
+/* Read extents one after another into dst. Returns the bytes read, 0 on a failure. */
+static u64 read_extents(u32 lun, const struct lp_extent *ext, int n, u64 dst)
 {
-	u64 start = timer_ticks(), total = 0, us;
-	u32 crc = ~0u;
+	u64 total = 0;
 	int i;
 
 	for (i = 0; i < n; i++) {
@@ -1029,23 +1026,96 @@ static void xnusys_crc(u32 lun, const struct lp_extent *ext, int n)
 
 		for (done = 0; done < ext[i].blocks; done += UFS_MAX_BLOCKS) {
 			u32 cnt = ext[i].blocks - done < UFS_MAX_BLOCKS ? (u32)(ext[i].blocks - done) : UFS_MAX_BLOCKS;
-			const u64 *w = (const u64 *)(uptr)iobuf;
-			u32 k;
 
 			wdt_kick();
-			if (ufs_read(lun, (u32)(ext[i].lba + done), cnt, (u64)(uptr)iobuf)) {
-				pr("ufs: xnusys: read failed at extent %d block %llu\n", i, done);
-				return;
+			if (ufs_read(lun, (u32)(ext[i].lba + done), cnt, dst + total * UFS_BLOCK)) {
+				pr("ufs: read failed at extent %d block %llu\n", i, done);
+				return 0;
 			}
-			for (k = 0; k < cnt * UFS_BLOCK / 8; k++)
-				__asm__("crc32x %w0, %w0, %x1" : "+r"(crc) : "r"(w[k]));
 			total += cnt;
 		}
 	}
-	us = (timer_ticks() - start) * 1000000 / timer_freq();
-	pr("ufs: xnusys: %llu bytes read in %llu ms (%llu KB/s), CRC-32 0x%08x\n", total * UFS_BLOCK, us / 1000,
-	   us ? total * UFS_BLOCK * 1000 / us : 0, ~crc);
+	return total * UFS_BLOCK;
 }
+
+#if !PROBE_LOADER
+/* The same 64 blocks read into iobuf (below 4 GiB) and at pa: equal? */
+static int same_as_iobuf(u32 lun, u64 lba, u64 pa)
+{
+	const volatile u64 *a = (const volatile u64 *)(uptr)iobuf, *b = (const volatile u64 *)(uptr)pa;
+	u32 k;
+
+	if (ufs_read(lun, (u32)lba, UFS_MAX_BLOCKS, (u64)(uptr)iobuf))
+		return 0;
+	for (k = 0; k < UFS_MAX_BLOCKS * UFS_BLOCK / 8; k++)
+		if (a[k] != b[k]) {
+			pr("ufs:   differs at byte %u: 0x%016llx (below 4 GiB) vs 0x%016llx (at 0x%llx)\n", k * 8, a[k],
+			   b[k], pa);
+			return 0;
+		}
+	return 1;
+}
+#endif
+
+/*
+ * Read the logical partition `name` of super to dst (at most max bytes), its extents one after the
+ * other: how the loader puts xnusys into XNU's window. Returns its size in bytes, 0 on a failure.
+ */
+u64 ufs_load_lp(const char *name, u64 dst, u64 max)
+{
+	struct lp_extent ext[8];
+	u64 bytes = 0, start, us;
+	int n, i;
+
+	if (super_lun_g == 0xff)
+		return 0;
+	if (!hs_ok)
+		pr("ufs: %s: the link is in PWM-G1, this will take long (well over the watchdog's patience)\n", name);
+	n = lp_find(super_lun_g, super_lba_g, super_blocks_g, name, ext, 8);
+	if (n <= 0)
+		return 0;
+	for (i = 0; i < n; i++)
+		bytes += ext[i].blocks * UFS_BLOCK;
+	if (bytes > max) {
+		pr("ufs: %s is %llu bytes, more than the %llu there is room for\n", name, bytes, max);
+		return 0;
+	}
+	start = timer_ticks();
+	if (!read_extents(super_lun_g, ext, n, dst))
+		return 0;
+	us = (timer_ticks() - start) * 1000000 / timer_freq();
+	pr("ufs: %s: %llu bytes to 0x%llx in %llu ms (%llu KB/s)\n", name, bytes, dst, us / 1000,
+	   us ? bytes * 1000 / us : 0);
+	return bytes;
+}
+
+/*
+ * Probe mode: can the controller write above 4 GiB (Google's driver gives it a 32-bit DMA mask)? The
+ * first 64 blocks of xnusys at XNU's resident RAM disk address, compared with the same read below
+ * 4 GiB; then all of it there, and its last 64 blocks compared too.
+ */
+#if !PROBE_LOADER
+static void xnusys_high(u32 lun, const struct lp_extent *ext, int n)
+{
+	const u64 hi = PLAT_XNU_PHYS + 0x08000000ULL;	/* HackiOS's RESIDENT_RD_OFFSET in the window */
+	u64 last = ext[n - 1].lba + ext[n - 1].blocks - UFS_MAX_BLOCKS, bytes;
+
+	if (ufs_read(lun, (u32)ext[0].lba, UFS_MAX_BLOCKS, hi)) {
+		pr("ufs: DMA above 4 GiB (0x%llx): the read failed\n", hi);
+		return;
+	}
+	if (!same_as_iobuf(lun, ext[0].lba, hi)) {
+		pr("ufs: DMA above 4 GiB (0x%llx): the data is NOT the same\n", hi);
+		return;
+	}
+	pr("ufs: DMA above 4 GiB (0x%llx): 256 KiB, the same as below 4 GiB\n", hi);
+	bytes = ufs_load_lp("xnusys", hi, PLAT_XNU_SIZE - 0x38000000ULL);
+	if (!bytes)
+		return;
+	pr("ufs: xnusys's last 256 KiB at 0x%llx: %s\n", hi + bytes - UFS_MAX_BLOCKS * UFS_BLOCK,
+	   same_as_iobuf(lun, last, hi + bytes - UFS_MAX_BLOCKS * UFS_BLOCK) ? "the same as read below 4 GiB" : "DIFFERENT");
+}
+#endif
 
 static void lp_list(u32 lun, u64 super_lba, u64 super_blocks)
 {
@@ -1077,8 +1147,10 @@ static void lp_list(u32 lun, u64 super_lba, u64 super_blocks)
 
 		pr("ufs: xnusys block 0: APFS container magic at 32: %c%c%c%c (want NXSB)\n", b[32], b[33], b[34], b[35]);
 	}
+#if !PROBE_LOADER
 	if (hs_ok)
-		xnusys_crc(lun, ext, n);
+		xnusys_high(lun, ext, n);	/* the loader reads it itself (xnu.c) */
+#endif
 }
 
 /* The GPT of each LUN, and in super the LP (dynamic partitions) metadata. */
@@ -1157,6 +1229,9 @@ static void ufs_read_test(void)
 	}
 	pr("ufs: super is lun %u lba %llu, %llu blocks (%llu bytes)\n", super_lun, super_lba, super_blocks,
 	   super_blocks * UFS_BLOCK);
+	super_lun_g = super_lun;
+	super_lba_g = super_lba;
+	super_blocks_g = super_blocks;
 	lp_list(super_lun, super_lba, super_blocks);
 }
 #endif

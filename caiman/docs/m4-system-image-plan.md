@@ -258,3 +258,87 @@ the read alone is ~82 s.) That run also found that `wdt_kick()` did nothing duri
 `wdt_report()`, which arms it, ran after `ufs_probe()`. It runs first now.
 
 Next: the loader (`LOADER=1`) reads `xnusys` into XNU's window and hands it over as the RAM disk.
+
+## Step 5: **iOS's user space on the phone** (2026-11-16)
+
+`make LOADER=1 PROBE_UFS=2 PROBE_XNU_SECONDS=150`, then `tools/mkxnuimg.py` with HackiOS's
+prebuilt kernel and `userland/root.apfs` as the payload's RAM disk; `fastboot boot` (RAM only).
+`tools/get_identity.sh` first copies the iPhone identity HackiOS's `mkidentity.sh` made from the
+owner's IPSW into `probe/identity.h` (git-ignored). The loader now:
+
+- starts the watcher core first (started after the ~80 s UFS read, PSCI said yes and the core never
+  reached its first instruction); it only feeds the watchdog until `watcher_go()` before the jump;
+- reads `xnusys` with `ufs_load_lp()` to XNU's window + 128 MiB (82 s, 23.5 MB/s, the controller
+  writing above 4 GiB directly): `RAMDisk` = md0, the root; the payload's `root.apfs` = `RAMDisk1`;
+- puts the iPhone's root, product and haptics properties in the device tree (P3 gamut as sRGB).
+
+The log (through the watcher, run 3 of the day's loader runs):
+
+```
+Added memory device md0/rmd0 (01000000/0D000000) at FFFFFFF00C000000 for 0000000072B74000
+Added memory device md1/rmd1 (01000001/0D000001) at FFFFFFF008408000 for 0000000000400000
+BSD root: md0, major 1, minor 0
+=== init: process 1, started as /redwood/sbin/init ===  ... === 36 checks, 0 failed ===
+com.apple.xpc.launchd ... Darwin Bootstrapper Version 7.0.0
+Successfully spawned: SpringBoard backboardd runningboardd lsd cfprefsd containermanagerd logd notifyd
+  fseventsd usermanagerd wifid powerd MobileGestaltHelper iconservicesagent pkd analyticsd Spotlight ...
+hakios: window server hooks installed
+```
+
+and the watcher's picture of the panel after 150 s (its brightness had counted the alpha byte, which
+the window server sets to 0xff everywhere: fixed), the home screen as under QEMU -- status bar, the
+two widgets, Calendar/Photos/Notes/Reminders, Clock/Settings, Search, the dock:
+
+```
+|                                                                |
+|    :#######                                             #   :  |
+|                                                                |
+|                                                                |
+|    ##########################    ##########################    |
+|    ###########################  ############################   |
+|    ###########################  ############################   |
+|    ###########################  ############################   |
+|    ###########################  ############################   |
+|    ###########################  ############################   |
+|    ###########################  ############################   |
+|    ###########################  ############################   |
+|    ###########################  ############################   |
+|     #########################    #########################     |
+|             ########+                    #########+            |
+|     ##########    ###########    ###########    ###########    |
+|    ###########    ###########    ###########    ###########    |
+|    ###########    ######+####    ###########    ###########    |
+|    ###########    ###########    ###########    ###########    |
+|     #########+      #######        #######      ###########    |
+|                                                                |
+|      ########     ###########                                  |
+|     ##########    #####+++###                                  |
+|     ##########    +++++++++++                                  |
+|       ######      +++++++++++                                  |
+|       ######       #########                                   |
+|                                                                |
+|                                                                |
+|                                                                |
+|                                                                |
+|                                                                |
+|                                                                |
+|                                                                |
+|                                                                |
+|                                                                |
+|                                                                |
+|                                                                |
+|                                                                |
+|                                                                |
+|                         ##############                         |
+|                         ##############                         |
+|      :##################################################+      |
+|  ############################################################  |
+| ############################################################## |
+| ############################################################## |
+| ############################################################## |
+|  ############################################################# |
+|   ##########################################################   |
+```
+
+Next: touch and the buttons (the event server asks for HID properties we do not have), the GPU-less
+drawing (widgets plain white), and a longer run than 150 s.

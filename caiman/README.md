@@ -234,7 +234,11 @@ caiman/
     HS-G4 x2 (23.6 MB/s, up from 0.6 MB/s in PWM-G1)
     ([plan](docs/m4-system-image-plan.md))
 
-  Next: iOS's own user space, which needs your IPSW and a way to get its ~2.5 GB system image to the kernel.
+  - **iOS's own user space on the phone** (M4): HackiOS's Darwin 16.5 system image, trimmed to 1835 MiB,
+    in the logical partition `xnusys` of super, read by the loader into RAM: launchd, backboardd and
+    SpringBoard run, and the panel shows the home screen ([plan](docs/m4-system-image-plan.md))
+
+  Next: touch and buttons, so the home screen can be used.
 
 When the log comes back, record the frame buffer address and the entry EL
 in `probe/platform_caiman.h` and in the plan's progress log. This probe is

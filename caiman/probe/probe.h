@@ -142,6 +142,7 @@ void __attribute__((noreturn)) probe_finish(const char *why);
 
 void display_probe(void);
 void ufs_probe(void);
+u64 ufs_load_lp(const char *name, u64 dst, u64 max);
 void display_send_frames(void);
 void kick_frames(u64 decon_main);
 
@@ -159,6 +160,7 @@ void xnu_boot(void);
 void watcher_start(void);
 void watcher_main(void);
 void watcher_entry(void);
+void watcher_go(void);
 void mmu_on(u64 l1_table);
 void __attribute__((noreturn)) jump_to_xnu(u64 entry_pa, u64 boot_args_pa);
 

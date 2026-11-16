@@ -1,2 +1,4 @@
 out/
 __pycache__/
+# the iPhone identity from the builder's own IPSW (HackiOS xnuloader/mkidentity.sh): Apple's data
+probe/identity.h

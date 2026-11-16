@@ -27,6 +27,7 @@ u8 watcher_stack[0x4000] __attribute__((aligned(16)));	/* handoff.S: sp = its to
 
 static u64 l1[512] __attribute__((aligned(4096)));
 static volatile u64 alive __attribute__((aligned(64)));
+static volatile u64 go __attribute__((aligned(64)));	/* watcher_go(): XNU is about to start */
 
 static void civac(const volatile void *p, u64 n)
 {
@@ -102,7 +103,9 @@ static void screen_report(void)
 					u32 x = (c * 4 + i) * g.fb_width / (cols * 4);
 					u32 y = (r * 8 + j) * g.fb_height / (rows * 8);
 					u32 px = *(volatile u32 *)(uptr)(g.fb_addr + (u64)y * g.fb_stride + x * 4ULL);
-					u32 b = (px >> 8) & 0xff, b2 = (px >> 16) & 0xff, b3 = px >> 24;
+					/* B, G, R (BGRA8888); not byte 3: Darwin's window server sets alpha to
+					 * 0xff everywhere, and every cell then looked bright */
+					u32 b = px & 0xff, b2 = (px >> 8) & 0xff, b3 = (px >> 16) & 0xff;
 
 					if (b2 > b)
 						b = b2;
@@ -121,6 +124,14 @@ static void screen_report(void)
 		pr("|%s\n", line);
 	}
 	pr("screen: %u of %u cells lit\n", lit, cols * rows);
+	/* a few pixels as they are, to tell the colour bytes from alpha */
+	for (r = 0; r < 5; r++) {
+		static const u32 fx[5] = { 1, 2, 1, 1, 3 }, fy[5] = { 1, 1, 2, 3, 3 };	/* quarters */
+		u32 x = g.fb_width * fx[r] / 4, y = g.fb_height * fy[r] / 4;
+
+		pr("screen: pixel (%u,%u) = 0x%08x\n", x, y,
+		   *(volatile u32 *)(uptr)(g.fb_addr + (u64)y * g.fb_stride + x * 4ULL));
+	}
 }
 
 static void snapshot(u32 base, u32 seconds, int last)
@@ -155,14 +166,37 @@ static void snapshot(u32 base, u32 seconds, int last)
 	log_flush();
 }
 
+/* The loader's core, right before it jumps: the watcher's clock starts now. */
+void watcher_go(void)
+{
+	go = 1;
+	civac(&go, 8);
+}
+
 void watcher_main(void)
 {
 	u32 el = (u32)(read_sysreg(CurrentEL) >> 2) & 3, base, s;
 
-	build_map(el);
-	mmu_on((u64)(uptr)l1);
-	alive = 1;
+	alive = 1;			/* stages, for watcher_start() to report where a core stopped */
 	civac(&alive, 8);
+	build_map(el);
+	alive = 2;
+	civac(&alive, 8);
+	mmu_on((u64)(uptr)l1);
+	alive = 3;
+	civac(&alive, 8);
+
+	/*
+	 * Started before the loader reads xnusys (~80 s): until XNU starts, only keep the watchdog fed and
+	 * leave the log to the loader's core. go is written there with the MMU off: invalidate before reading.
+	 */
+	for (;;) {
+		civac(&go, 8);
+		if (go)
+			break;
+		wdt_kick();
+		delay_us(100000);
+	}
 
 	log_uart_enable(0);	/* the UART is the kernel's now */
 	pr("watcher: running on MPIDR 0x%llx at EL%u; XNU gets %u s\n", read_sysreg(mpidr_el1), el,
@@ -199,7 +233,11 @@ void watcher_start(void)
 	civac(&alive, 8);
 	r = psci_call(PSCI_CPU_ON_64, PLAT_WATCH_MPIDR, (u64)(uptr)watcher_entry, 0);
 	pr("watcher: PSCI CPU_ON(0x%llx) = %lld", (u64)PLAT_WATCH_MPIDR, r);
-	for (i = 0; i < 100 && !alive; i++)
+	for (i = 0; i < 100 && alive != 3; i++)
 		delay_us(10000);
-	pr(alive ? ", running\n" : ", NOT seen: nothing will save XNU's log\n");
+	if (alive == 3)
+		pr(", running\n");
+	else
+		pr(", NOT running (stage %llu: 0 never started, 1 entered, 2 map built, MMU not on): nothing will"
+		   " save XNU's log\n", alive);
 }

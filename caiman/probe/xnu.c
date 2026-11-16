@@ -13,6 +13,27 @@
  */
 #include "probe.h"
 
+/*
+ * Who Darwin shall think it runs on: the iPhone's own device-tree properties, made from the builder's
+ * IPSW by HackiOS's xnuloader/mkidentity.sh and copied here as identity.h (never committed: it is
+ * Apple's data). Without it the device tree carries a placeholder: enough for the kernel and an
+ * Apple-free root, not for Darwin's user space.
+ */
+#if __has_include("identity.h")
+#include "identity.h"
+#define HAVE_IDENTITY 1
+#else
+#define HAVE_IDENTITY 0
+#endif
+
+/*
+ * The iOS system image (the logical partition xnusys of super, docs/m4-system-image-plan.md), read
+ * from UFS at XNU's window + 128 MiB, as HackiOS's loader keeps its resident image
+ * (RESIDENT_RD_OFFSET): it becomes /dev/md0, the root, and the payload's RAM disk /dev/md1.
+ */
+#define RESIDENT_RD_OFFSET	0x08000000ULL
+#define RESIDENT_RD_RESERVE	0x30000000ULL	/* RAM that must remain for the kernel itself */
+
 #define PAYLOAD_MAGIC		0x50554e58u	/* "XNUP" */
 #define MH_MAGIC_64		0xfeedfacfu
 #define LC_SEGMENT_64		0x19
@@ -339,7 +360,25 @@ static void nvram_image(u8 *img)
 	memcpy(img + 16, &adler, 4);
 }
 
-static u32 build_adt(u64 dt_pa, u64 rd_pa, u64 rd_size)
+#if HAVE_IDENTITY
+/*
+ * The iPhone's properties, but one, as HackiOS's loader: "artwork-display-gamut" P3 makes WebKit draw
+ * ten-bit surfaces that nothing here shows; the screen is what the frame buffer is, sRGB.
+ */
+static void dt_identity(struct dt_writer *w, const struct identity_prop *props, u32 count, const u8 *data)
+{
+	u32 i;
+
+	for (i = 0; i < count; i++) {
+		if (!strcmp(props[i].name, "artwork-display-gamut"))
+			dt_prop(w, props[i].name, "sRGB", 5);
+		else
+			dt_prop(w, props[i].name, data + props[i].offset, props[i].length);
+	}
+}
+#endif
+
+static u32 build_adt(u64 dt_pa, u64 rd_pa, u64 rd_size, u64 res_pa, u64 res_size)
 {
 	static u8 nvram[NVRAM_BANK_SIZE];
 	static const u8 wifi_mac[6] = { 0x02, 0x43, 0x41, 0x49, 0x00, 0x01 };
@@ -366,8 +405,12 @@ static u32 build_adt(u64 dt_pa, u64 rd_pa, u64 rd_size)
 	fill0((u64)(uptr)pram, PANIC_LOG_SIZE);
 
 	dt_begin(&w, "device-tree");
+#if HAVE_IDENTITY
+	dt_identity(&w, identity_root, sizeof(identity_root) / sizeof(identity_root[0]), identity_root_data);
+#else
 	/* identity: none (placeholder, as xnuloader/mkidentity.py --placeholder): enough for the kernel */
 	dt_prop(&w, "hakios-placeholder", "", 0);
+#endif
 	dt_str(&w, "platform-name", "t8015");
 	dt_padded(&w, "serial-number", "CAIMAN0000000000", 32);
 	dt_padded(&w, "mlb-serial-number", "CAIMAN0000000000MLB", 32);
@@ -406,7 +449,20 @@ static u32 build_adt(u64 dt_pa, u64 rd_pa, u64 rd_size)
 	dt_u32(&w, "nvram-current-bank", 0);
 	dt_prop(&w, "nvram-proxy-data", nvram, sizeof(nvram));
 	dt_begin(&w, "memory-map");
-	if (rd_size) {
+	/*
+	 * "RAMDisk" is /dev/md0, the root; "RAMDisk1" /dev/md1. With xnusys in memory it is the root and
+	 * the payload's small image (HackiOS's root.apfs, mounted on /redwood) the second disk.
+	 */
+	if (res_size) {
+		u64 rd[2] = { res_pa, res_size };
+
+		dt_prop(&w, "RAMDisk", rd, sizeof(rd));
+		if (rd_size) {
+			u64 rd1[2] = { rd_pa, rd_size };
+
+			dt_prop(&w, "RAMDisk1", rd1, sizeof(rd1));
+		}
+	} else if (rd_size) {
 		u64 rd[2] = { rd_pa, rd_size };
 
 		dt_prop(&w, "RAMDisk", rd, sizeof(rd));
@@ -419,10 +475,19 @@ static u32 build_adt(u64 dt_pa, u64 rd_pa, u64 rd_size)
 	dt_end(&w);
 
 	dt_begin(&w, "product");
+#if HAVE_IDENTITY
+	dt_identity(&w, identity_product, sizeof(identity_product) / sizeof(identity_product[0]),
+		    identity_product_data);
+	dt_begin(&w, "haptics");
+	dt_identity(&w, identity_haptics, sizeof(identity_haptics) / sizeof(identity_haptics[0]),
+		    identity_haptics_data);
+	dt_end(&w);
+#else
 	dt_prop(&w, "hakios-placeholder", "", 0);
 	dt_begin(&w, "haptics");
 	dt_prop(&w, "hakios-placeholder", "", 0);
 	dt_end(&w);
+#endif
 	dt_end(&w);
 
 	dt_begin(&w, "options");	/* IOKit publishes NVRAM here; it asserts without the node */
@@ -493,7 +558,7 @@ void xnu_boot(void)
 	const struct mach_header_64 *mh;
 	const struct load_command *lc;
 	struct boot_args *ba;
-	u64 vm_hi = 0, entry_va = 0, kern_hi, rd_pa, rd_size, dt_pa, ba_pa, top;
+	u64 vm_hi = 0, entry_va = 0, kern_hi, rd_pa, rd_size, dt_pa, ba_pa, top, res_pa = 0, res_size = 0;
 	u32 i, dt_len, n;
 
 	pr("\n--- xnu ---\n");
@@ -510,6 +575,23 @@ void xnu_boot(void)
 		pr("xnu: XNU's memory window is not free DRAM by the device tree; not starting\n");
 		return;
 	}
+
+	/*
+	 * The watcher core now, not after the long read below: started ~100 s into the boot (after the
+	 * UFS load) it never ran (PSCI said yes, the core never reached its first instruction). It only
+	 * feeds the watchdog until watcher_go().
+	 */
+	watcher_start();
+#if PROBE_UFS >= 2
+	/* the system image first: ~2 minutes of READ(10)s, the watchdog kicked all along */
+	res_pa = PLAT_XNU_PHYS + RESIDENT_RD_OFFSET;
+	res_size = ufs_load_lp("xnusys", res_pa, PLAT_XNU_SIZE - RESIDENT_RD_OFFSET - RESIDENT_RD_RESERVE);
+	if (res_size)
+		res_size = ALIGN_UP(res_size, XNU_PAGE);
+	else
+		pr("xnu: no xnusys loaded: booting without the system image\n");
+	pr("xnu: identity: %s\n", HAVE_IDENTITY ? "the iPhone's (identity.h)" : "placeholder (no identity.h)");
+#endif
 
 	/* the kernel's segments, at their place in XNU's window */
 	mh = (const void *)pl.kernel;
@@ -558,8 +640,14 @@ void xnu_boot(void)
 		fill0(xnu.uart_pa, sizeof(fake_uart));
 		fake_uart[0x18 / 4] = 0x90;	/* FR: transmit FIFO empty, receive FIFO empty */
 	}
-	dt_pa = rd_pa + rd_size;
-	dt_len = build_adt(dt_pa, rd_pa, rd_size);
+	if (res_size && rd_pa + rd_size > res_pa) {
+		pr("xnu: kernel and ramdisk (up to 0x%llx) overlap xnusys at 0x%llx; not starting\n", rd_pa + rd_size,
+		   res_pa);
+		return;
+	}
+	/* everything up to topOfKernelData is the kernel's static region: it must cover xnusys too */
+	dt_pa = res_size ? res_pa + res_size : rd_pa + rd_size;
+	dt_len = build_adt(dt_pa, rd_pa, rd_size, res_pa, res_size);
 	if (!dt_len)
 		return;
 	ba_pa = ALIGN_UP(dt_pa + dt_len, XNU_PAGE);
@@ -585,7 +673,7 @@ void xnu_boot(void)
 		ba->video.v_depth = 32;
 	}
 	n = append(ba->commandLine, 0, PLAT_XNU_ARGS);
-	if (rd_size)
+	if (rd_size || res_size)
 		n = append(ba->commandLine, n, " rd=md0");
 	if (pl.cmdline && pl.cmdline[0]) {
 		n = append(ba->commandLine, n, " ");
@@ -605,7 +693,7 @@ void xnu_boot(void)
 
 	if (g.fb_addr)
 		display_send_frames();
-	watcher_start();
+	watcher_go();
 	pr("xnu: jumping to the kernel at EL1\n");
 	log_flush();
 	jump_to_xnu(kva_to_pa(entry_va), ba_pa);
