@@ -10,6 +10,8 @@
 #   PROBE_FINISH=0|1|2      0 warm reboot (default), 1 cold reboot, 2 hang
 #   PROBE_FINISH_DELAY_MS=N wait before rebooting (default 3000)
 #   PROBE_CRASHTEST=1       fault on purpose at the end (tests the handler)
+#   LOADER=1                the M2 loader: probe, then start XNU from an appended payload
+#                           (OUT=out/loader-$(PLATFORM); ../tools/mkxnuimg.py builds the image)
 #   BOOTIMG_ARGS="..."      extra args for tools/pack_bootimg.py, e.g.
 #                           "--stock-boot ../../out/boot.img" or "--compress lz4"
 
@@ -38,15 +40,23 @@ CFLAGS := --target=aarch64-none-elf -march=armv8.2-a -O2 -g -std=gnu11 \
 	-DPROBE_UART=$(PROBE_UART) -DPROBE_PAINT=$(PROBE_PAINT) \
 	-DPROBE_FINISH=$(PROBE_FINISH) -DPROBE_FINISH_DELAY_MS=$(PROBE_FINISH_DELAY_MS) \
 	-DPROBE_CRASHTEST=$(PROBE_CRASHTEST)
+ifdef PROBE_XNU_SECONDS
+CFLAGS += -DPROBE_XNU_SECONDS=$(PROBE_XNU_SECONDS)
+endif
 ifeq ($(PLATFORM),qemu)
 CFLAGS += -DPLATFORM_QEMU
 endif
 LDFLAGS := -pie --no-dynamic-linker -z norelro -z noexecstack --build-id=none -T linker.ld
 
+LOADER ?= 0
 SRCS := start.S main.c log.c uart.c timer.c fdt.c psci.c exception.c display.c wdt.c lib.c
+ifeq ($(LOADER),1)
+SRCS += xnu.c watcher.c handoff.S
+CFLAGS += -DPROBE_LOADER=1
+endif
 OBJS := $(patsubst %,$(OUT)/%.o,$(SRCS))
 
-all: $(OUT)/probe.Image $(if $(filter caiman,$(PLATFORM)),$(OUT)/probe-boot.img)
+all: $(OUT)/probe.Image $(if $(filter caiman,$(PLATFORM)),$(if $(filter 0,$(LOADER)),$(OUT)/probe-boot.img))
 
 $(OUT)/%.o: % probe.h platform.h platform_caiman.h platform_qemu.h Makefile
 	@mkdir -p $(OUT)

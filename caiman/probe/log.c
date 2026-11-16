@@ -109,6 +109,37 @@ void log_uart_mute(int mute)
 	uart_quiet = mute;
 }
 
+/* For the watcher: where the log is now, going back there, and copying a block in. */
+u32 log_pos(void)
+{
+	return rz.pos;
+}
+
+void log_rewind(u32 pos)
+{
+	if (rz.attached && pos <= rz.pos) {
+		rz.pos = pos;
+		if (rz.synced > pos)
+			rz.synced = pos;
+		rz_sync();
+	}
+}
+
+void log_write_raw(const volatile u8 *p, u32 n)
+{
+	u32 i;
+
+	if (!rz.attached)
+		return;
+	for (i = 0; i < n && rz.pos < rz.cap; i++) {
+		u8 c = p[i];
+
+		if (c)
+			rz.zone[PRZ_HDR + rz.pos++] = c;
+	}
+	rz_sync();
+}
+
 /* Send everything logged so far (up to the mirror size) to the UART. */
 void log_uart_replay(void)
 {

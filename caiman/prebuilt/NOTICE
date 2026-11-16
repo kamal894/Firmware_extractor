@@ -1,0 +1,17 @@
+xnu-boot.img contains, after the caiman loader (MIT, this repository):
+
+  hakios-kernel -- HackiOS's build of Apple's open-source XNU (xnu-8796.121.2, Darwin 22.5.0,
+  DEVELOPMENT_ARM64_BCM2837), taken unmodified from
+  https://github.com/oosexgang/hackios-xnu-kernel/blob/63fc2b4/prebuilt/hakios-kernel
+  sha256 03e794e8e1d389a6abb9bcd2431eaccf9747271ff8c1234922225718c70441e9
+  (matches that repository's prebuilt/SHA256SUMS).
+  Licensed under the Apple Public Source License 2.0 (XNU, and HackiOS's kernel changes);
+  the source is Apple's xnu-8796.121.2 plus that repository's xnu/ directory.
+  The loader patches three instructions of it in RAM at boot (console -> loader_log), as
+  HackiOS's own MediaTek loader does.
+
+No file of iOS or of any Apple firmware is included. The device identity in the loader's
+device tree is a placeholder (no Apple data).
+
+The loader's XNU path (probe/xnu.c, probe/watcher.c, probe/handoff.S) follows HackiOS's
+mtkloader (hakios-mt6768) and xnuloader (hackios-xnu-kernel), MIT, (c) the HakiOS developers.

@@ -37,6 +37,19 @@
 #define PLAT_WDT_BASE		0x50280000ULL	/* fake, inside the test's RAM blob */
 #define PLAT_WDT_CLK		24576000ULL
 
+/* XNU (LOADER=1): QEMU virt with -m 6G -smp 2 -machine virtualization=on,gic-version=3 */
+#define PLAT_XNU_PHYS		0x80000000ULL
+#define PLAT_XNU_SIZE		0x100000000ULL
+#define PLAT_ADT_NAME		"qemu-virt"
+#define PLAT_IO_BASE		0x08000000ULL
+#define PLAT_IO_SIZE		0x08000000ULL
+#define PLAT_GICD		0x08000000ULL
+#define PLAT_GICR		0x080A0000ULL
+#define PLAT_GICR_SIZE		0x100000ULL
+#define PLAT_UART_FOR_XNU	0x09000000ULL		/* the real PL011 */
+#define PLAT_WATCH_MPIDR	0x1ULL			/* the second vCPU */
+#define PLAT_XNU_ARGS		"debug=0x8 serial=3 cpus=1"
+
 #define PLAT_PANEL_W		1280
 #define PLAT_PANEL_H		2856
 

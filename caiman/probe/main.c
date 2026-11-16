@@ -390,7 +390,7 @@ static void summary(void)
 
 /* ---- entry ----------------------------------------------------------- */
 
-void probe_main(u64 dtb, u64 load_base, u64 cur_el)
+void c_entry(u64 dtb, u64 load_base, u64 cur_el)
 {
 	struct region def;
 
@@ -470,6 +470,10 @@ void probe_main(u64 dtb, u64 load_base, u64 cur_el)
 
 	summary();
 	log_flush();
+
+#if PROBE_LOADER
+	xnu_boot();	/* returns only if XNU could not be started */
+#endif
 
 	if (PROBE_CRASHTEST) {
 		pr("\ncrashtest: executing an undefined instruction\n");

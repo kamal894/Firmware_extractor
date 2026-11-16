@@ -71,6 +71,9 @@ u64 log_space_left(void);
 void log_uart_enable(int on);
 void log_uart_mute(int mute);	/* keep UART quiet for bulk dumps */
 void log_uart_replay(void);
+u32 log_pos(void);
+void log_rewind(u32 pos);
+void log_write_raw(const volatile u8 *p, u32 n);
 
 #define pr(...) log_printf(__VA_ARGS__)
 
@@ -138,6 +141,25 @@ void __attribute__((noreturn)) probe_finish(const char *why);
 /* ---- display.c -------------------------------------------------------- */
 
 void display_probe(void);
+void display_send_frames(void);
+void kick_frames(u64 decon_main);
+
+/* ---- xnu.c / watcher.c / handoff.S (LOADER=1) -------------------------- */
+
+struct xnu_info {
+	u64 log_va, log_len_va, panic_str_va;	/* kernel virtual addresses of its symbols */
+	u64 log_putc_va, tx_ready_va, tx_data_va, rx_ready_va;
+	u64 log_pa, log_len_pa;			/* ... and where they are in RAM */
+	u64 uart_pa;				/* what the kernel's PL011 driver is given */
+};
+extern struct xnu_info xnu;
+
+void xnu_boot(void);
+void watcher_start(void);
+void watcher_main(void);
+void watcher_entry(void);
+void mmu_on(u64 l1_table);
+void __attribute__((noreturn)) jump_to_xnu(u64 entry_pa, u64 boot_args_pa);
 
 /* ---- wdt.c ------------------------------------------------------------ */
 
@@ -178,6 +200,7 @@ struct probe_state {
 	int decon_cmd_mode;		/* -1 unknown, 0 video, 1 command */
 	u32 frame_count_delta;
 
+	u64 decon_main;
 	int uart_ok;
 	int psci_hvc;
 	s64 psci_version;

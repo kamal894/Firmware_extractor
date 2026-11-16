@@ -30,6 +30,9 @@
 #ifndef PROBE_CRASHTEST
 #define PROBE_CRASHTEST 0	/* 1: deliberately fault at the end (tests the handler) */
 #endif
+#ifndef PROBE_LOADER
+#define PROBE_LOADER 0		/* 1: start XNU from the payload after probing (xnu.c) */
+#endif
 #ifndef PROBE_VERSION
 #define PROBE_VERSION "dev"
 #endif

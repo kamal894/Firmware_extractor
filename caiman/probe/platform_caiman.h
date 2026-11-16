@@ -59,6 +59,21 @@
 #define PLAT_WDT_BASE		0x10060000ULL
 #define PLAT_WDT_CLK		24576000ULL	/* OSCCLK */
 
+/* XNU (LOADER=1). Its window is the high DRAM bank: 0x880000000-0xc00000000 (14 GiB) has no
+ * reserved region in the bootloader's device tree (run 3); everything of ours is in the low bank. */
+#define PLAT_XNU_PHYS		0x880000000ULL
+#define PLAT_XNU_SIZE		0x100000000ULL		/* 4 GiB, as the MediaTek port */
+/* /arm-io: one window over the SoC's registers and, for the RAM "UART", our own image */
+#define PLAT_ADT_NAME		"caiman"
+#define PLAT_IO_BASE		0x10000000ULL
+#define PLAT_IO_SIZE		0x80000000ULL
+#define PLAT_GICD		0x10400000ULL
+#define PLAT_GICR		0x10440000ULL
+#define PLAT_GICR_SIZE		0x200000ULL
+#define PLAT_UART_FOR_XNU	0			/* none usable: a page of RAM (xnu.c) */
+#define PLAT_WATCH_MPIDR	0x100ULL		/* core 1 (Aff1 = 1), a Cortex-A520 */
+#define PLAT_XNU_ARGS		"debug=0x8 serial=3 cpus=1 -v"
+
 /* Panel (s6e3hc3), for sanity-checking what the registers say. */
 #define PLAT_PANEL_W		1280
 #define PLAT_PANEL_H		2856

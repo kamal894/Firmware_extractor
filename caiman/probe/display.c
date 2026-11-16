@@ -229,7 +229,7 @@ static u32 pixel(u32 fmt, u32 r, u32 g8, u32 b)
  * does: request a shadow update, then unmask the TE-driven (hw) trigger so a
  * frame goes out on every tearing-effect pulse from the panel.
  */
-static void kick_frames(u64 main)
+void kick_frames(u64 main)
 {
 	u32 trig, fc0, fc1, up;
 	int ok;
@@ -323,6 +323,7 @@ void display_probe(void)
 
 	pr("\n--- display ---\n");
 	dt_lookup(&m);
+	g.decon_main = m.main;
 	pr("display: DECON0 main=0x%llx win=0x%llx wincon=0x%llx (%u windows)\n", m.main, m.win,
 	   m.wincon, m.nwin);
 
@@ -426,4 +427,11 @@ void display_probe(void)
 
 	if (PROBE_PAINT && found)
 		paint(m.main);
+}
+
+/* For the loader: a command-mode panel only shows new pixels once frames are sent. */
+void display_send_frames(void)
+{
+	if (g.decon_cmd_mode == 1 && g.decon_main)
+		kick_frames(g.decon_main);
 }

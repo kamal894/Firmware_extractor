@@ -42,11 +42,11 @@ Goal (plan's M2): XNU prints its first log lines on caiman, read back from pstor
 | marker + reboot into the loader to save the log | fastboot-booted, so the next boot is Android. The watcher therefore **copies XNU's log buffer into the pstore console zone** (with `dc civac`) every second. After the reset, `run_probe.sh --fetch` reads it |
 | UART at MediaTek address | UART not enabled by the bootloader. The kernel log goes only to its buffer and pstore |
 | 4 cores, watcher on core 7 | start with `cpus=1` (CPU 0, A520). The watcher on another core (e.g. Aff1=1) |
-| `XNU_PHYS_BASE` 0xc0000000 | **to choose** from the DT memory map, avoiding: the loader 0x80000000, DTB 0x8a000000, initrd 0x86000000–0x87f32125, secure 0xb6200000+0x9e00000 and 0xe0000000+0x3800000, fb 0xfac00000, ramoops 0xfd3ff000, bldr log 0xfd800000. Probably the high bank above 4 GiB. **Needs the `dt: memory` / `dt: rsv` lines of run 2's log** |
+| `XNU_PHYS_BASE` 0xc0000000 | **0x880000000**, 4 GiB to start. The DT memory map (run 3 log) is 0x80000000–0x100000000 (2 GiB, full of reserved regions) plus **0x880000000–0xc00000000 (14 GiB, nothing reserved)**. The loader, DTB, initrd, framebuffer and pstore all stay in the low bank, outside XNU's range |
 
 ## Steps
 
-1. **Memory map.** Get the DT memory ranges from run 2's `probe-log.txt` and pick `XNU_PHYS_BASE` and `memSize`.
+1. ~~**Memory map.**~~ Done: XNU at 0x880000000 (see the table).
 2. **`caiman/loader/`**, grown from the probe (entry, exception vectors, pstore log, FDT reader,
    PSCI, watchdog, display trigger) plus ports of mtkloader's payload parser, Mach-O loader,
    symbol finder and patches, Apple device-tree writer and `boot_args`. Add the EL2→EL1 drop and the
@@ -57,6 +57,22 @@ Goal (plan's M2): XNU prints its first log lines on caiman, read back from pstor
 4. **Phone.** The same image with caiman's addresses, through `run_probe.sh`. Gate: XNU log lines in
    pstore (M2). With the TE trigger unmasked and `-v`, the kernel's text console should also appear on
    the screen (early M3).
+
+## Kernel details that shape the loader (from `hackios-xnu-kernel/xnu/`)
+
+- `loader_log` is a 1.5 MiB char array in the kernel, with `loader_log_len` (u32). The serial console path
+  (`serial_putc_crlf`) and `/dev/console` output feed it. The kernel message buffer is at `msgbufp`.
+- The BCM2837 target has GICv3 (`GENERIC_GIC_V3_IRQ`), PSCI SMP (`psci-method` in `/chosen`), the
+  arch timer, a PL011 driver (`VMAPPLE_UART`, DT `arm,pl011` under `/arm-io/uart0`) and `MAX_CPUS` 8.
+- The EFI loader's platform table (`xnuloader/loader.c`, `struct platform`) describes a board as an
+  I/O window, GICD/GICR, an optional PL011 and the core numbering. caiman would be
+  `io_base 0x10000000, io_size 0x10000000, gic_dist 0x10400000, gic_redist 0x10440000,
+  core_shift 8`, with PSCI over SMC.
+- caiman has no usable UART, so the kernel's PL011 driver gets a page of **ordinary RAM** as its
+  registers: FR reads 0 (never full), DR writes land in RAM, and every character still goes through
+  `serial_putc_crlf` into `loader_log`. No code patching needed.
+- On a panic the kernel can return to a loader stub (`loader_stub_slot`, "XNULDRST") with its log: the
+  stub writes it to pstore and resets. The watcher covers hangs.
 
 ## Not needed yet
 

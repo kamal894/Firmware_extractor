@@ -54,7 +54,7 @@ entry:
 	mov	x0, x19
 	mov	x1, x20
 	mov	x2, x21
-	bl	probe_main
+	bl	c_entry
 5:	wfe
 	b	5b
 

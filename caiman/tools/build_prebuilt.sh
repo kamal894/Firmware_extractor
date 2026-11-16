@@ -19,6 +19,18 @@ build probe-boot-hang PROBE_FINISH=2
 build probe-boot-paint PROBE_PAINT=1 PROBE_FINISH_DELAY_MS=10000
 cp out/pb-probe-boot/probe.Image "$dest/probe.Image"
 
+# M2: the loader with HackiOS's prebuilt XNU (hackios-xnu-kernel/prebuilt/hakios-kernel)
+HAKIOS_KERNEL=${HAKIOS_KERNEL:-/home/user/oosexgang/hackios-xnu-kernel/prebuilt/hakios-kernel}
+if [ -f "$HAKIOS_KERNEL" ]; then
+	rm -rf out/pb-xnu
+	make -s OUT=out/pb-xnu LOADER=1 >/dev/null
+	python3 ../tools/mkxnuimg.py --loader out/pb-xnu/probe.Image --kernel "$HAKIOS_KERNEL" \
+		--kernel-sha256 03e794e8e1d389a6abb9bcd2431eaccf9747271ff8c1234922225718c70441e9 \
+		--out-image out/pb-xnu/xnu.Image --out-bootimg "$dest/xnu-boot.img" >/dev/null
+else
+	echo "no HackiOS kernel at $HAKIOS_KERNEL: xnu-boot.img not rebuilt" >&2
+fi
+
 cd "$dest"
-sha256sum probe.Image probe-boot*.img > SHA256SUMS
+sha256sum probe.Image probe-boot*.img xnu-boot.img > SHA256SUMS
 cat SHA256SUMS
