@@ -230,7 +230,8 @@ caiman/
   - **First user-space process**: `hello` as process 1 ("Hello from user space on Darwin!")
 
   - **UFS from bare metal** (`probe-boot-ufs.img`): cold start of the controller and the device,
-    READ(10) of every LUN's GPT, and `super`'s dynamic-partition (LP) metadata, matching `lpdump`
+    READ(10) of every LUN's GPT, and `super`'s dynamic-partition (LP) metadata, matching `lpdump`;
+    HS-G4 x2 (23.6 MB/s, up from 0.6 MB/s in PWM-G1)
     ([plan](docs/m4-system-image-plan.md))
 
   Next: iOS's own user space, which needs your IPSW and a way to get its ~2.5 GB system image to the kernel.

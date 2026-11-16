@@ -173,6 +173,7 @@ static u8 q_ucd[UCD_BYTES] __attribute__((aligned(128)));
 /* data lands below 4 GiB: Google's driver gives this controller a 32-bit DMA mask */
 static u8 iobuf[UFS_MAX_BLOCKS * UFS_BLOCK] __attribute__((aligned(4096)));
 static u32 mclk_hz, unipro_prd, lanes = 2;
+static int hs_ok;			/* the link is in HS gear */
 
 static void put_be32(u8 *p, u32 v)
 {
@@ -415,6 +416,17 @@ static int hba_enable(u32 cnt_1us)
 	return 0;
 }
 
+/* The UIC error code registers (reading clears them), and IS.UE. */
+static void uic_errors(const char *when)
+{
+	const u64 hci = PLAT_UFS_HCI;
+	u32 is = rd32(hci + IS);
+
+	pr("ufs:   UIC errors %s: IS 0x%08x PA 0x%08x DL 0x%08x N 0x%08x T 0x%08x DME 0x%08x\n", when, is,
+	   rd32(hci + 0x38), rd32(hci + 0x3c), rd32(hci + 0x40), rd32(hci + 0x44), rd32(hci + 0x48));
+	wr32(hci + IS, is & IS_UE);
+}
+
 static int link_startup(void)
 {
 	const u64 hci = PLAT_UFS_HCI, vs = PLAT_UFS_VS, unipro = PLAT_UFS_UNIPRO;
@@ -441,7 +453,8 @@ static int link_startup(void)
 	   rd32(unipro + UNIP_PA_CONNECTEDTXDATALANES), rd32(unipro + UNIP_PA_CONNECTEDRXDATALANES),
 	   rd32(unipro + UNIP_PA_MAXRXHSGEAR));
 	cal_apply("post_link", cal_post_link);
-	(void)rd32(hci + 0x38);		/* reading UECPA clears it */
+	/* PA 0x80000010 here is the generic PA error, ufshcd's LINERESET indication: expected */
+	uic_errors("after link start-up");
 	return 0;
 }
 
@@ -646,6 +659,27 @@ static void board_power(void)
 		pr("ufs: PHY isolation bypass via SMC: returned %lld, register now 0x%08x\n", r,
 		   rd_or(PLAT_UFS_PMU_ISO, 0xdead));
 	}
+	/*
+	 * gph5 (zumapro-pinctrl.dtsi ufs_refclk_out, ufs_rst_n): both pins function 2, no pull. PWM
+	 * gears run without the reference clock, HS gears need it at the device: if "shutdown
+	 * complete" left these pins as plain GPIOs, the power mode change to HS fails.
+	 */
+	con = safe_rd32(PLAT_UFS_PIN_BANK, &ok);
+	if (ok) {
+		u32 pud = rd_or(PLAT_UFS_PIN_BANK + 8, 0);
+
+		pr("ufs: refclk/RST_n pins (gph5): CON 0x%08x (functions %u, %u; want 2, 2) DAT 0x%08x PUD 0x%08x"
+		   " DRV 0x%08x\n", con, con & 0xf, (con >> 4) & 0xf, rd_or(PLAT_UFS_PIN_BANK + 4, 0), pud,
+		   rd_or(PLAT_UFS_PIN_BANK + 0xc, 0));
+		if ((con & 0xff) != 0x22 || (pud & 0xff)) {
+			wr32(PLAT_UFS_PIN_BANK, (con & ~0xffu) | 0x22);
+			wr32(PLAT_UFS_PIN_BANK + 8, pud & ~0xffu);
+			pr("ufs: refclk/RST_n pins set to function 2: CON 0x%08x PUD 0x%08x\n", rd32(PLAT_UFS_PIN_BANK),
+			   rd32(PLAT_UFS_PIN_BANK + 8));
+		}
+	} else {
+		pr("ufs: refclk/RST_n pins (gph5): read aborted\n");
+	}
 	con = safe_rd32(PLAT_UFS_VCC_BANK, &ok);
 	dat = ok ? rd_or(PLAT_UFS_VCC_BANK + 4, 0) : 0;
 	field = (con >> (4 * PLAT_UFS_VCC_PIN)) & 0xf;
@@ -703,6 +737,123 @@ static int ufs_cold_start(void)
 	}
 	pr("ufs: cold start done: the device answers (PWM-G1)\n");
 	return 0;
+}
+
+/* ---- HS gear: ufshcd_change_power_mode() with Google's pre_pmc CAL around it ---- */
+
+#define UIC_DME_GET		0x01
+#define UIC_DME_SET		0x02
+#define UIC_DME_PEER_GET	0x03
+#define IS_UPMS			(1u << 4)	/* UIC power mode status */
+#define UNIP_DL_ERROR_IRQ_MASK	0x4844
+#define  PA_ERROR_IND_RECEIVED	(1u << 15)
+
+#define PA_ACTIVETXDATALANES	0x1560
+#define PA_CONNECTEDTXDATALANES	0x1561
+#define PA_TXGEAR		0x1568
+#define PA_TXTERMINATION	0x1569
+#define PA_HSSERIES		0x156a
+#define PA_PWRMODE		0x1571
+#define PA_ACTIVERXDATALANES	0x1580
+#define PA_CONNECTEDRXDATALANES	0x1581
+#define PA_RXGEAR		0x1583
+#define PA_RXTERMINATION	0x1584
+#define PA_MAXRXHSGEAR		0x1587
+#define FAST_MODE		1
+#define PA_HS_MODE_B		2
+
+/* zuma calib_of_hs_rate_b: PA_TXHSADAPTTYPE, the DL timeouts (std MIB and debug APB copies) */
+static const struct { u32 addr, val; } cal_hs_rate_b[] = {
+	{0x3350, 0x1},
+	{0x4104, 8064}, {0x4108, 28224}, {0x410c, 20160},
+	{0x32c0, 12000}, {0x32c4, 32000}, {0x32c8, 16000},
+	{0x7888, 8064}, {0x788c, 28224}, {0x7890, 20160},
+	{0x78b8, 12000}, {0x78bc, 32000}, {0x78c0, 16000},
+};
+
+/* DME_GET / DME_SET / DME_PEER_GET of a MIB attribute (selector 0). 0 on success. */
+static int dme(u32 cmd, u32 mib, u32 val, u32 *out)
+{
+	u32 res = 0xff;
+	int r = uic_cmd(cmd, mib << 16, 0, val, 100, &res);
+
+	if (r || res) {
+		pr("ufs:   DME 0x%02x of 0x%04x: %s %u\n", cmd, mib, r ? "no answer" : "result", r ? (u32)-r : res);
+		return -1;
+	}
+	if (out)
+		*out = rd32(PLAT_UFS_HCI + UCMDARG3);
+	return 0;
+}
+
+static int ufs_hs_gear(void)
+{
+	const u64 hci = PLAT_UFS_HCI, unipro = PLAT_UFS_UNIPRO;
+	u32 lgear = 0, pgear = 0, tx = 0, rx = 0, gear, lanes_n, i, upmcrs;
+
+	pr("\n--- ufs power mode: HS gear ---\n");
+	if (dme(UIC_DME_GET, PA_MAXRXHSGEAR, 0, &lgear) || dme(UIC_DME_PEER_GET, PA_MAXRXHSGEAR, 0, &pgear) ||
+	    dme(UIC_DME_GET, PA_CONNECTEDTXDATALANES, 0, &tx) || dme(UIC_DME_GET, PA_CONNECTEDRXDATALANES, 0, &rx))
+		return -1;
+	gear = lgear < pgear ? lgear : pgear;
+	if (gear > 4)
+		gear = 4;		/* ufs,pmd-attr-gear */
+	lanes_n = tx < rx ? tx : rx;
+	if (lanes_n > 2)
+		lanes_n = 2;		/* ufs,pmd-attr-lane */
+	pr("ufs: max HS gear: host %u, device %u; connected lanes tx %u rx %u -> HS-G%u rate B x%u\n", lgear,
+	   pgear, tx, rx, gear, lanes_n);
+	if (!gear || !lanes_n)
+		return -1;
+	/* ufs_cal_pre_pmc() */
+	wr32(unipro + UNIP_DL_ERROR_IRQ_MASK, rd32(unipro + UNIP_DL_ERROR_IRQ_MASK) | PA_ERROR_IND_RECEIVED);
+	for (i = 0; i < sizeof(cal_hs_rate_b) / sizeof(cal_hs_rate_b[0]); i++)
+		wr32(unipro + cal_hs_rate_b[i].addr, cal_hs_rate_b[i].val);
+	/* ufshcd_change_power_mode(); PA_PWRMODEUSERDATA comes from the CAL (SKIP_DEF_UNIPRO_TIMEOUT_SETTING) */
+	if (dme(UIC_DME_SET, PA_RXGEAR, gear, 0) || dme(UIC_DME_SET, PA_ACTIVERXDATALANES, lanes_n, 0) ||
+	    dme(UIC_DME_SET, PA_RXTERMINATION, 1, 0) || dme(UIC_DME_SET, PA_TXGEAR, gear, 0) ||
+	    dme(UIC_DME_SET, PA_ACTIVETXDATALANES, lanes_n, 0) || dme(UIC_DME_SET, PA_TXTERMINATION, 1, 0) ||
+	    dme(UIC_DME_SET, PA_HSSERIES, PA_HS_MODE_B, 0))
+		return -1;
+	log_flush();
+	wr32(hci + IS, IS_UPMS);
+	if (dme(UIC_DME_SET, PA_PWRMODE, FAST_MODE << 4 | FAST_MODE, 0))
+		return -1;
+	if (!wait_is(IS_UPMS, 1000)) {
+		pr("ufs: power mode change: no status in 1 s (IS 0x%08x HCS 0x%08x)\n", rd32(hci + IS), rd32(hci + HCS));
+		return -1;
+	}
+	wr32(hci + IS, IS_UPMS);
+	upmcrs = (rd32(hci + HCS) >> 8) & 7;
+	pr("ufs: power mode change: status %u (1 = done), IS 0x%08x\n", upmcrs, rd32(hci + IS));
+	if (upmcrs != 1) {
+		uic_errors("after the power mode change");
+		return -1;
+	}
+	/* post_calib_of_hs_rate_b is empty; post_ah8 only with samsung,support-ah8 (not on caiman) */
+	if (!dme(UIC_DME_GET, PA_RXGEAR, 0, &rx) && !dme(UIC_DME_GET, PA_TXGEAR, 0, &tx))
+		pr("ufs: now HS-G%u/G%u rate B, %u lane(s): the link is fast\n", rx, tx, lanes_n);
+	hs_ok = 1;
+	return 0;
+}
+
+/* Read mib MiB from (lun, lba) in 256 KiB commands and print the rate. */
+static void ufs_speed(const char *what, u32 lun, u32 lba, u32 mib)
+{
+	const u32 chunk = UFS_MAX_BLOCKS, total = mib * (1024 * 1024 / UFS_BLOCK);
+	u64 start = timer_ticks(), us;
+	u32 done;
+
+	for (done = 0; done < total; done += chunk) {
+		wdt_kick();
+		if (ufs_read(lun, lba + done, chunk, (u64)(uptr)iobuf)) {
+			pr("ufs: speed (%s): read failed at block %u\n", what, done);
+			return;
+		}
+	}
+	us = (timer_ticks() - start) * 1000000 / timer_freq();
+	pr("ufs: speed (%s): %u MiB in %llu ms = %llu KB/s\n", what, mib, us / 1000,
+	   us ? (u64)mib * 1048576 * 1000 / us : 0);
 }
 
 /*
@@ -880,6 +1031,8 @@ static void lp_list(u32 lun, u64 super_lba, u64 super_blocks)
 		pr("ufs: system_a block 0: %02x %02x %02x %02x ... ext4 magic at 0x438: 0x%02x%02x (want 0xef53)\n",
 		   b[0], b[1], b[2], b[3], b[0x439], b[0x438]);
 	}
+	if (hs_ok && n > 0 && ext[0].blocks >= 256 * 256)
+		ufs_speed("system_a", lun, (u32)ext[0].lba, 256);
 }
 
 /* The GPT of each LUN, and in super the LP (dynamic partitions) metadata. */
@@ -892,6 +1045,9 @@ static void ufs_read_test(void)
 
 	if (ufs_cold_start())
 		return;
+	ufs_speed("PWM-G1", 0, 0, 2);
+	if (ufs_hs_gear())
+		pr("ufs: staying in PWM-G1\n");
 	pr("\n--- ufs read test (READ(10) only) ---\n");
 	log_flush();
 	for (lun = 0; lun < 4; lun++) {

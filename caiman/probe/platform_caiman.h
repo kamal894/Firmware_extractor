@@ -85,6 +85,7 @@
 #define PLAT_UFS_IOCC		0x13020710ULL		/* sysreg_ufs + ufs-iocc offset (read only) */
 #define PLAT_UFS_VCC_BANK	0x10840000ULL		/* GPIO_PERIC0 gpp0 (CON +0, DAT +4): "ufs-vcc" */
 #define PLAT_UFS_VCC_PIN	1
+#define PLAT_UFS_PIN_BANK	0x13060000ULL		/* GPIO_HSI2UFS gph5: pin 0 refclk out, pin 1 RST_n (function 2) */
 
 /* Panel (s6e3hc3), for sanity-checking what the registers say. */
 #define PLAT_PANEL_W		1280

@@ -167,3 +167,35 @@ All six partitions, their extents and the free space match `lpdump` on the phone
 READ(10) on each LUN gets CHECK CONDITION (UNIT ATTENTION after the reset) and the retry succeeds.
 `lp_find()` is what the loader will use to find `xnusys`. Still PWM-G1 (slow): HS gear is next,
 before reading ~1.9 GB.
+
+### Runs 16-19: HS gear, and the reference clock pin
+
+`ufs_hs_gear()` does what ufshcd's power mode change does with Google's `pre_pmc` CAL around it:
+block `PA_ERROR_IND_RECEIVED` in the DL error mask, apply zuma's `calib_of_hs_rate_b` (PA_TXHSADAPTTYPE
+and the DL timeouts), DME_SET gear, active lanes, termination and HS series B, then `PA_PWRMODE` =
+FAST/FAST (0x11) and wait for `IS.UPMS`.
+
+- Run 16: power mode status 5 (PWR_FATAL_ERROR), no UIC error codes; the link was dead after it.
+- Run 17: link start-up twice, as `ufshcd_link_startup()` does for a device that is not active
+  yet: the second one fails at once (result 1, device gone). Dropped. The `UECPA 0x80000010` after
+  every link start-up is the generic PA error, ufshcd's LINERESET indication: expected.
+- Run 18: still status 5, still no UIC errors.
+- Run 19: the UFS node's pinctrl (`ufs_refclk_out`, `ufs_rst_n`: GPIO_HSI2UFS at 0x13060000,
+  `gph5-0` and `gph5-1`, function 2) had been changed by the bootloader's shutdown:
+
+```
+ufs: refclk/RST_n pins (gph5): CON 0x00000021 (functions 1, 2; want 2, 2) DAT 0x00000000 PUD 0x00000001 DRV 0x00000002
+ufs: refclk/RST_n pins set to function 2: CON 0x00000022 PUD 0x00000000
+ufs: speed (PWM-G1): 2 MiB in 3280 ms = 639 KB/s
+ufs: max HS gear: host 4, device 4; connected lanes tx 2 rx 2 -> HS-G4 rate B x2
+ufs: power mode change: status 1 (1 = done), IS 0x00000001
+ufs: now HS-G4/G4 rate B, 2 lane(s): the link is fast
+ufs: speed (system_a): 256 MiB in 11380 ms = 23588 KB/s
+```
+
+`gph5-0` was a plain GPIO output driving 0: no reference clock at the device. PWM gears do not
+need it (they carry their own clock), HS gears do. With the pin back on function 2, HS-G4 works.
+
+23.6 MB/s is far below what HS-G4 x2 can do (one 256 KiB READ(10) at a time, ~11 ms each), but it
+reads ~1.9 GB in about 80 s, which is enough to go on with. Queueing several requests (32 slots)
+and longer transfers are the obvious improvements, later.
