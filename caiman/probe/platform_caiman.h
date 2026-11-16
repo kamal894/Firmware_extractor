@@ -74,6 +74,10 @@
 #define PLAT_WATCH_MPIDR	0x100ULL		/* core 1 (Aff1 = 1), a Cortex-A520 */
 #define PLAT_XNU_ARGS		"debug=0x8 serial=3 cpus=1 -v"
 
+/* UFS (zuma-ufs.dtsi, "samsung,exynos-ufs"): UFSHCI standard registers, vendor registers */
+#define PLAT_UFS_HCI		0x13200000ULL
+#define PLAT_UFS_VS		0x13201100ULL
+
 /* Panel (s6e3hc3), for sanity-checking what the registers say. */
 #define PLAT_PANEL_W		1280
 #define PLAT_PANEL_H		2856

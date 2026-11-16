@@ -129,6 +129,7 @@ decon mode   : video|command, N frames in 100 ms
 | `probe-boot-hang.img` | `PROBE_FINISH=2`: stays in a loop at the end; you force-restart |
 | `xnu-boot.img` | **M2**: `LOADER=1`. Probes as usual, then starts HackiOS's prebuilt XNU (see `NOTICE`) at EL1 with the `-v` text console on the panel. A second core keeps the watchdog fed and copies XNU's log into pstore; it resets after 45 s |
 | `hello-boot.img` | **M4, first step**: like `xnu-boot.img`, with HackiOS's Apple-free `hello` as the RAM disk. XNU mounts it as root (mockfs) and runs it as process 1. It prints "Hello from user space on Darwin!" and exits, and the kernel panics as it must when process 1 ends; the log has both |
+| `probe-boot-ufs.img` | `PROBE_UFS=1`: also a read-only look at the UFS controller (0x13200000): is the link the bootloader used still up, and the bootloader's own request descriptors |
 | `probe-boot-paint.img` | `PROBE_PAINT=1`: paints colour bars into the frame buffer, sends the frame (command-mode panel), feeds the watchdog and holds them 10 s before rebooting |
 
 `SHA256SUMS` lists their hashes.

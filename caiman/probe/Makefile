@@ -40,6 +40,9 @@ CFLAGS := --target=aarch64-none-elf -march=armv8.2-a -O2 -g -std=gnu11 \
 	-DPROBE_UART=$(PROBE_UART) -DPROBE_PAINT=$(PROBE_PAINT) \
 	-DPROBE_FINISH=$(PROBE_FINISH) -DPROBE_FINISH_DELAY_MS=$(PROBE_FINISH_DELAY_MS) \
 	-DPROBE_CRASHTEST=$(PROBE_CRASHTEST)
+ifdef PROBE_UFS
+CFLAGS += -DPROBE_UFS=$(PROBE_UFS)
+endif
 ifdef PROBE_XNU_SECONDS
 CFLAGS += -DPROBE_XNU_SECONDS=$(PROBE_XNU_SECONDS)
 endif
@@ -49,7 +52,7 @@ endif
 LDFLAGS := -pie --no-dynamic-linker -z norelro -z noexecstack --build-id=none -T linker.ld
 
 LOADER ?= 0
-SRCS := start.S main.c log.c uart.c timer.c fdt.c psci.c exception.c display.c wdt.c lib.c
+SRCS := start.S main.c log.c uart.c timer.c fdt.c psci.c exception.c display.c wdt.c ufs.c lib.c
 ifeq ($(LOADER),1)
 SRCS += xnu.c watcher.c handoff.S
 CFLAGS += -DPROBE_LOADER=1

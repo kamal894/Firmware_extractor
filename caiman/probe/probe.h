@@ -141,6 +141,7 @@ void __attribute__((noreturn)) probe_finish(const char *why);
 /* ---- display.c -------------------------------------------------------- */
 
 void display_probe(void);
+void ufs_probe(void);
 void display_send_frames(void);
 void kick_frames(u64 decon_main);
 

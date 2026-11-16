@@ -17,6 +17,7 @@ Scenarios:  default | el1 (entered at EL1, PSCI over HVC) |
             hello (the same with HackiOS's raw-syscall `hello` as the RAM disk: process 1 in user
                    space, then the kernel's panic when it exits; needs HAKIOS_HELLO) |
             bare-dt (no caiman nodes in the DT: built-in fallbacks) |
+            ufs (PROBE_UFS=1: the read-only UFS look, against a fake running controller) |
             paint (PROBE_PAINT=1) | crash (PROBE_CRASHTEST=1)
 
 Needs: qemu-system-aarch64, dtc, clang, ld.lld, llvm-objcopy.
@@ -92,8 +93,8 @@ DT_EXTRA = f"""
 
 
 def fake_mmio():
-    """3 MiB image of the DPU register space as the bootloader would leave it."""
-    m = bytearray(0x300000)
+    """4 MiB image of the DPU (and UFS) register space as the bootloader would leave it."""
+    m = bytearray(0x400000)
 
     def w32(off, v):
         struct.pack_into("<I", m, off, v)
@@ -128,6 +129,21 @@ def fake_mmio():
             w32(base + shd + 0x40, addr)
             w32(base + shd + 0x50, 0)
 
+    # UFS host controller at +0x300000 (PLAT_UFS_HCI on qemu), running, with a request list at
+    # +0x380000 holding one finished READ(10) as a bootloader leaves it
+    w32(0x300000, 0x0107001f)                 # CAP: 32 slots, 8 task slots, 64-bit
+    w32(0x300008, 0x00000300)                 # VER 3.0
+    w32(0x300030, 0x0000010f)                 # HCS: DP, UTRLRDY, UTMRLRDY, UCRDY
+    w32(0x300034, 1)                          # HCE
+    w32(0x300050, MMIO_BASE + 0x380000)       # UTRLBA
+    w32(0x300060, 1)                          # UTRLRSR
+    w32(0x380000, 0x21000000)                 # UTRD: command type UFS storage, data in
+    w32(0x380010, MMIO_BASE + 0x381000)       # UCD
+    w32(0x380018, (0x80 << 16) | 0x20)        # response @ dword 0x80, 0x20 dwords
+    w32(0x38001c, (0x88 << 16) | 1)           # PRDT @ dword 0x88, 1 entry
+    w32(0x381000, 0x00000001)                 # command UPIU: transaction code 0x01
+    w32(0x381220, MMIO_BASE + 0x390000)       # PRDT entry 0: data address
+    w32(0x38122c, 0xfff)                      # ... byte count - 1
     rdma(0x201000, FB_BASE, W, H, 0)          # dpp 8 = DPUF1 L8
     rdma(0x102000, 0x5f000000, 100, 100, 7)   # dpp 2 = DPUF0 L2
     return bytes(m)
@@ -184,7 +200,8 @@ def build(scenario, work):
     flags = {"default": [], "el1": [], "bare-dt": [], "paint": ["PROBE_PAINT=1"],
              "crash": ["PROBE_CRASHTEST=1"],
              "xnu": ["LOADER=1", "PROBE_XNU_SECONDS=40"],
-             "hello": ["LOADER=1", "PROBE_XNU_SECONDS=40"]}[scenario]
+             "hello": ["LOADER=1", "PROBE_XNU_SECONDS=40"],
+             "ufs": ["PROBE_UFS=1"]}[scenario]
     run(["make", "-s", "-C", PROBE, "PLATFORM=qemu", f"OUT={out}", "PROBE_FINISH_DELAY_MS=100"]
         + flags, stdout=subprocess.DEVNULL)
     image = os.path.join(PROBE, out, "probe.Image")
@@ -356,6 +373,17 @@ SCENARIOS = {
         "=== panic: ",
         "screen: 1280x2856 at 0x58000000, 64x48 cells", "cells lit",
         "watcher: 40 s are up; resetting the phone",
+    ],
+    "ufs": COMMON + EL2 + [
+        "--- ufs (read-only) ---",
+        "ufs: CAP 0x0107001f (32 transfer slots, 8 task slots, 64-bit yes) VER 0x00000300",
+        "ufs: HCE 0x00000001 (enabled)  HCS 0x0000010f: device present, UTRL ready, UTMRL ready, UIC cmd ready, power mode 1",
+        "ufs: transfer request list (the bootloader's) at 0x50380000, 32 slots",
+        "ufs:   slot 0: OCS 0x00, UCD 0x50381000, response @+128 len 32, PRDT @+136 x1",
+        "ufs:   command UPIU @ 0x50381000: 00000001",
+        "ufs:   PRDT @dw @ 0x50381220: 50390000 00000000 00000000 00000fff",
+        "ufs: verdict: UP: the bootloader left the link running",
+        "=== caiman-probe end ===",
     ],
     "paint": COMMON + EL2 + ["paint: colour bars into 0x58000000 (1280x2856, stride 5120)", "paint: done",
                        "kick: TRIG_CON=0x00000010 (hw trigger, masked) FRAME_COUNT=1234",

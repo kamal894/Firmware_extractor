@@ -17,6 +17,7 @@ build probe-boot
 build probe-boot-lz4 BOOTIMG_ARGS="--compress lz4"
 build probe-boot-hang PROBE_FINISH=2
 build probe-boot-paint PROBE_PAINT=1 PROBE_FINISH_DELAY_MS=10000
+build probe-boot-ufs PROBE_UFS=1
 cp out/pb-probe-boot/probe.Image "$dest/probe.Image"
 
 # M2: the loader with HackiOS's prebuilt XNU (hackios-xnu-kernel/prebuilt/hakios-kernel)

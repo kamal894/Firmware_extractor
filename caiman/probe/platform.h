@@ -30,6 +30,9 @@
 #ifndef PROBE_CRASHTEST
 #define PROBE_CRASHTEST 0	/* 1: deliberately fault at the end (tests the handler) */
 #endif
+#ifndef PROBE_UFS
+#define PROBE_UFS 0		/* 1: read-only look at the UFS host controller (ufs.c) */
+#endif
 #ifndef PROBE_LOADER
 #define PROBE_LOADER 0		/* 1: start XNU from the payload after probing (xnu.c) */
 #endif
