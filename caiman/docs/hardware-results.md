@@ -71,7 +71,77 @@ survived the PSCI SYSTEM_RESET2 warm reset.
 | Watchdog | WTCON 0x0001af39: prescaler 176, /128, ~1090 Hz. **Period ~60 s**; 52 s left when the probe ran. Reloading `WTCNT` from `WTDAT` keeps it quiet | the loader has under a minute before reset unless it kicks or stops the watchdog. XNU needs a driver or a timer that kicks it |
 | Log loss in run 1 | caches were off, yet run 1's log vanished and runs 2–3 (with `dc civac` after each write) survived | likely explanation: Tensor's system-level cache (SLC) holds non-cacheable writes and drops them at reset. **Always clean to PoC before a reset**, even with the MMU off. Not proven |
 
+## Run 4: `xnu-boot.img` (ce41c6f): **XNU runs on the Pixel 9 Pro (M2)**
+
+The loader (`make LOADER=1`) probed as usual, then started HackiOS's prebuilt XNU (see
+`prebuilt/NOTICE`). The output, as `run_probe.sh` printed it:
+
+```
+xnu: kernel 16809112 bytes, ramdisk 0 bytes, XNU memory 0x880000000 + 0x100000000
+xnu: console -> loader_log (vmapple_uart transmit patched, receive off)
+xnu: entry 0xfffffff0074424a8 (pa 0x8834424a8), top 0x884408000; loader_log found
+xnu: device tree 0x884408000 (11740 bytes), boot_args 0x88440c000, top 0x884410000
+xnu: uart for the kernel 0x8001c000 (a page of RAM: the console goes only to loader_log), framebuffer 0xfac00000
+xnu: boot-args: debug=0x8 serial=3 cpus=1 -v
+kick: TRIG_CON now 0x00003061; FRAME_COUNT 5 -> 17 in 200 ms (frames are going out: the bars should be on screen)
+watcher: PSCI CPU_ON(0x100) = 0watcher: running on MPIDR 0x81000100 at EL2; XNU gets 45 s
+
+=== XNU after 45 s (last look): loader_log 5109 bytes ===
+Darwin Kernel Version 22.5.0: Sun Oct 25 22:52:46 PDT 2026; shimoku:xnu-8796.121.2[xnu-8796.121.2-dirty]/BUILD/obj/DEVELOPMENT_ARM64_BCM2837
+pmap_startup() init/release time: 20508 microsec
+vm_page_bootstrap: 256747 free pages, 5397 wired pages, (up to 0 of which are delayed free)
+...
+"vm_compressor_mode" is 2
+VM bootstrap done: 90 maps, 163 entries and 500 holes left
+...
+Serial requested, consistent debug disabled or debug boot arg not present, configuring debugging over serial
+iBoot version: iBoot-8422.100.650
+IONVRAM.cpp:initImageFormat:1364 - NVRAM size is 8192 bytes
+minicrypto: registered (md5, sha1, sha2, hmac, aes-ecb/cbc/ctr, hmac-drbg prng); no xts/gcm, no RSA
+Security policy loaded: Guarded vnode policy (vnguard)
+Security policy loaded: Apple Mobile File Integrity (stand-in) (AMFI)
+Security policy loaded: Seatbelt sandbox policy (stand-in) (Sandbox)
+GenericARMPE: platform "device-tree"
+GenericARMCPU: cpu 0 (phys id 0x0) registered
+MAC Framework successfully initialized
+mcache: 1 CPU(s), 64 bytes CPU cache line size
+mbinit: done [96 MB total pool size, (64/32) split]
+dlil_init: All the created dlil kernel threads have been scheduled at least once. Proceeding.
+ifnet_attach: All kernel threads created for interface lo0 have been scheduled at least once. Proceeding.
+skip attaching fsw to lo0 using legacy TX modelMiniIOMobileFramebuffer: display 1125x2436 on a panel of 1280x2856 (5120 bytes per row)
+GenericARMPE: the slower cores started too: 1 processors running
+!BSD
+Waiting on <dict ID="0"><key>IOProviderClass</key><string ID="1">IOMedia</string><key>Content</key><string ID="2">Apple_HFS</string></dict>
+
+=== end of XNU snapshot ===
+watcher: 45 s are up; resetting the phone
+```
+
+The next boot's bootloader reported `RST_STAT: 0x80 - SYSTEM_SWRESET_SYSTEM`: the watcher's PSCI
+reset, not the watchdog. Its PSCI breadcrumbs show `Core1: 0000480f`, the watcher core.
+
+What this establishes:
+
+- **M2 gate met**: XNU's own log, from the Pixel, read back through pstore.
+- The EL2 → EL1 hand-off, the Apple device tree (GICv3 at 0x10400000/0x10440000, cpu0 at Aff 0),
+  and XNU's window in the high bank (0x880000000, 4 GiB across two of the DT's 2 GiB ranges) work
+  as written.
+- The kernel ran its threads (`dlil_init ... scheduled at least once. Proceeding`), so the
+  scheduler, the arch timer and GIC interrupts work on Tensor G4.
+- It is the same log, line for line, as the QEMU `xnu` scenario, which stops at the same place:
+  waiting for a root disk.
+- The watcher on core 1 (PSCI CPU_ON from EL2) kept the watchdog fed, copied the log and reset
+  the phone on time.
+
 ## Next
+
+- M3: confirm what the `-v` text console looked like on the panel (the TE trigger was unmasked
+  before the jump).
+- M4: give the kernel a root disk. First an Apple-free one (HackiOS's `hello`/`init`), which should
+  print "Hello from user space on Darwin! I am process 1". Then iOS 16.5's own user space from your
+  IPSW.
+
+## Earlier plan
 
 M2: the stage-1 loader, based on this probe. It needs to:
 

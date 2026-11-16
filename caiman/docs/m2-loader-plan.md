@@ -51,7 +51,8 @@ Goal (plan's M2): XNU prints its first log lines on caiman, read back from pstor
   the loader: GICv3, EL2 entry, PSCI SMC, RAM split into two ranges like the Pixel's. XNU's log is
   read back from pstore only (the UART stays silent). It runs from `Darwin Kernel Version 22.5.0`
   through IOKit, NVRAM, the framebuffer driver and BSD, and stops at `Waiting on ... IOMedia` (no root disk).
-- Phone: `prebuilt/xnu-boot.img`, not run yet.
+- **Phone: works (run 4, docs/hardware-results.md).** The same log, line for line, through pstore,
+  and the watcher reset the phone after 45 s. **M2 done.**
 
 ## Steps
 
