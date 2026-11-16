@@ -116,7 +116,7 @@ What Linux's ufshcd core and Google's Tensor driver do at every boot, in `probe/
    switched on only if the pin is an output and low);
 2. host: HCE off, vendor software reset (`HCI_SW_RST`), Google's `exynos_ufs_config_host` values,
    device reset pin (`HCI_GPIO_OUT`) pulsed, HCE on, clock-stop control as in `hce_enable_notify`;
-3. link: zuma CAL `init_cfg` table (58 PHY/PCS/UniPro writes, `probe/ufs_cal_zuma.h`, GPL-2.0),
+3. link: zuma CAL `init_cfg` table (57 PHY/PCS/UniPro entries, `probe/ufs_cal_zuma.h`, GPL-2.0),
    DME_LINKSTARTUP (3 tries), `post_init_cfg`;
 4. our own transfer/task lists (in the image, below 4 GiB: Google gives this controller a 32-bit
    DMA mask), NOP OUT/IN, fDeviceInit;
