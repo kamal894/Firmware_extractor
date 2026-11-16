@@ -63,6 +63,14 @@ Variants: `caiman/tools/run_probe.sh caiman/prebuilt/probe-boot-lz4.img`,
 `UART=1 caiman/tools/run_probe.sh`, and `caiman/tools/run_probe.sh --fetch`
 (only reads the log, e.g. after a manual force-restart).
 
+On Windows, run the PowerShell version from the repo folder. It takes the
+same options as `-Image <file>`, `-Uart` and `-Fetch`, and needs the Google
+USB driver for bootloader mode:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File caiman\tools\run_probe.ps1
+```
+
 The same steps by hand follow. If adb says `more than one device/emulator`,
 first run `export ANDROID_SERIAL=<serial>`, using the Pixel's serial from
 `adb devices -l`.
@@ -189,7 +197,7 @@ python3 caiman/tools/pack_bootimg.py dtb out/vendor_boot.img --out caiman-vendor
 caiman/
   probe/        bare-metal probe (start.S entry + Image header, exception vectors,
                 ramoops/UART logging, FDT walker, PSCI, display probe)
-  tools/        run_probe.sh (boot the probe + fetch its log), pack_bootimg.py
+  tools/        run_probe.sh / run_probe.ps1 (boot the probe + fetch its log), pack_bootimg.py
                 (pack/info/dtb), decode_ramoops.py, check_image.py
   test/         qemu_test.py
   prebuilt/     ready-to-boot images
