@@ -75,6 +75,54 @@ static u32 rd32pa(u64 pa)
 	return *(volatile u32 *)(uptr)pa;
 }
 
+/*
+ * What is on the panel, as text: a 64 x 48 picture of the frame buffer (each cell the brightest of
+ * 4 x 8 samples in it) and the DECON's frame counter. With the TE trigger unmasked the panel shows
+ * whatever is in the buffer, so this is what a person looking at the phone would see.
+ */
+static void screen_report(void)
+{
+	static const char shade[5] = { ' ', '.', ':', '+', '#' };
+	u32 cols = 64, rows = 48, r, c, i, j, lit = 0;
+
+	if (!g.fb_addr || g.fb_bpp != 4 || !g.fb_width || !g.fb_height)
+		return;
+	if (g.decon_main)
+		pr("screen: DECON FRAME_COUNT %u\n", rd32(g.decon_main + 0x4));
+	pr("screen: %ux%u at 0x%llx, 64x48 cells (' ' dark .. '#' bright):\n", g.fb_width, g.fb_height,
+	   g.fb_addr);
+	for (r = 0; r < rows; r++) {
+		char line[66];
+
+		for (c = 0; c < cols; c++) {
+			u32 best = 0;
+
+			for (j = 0; j < 8; j++) {
+				for (i = 0; i < 4; i++) {
+					u32 x = (c * 4 + i) * g.fb_width / (cols * 4);
+					u32 y = (r * 8 + j) * g.fb_height / (rows * 8);
+					u32 px = *(volatile u32 *)(uptr)(g.fb_addr + (u64)y * g.fb_stride + x * 4ULL);
+					u32 b = (px >> 8) & 0xff, b2 = (px >> 16) & 0xff, b3 = px >> 24;
+
+					if (b2 > b)
+						b = b2;
+					if (b3 > b)
+						b = b3;
+					if (b > best)
+						best = b;
+				}
+			}
+			if (best > 0x20)
+				lit++;
+			line[c] = shade[best * 5 / 256];
+		}
+		line[cols] = '|';
+		line[cols + 1] = 0;
+		pr("|%s\n", line);
+	}
+	pr("screen: %u of %u cells lit\n", lit, cols * rows);
+}
+
 static void snapshot(u32 base, u32 seconds, int last)
 {
 	u32 len = xnu.log_len_pa ? rd32pa(xnu.log_len_pa) : 0;
@@ -102,6 +150,7 @@ static void snapshot(u32 base, u32 seconds, int last)
 			pr(" ===\n");
 		}
 	}
+	screen_report();
 	pr("\n=== end of XNU snapshot ===\n");
 	log_flush();
 }

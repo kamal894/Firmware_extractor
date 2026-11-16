@@ -133,7 +133,50 @@ What this establishes:
 - The watcher on core 1 (PSCI CPU_ON from EL2) kept the watchdog fed, copied the log and reset
   the phone on time.
 
+## Run 5: `hello-boot.img` (1950b86): **user space on the Pixel 9 Pro**
+
+XNU mounted HackiOS's `hello` as its root and ran it as process 1:
+
+```
+xnu: boot-args: debug=0x8 serial=3 cpus=1 -v rd=md0
+watcher: running on MPIDR 0x81000100 at EL2; XNU gets 45 s
+Added memory device md0/rmd0 (01000000/0D000000) at FFFFFFF008408000 for 0000000000008000
+BSD root: md0, major 1, minor 0
+load_init_program: attempting to load /sbin/launchd
+Hello from user space on Darwin!
+I am process 1, uid 0, console fd 0.          (printed twice, interleaved: two paths feed loader_log)
+pid 1 exited -- no exit reason available -- (signal 0, exit 0)
+panic(cpu 0 caller 0xfffffff007ae8240): initproc failed to start -- no exit reason available -- (signal 0, exit status 0 )
+```
+
+On a panic the kernel appends its whole message buffer and panic buffer to `loader_log`, so the
+watcher saved those too. From the message buffer:
+
+```
+initialize_screen: b=FAC00000, w=00000500, h=00000B28, r=00001400, d=00000000
+pe_arm_init_interrupts: args: 0xfffffff007b8a720
+gic: v3, distributor 0xfffffff117278000, cpu 0's redistributor 0xfffffff117288000, virtual timer on PPI 27
+Scheduler: Default of clutch
+Skywalk: running self-tests ... PASSED (all)
+cpu_start() cpu: 0
+```
+
+- **First user-space process on the phone.** The process exiting and the `initproc` panic that
+  follows are by design: the prebuilt `hello` exits straight away.
+- XNU's console is the phone's framebuffer at 0xfac00000 (1280×2856, row 5120 bytes).
+- The kernel's clock started at ~31 s: the arch counter runs from power-on.
+- On the Mac, `tr` choked on the panic's binary stackshot (`tr: Illegal byte sequence`) and only
+  65 KB of the 107 KB log was saved; `run_probe.sh` now runs it with `LC_ALL=C`.
+
 ## Next
+
+- M3 objectively: the watcher now draws a 64×48 text picture of the frame buffer (and DECON's
+  frame counter) into each snapshot, so the next run shows what the panel showed.
+- Real iOS user space (launchd → SpringBoard) needs your iOS 16.5 IPSW and a way to get a ~2.5 GB
+  system image to the kernel: `fastboot boot` can't carry it, so either a storage driver (UFS) or
+  a partition the loader reads.
+
+## Earlier next steps
 
 - M4, first step, ready: `prebuilt/hello-boot.img` (QEMU scenario `hello` passes). The kernel mounts
   HackiOS's `hello` as its RAM-disk root and runs it as process 1. Expected: "Hello from user space on

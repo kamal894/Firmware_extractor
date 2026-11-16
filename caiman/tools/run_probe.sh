@@ -92,7 +92,7 @@ fi
 
 echo "reading pstore..."
 adb shell su -c "'ls -l /sys/fs/pstore'" || true
-adb shell su -c "'cat /sys/fs/pstore/console-ramoops*'" | tr -d '\r' > "$log" || true
+adb shell su -c "'cat /sys/fs/pstore/console-ramoops*'" | LC_ALL=C tr -d '\r' > "$log" || true
 
 if grep -q '=== caiman-probe' "$log"; then
 	echo "saved $(wc -c < "$log") bytes to $log"

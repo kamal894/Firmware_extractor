@@ -354,6 +354,7 @@ SCENARIOS = {
         "I am process",
         "panic(cpu 0 caller", "initproc failed to start",
         "=== panic: ",
+        "screen: 1280x2856 at 0x58000000, 64x48 cells", "cells lit",
         "watcher: 40 s are up; resetting the phone",
     ],
     "paint": COMMON + EL2 + ["paint: colour bars into 0x58000000 (1280x2856, stride 5120)", "paint: done",
