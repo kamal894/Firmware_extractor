@@ -51,6 +51,22 @@ buffer at `0xfd800000`.
 You need Android platform-tools on the PC, and root on the phone to read
 pstore.
 
+One command does everything below. It picks the Pixel by `device:caiman`,
+so an emulator or another phone can stay connected. It then boots the probe,
+waits for Android to come back, and saves `probe-log.txt`:
+
+```bash
+caiman/tools/run_probe.sh
+```
+
+Variants: `caiman/tools/run_probe.sh caiman/prebuilt/probe-boot-lz4.img`,
+`UART=1 caiman/tools/run_probe.sh`, and `caiman/tools/run_probe.sh --fetch`
+(only reads the log, e.g. after a manual force-restart).
+
+The same steps by hand follow. If adb says `more than one device/emulator`,
+first run `export ANDROID_SERIAL=<serial>`, using the Pixel's serial from
+`adb devices -l`.
+
 ```bash
 adb reboot bootloader
 ```
@@ -173,7 +189,8 @@ python3 caiman/tools/pack_bootimg.py dtb out/vendor_boot.img --out caiman-vendor
 caiman/
   probe/        bare-metal probe (start.S entry + Image header, exception vectors,
                 ramoops/UART logging, FDT walker, PSCI, display probe)
-  tools/        pack_bootimg.py (pack/info/dtb), decode_ramoops.py, check_image.py
+  tools/        run_probe.sh (boot the probe + fetch its log), pack_bootimg.py
+                (pack/info/dtb), decode_ramoops.py, check_image.py
   test/         qemu_test.py
   prebuilt/     ready-to-boot images
   reference/    Google's caimito/zumapro DTS and display-driver files the
