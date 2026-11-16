@@ -36,6 +36,16 @@
 #define UTMRLBA		0x70
 #define UTMRLBAU	0x74
 #define UTMRLRSR	0x80
+#define UICCMD		0x90
+#define UCMDARG1	0x94
+#define UCMDARG2	0x98
+#define UCMDARG3	0x9c
+#define IS_UPMS		(1u << 4)	/* power mode status */
+#define IS_UHXS		(1u << 5)	/* hibern8 exit status */
+#define IS_UHES		(1u << 6)	/* hibern8 enter status */
+#define IS_UCCS		(1u << 10)	/* UIC command completion */
+#define UIC_HIBER_ENTER	0x17
+#define UIC_HIBER_EXIT	0x18
 
 static int rd(u64 a, u32 *v)
 {
@@ -188,6 +198,56 @@ static int ufs_read(u32 lun, u32 lba, u32 nblocks, u64 dst)
 	return 0;
 }
 
+static int wait_is(u32 bits, u32 ms)
+{
+	u64 start = timer_ticks(), limit = timer_freq() / 1000 * ms;
+
+	while (!(rd32(PLAT_UFS_HCI + IS) & bits))
+		if (timer_ticks() - start > limit)
+			return 0;
+	return 1;
+}
+
+/*
+ * Run 8: every READ timed out. Run 7's register dump says why: UICCMD (0x90) held 0x17,
+ * DME_HIBER_ENTER, the bootloader's last act before "shutdown complete". The link is in Hibern8
+ * and requests wait for ever. DME_HIBER_EXIT wakes it: a link power-state change, no data.
+ */
+static int hibern8_exit(void)
+{
+	const u64 hci = PLAT_UFS_HCI;
+	u32 hcs = rd32(hci + HCS), cmd = rd32(hci + UICCMD) & 0xff, arg2, is;
+
+	pr("ufs: last UIC command 0x%02x%s, HCS 0x%08x\n", cmd,
+	   cmd == UIC_HIBER_ENTER ? " (DME_HIBER_ENTER: the link is in Hibern8)" : "", hcs);
+	if (cmd != UIC_HIBER_ENTER)
+		return 0;
+	if (!(hcs & 8)) {
+		pr("ufs: UIC command interface not ready; not sending DME_HIBER_EXIT\n");
+		return -1;
+	}
+	wr32(hci + IS, IS_UCCS | IS_UHXS | IS_UHES | IS_UPMS);
+	wr32(hci + UCMDARG1, 0);
+	wr32(hci + UCMDARG2, 0);
+	wr32(hci + UCMDARG3, 0);
+	pr("ufs: sending DME_HIBER_EXIT\n");
+	log_flush();
+	wr32(hci + UICCMD, UIC_HIBER_EXIT);
+	if (!wait_is(IS_UCCS, 500)) {
+		pr("ufs: DME_HIBER_EXIT: no completion in 500 ms (IS 0x%08x)\n", rd32(hci + IS));
+		return -2;
+	}
+	arg2 = rd32(hci + UCMDARG2);
+	wait_is(IS_UHXS, 500);
+	is = rd32(hci + IS);
+	hcs = rd32(hci + HCS);
+	pr("ufs: DME_HIBER_EXIT: result %u (0 = success), IS 0x%08x (exit status %s), HCS 0x%08x "
+	   "(power mode status %u, 1 = done)\n", arg2 & 0xff, is, (is & IS_UHXS) ? "set" : "NOT set",
+	   hcs, (hcs >> 8) & 7);
+	wr32(hci + IS, IS_UCCS | IS_UHXS | IS_UPMS);
+	return (arg2 & 0xff) == 0 && (is & IS_UHXS) ? 0 : -3;
+}
+
 /* The GPT of each LUN, and in super the LP (dynamic partitions) metadata header. */
 static void ufs_read_test(u64 utrl)
 {
@@ -199,6 +259,8 @@ static void ufs_read_test(u64 utrl)
 	utrl_slot0 = utrl;
 	pr("\n--- ufs read test (READ(10) only, through the bootloader's request list) ---\n");
 	log_flush();
+	if (hibern8_exit())
+		pr("ufs: the link did not leave Hibern8; reads will likely time out\n");
 	for (lun = 0; lun < 4; lun++) {
 		u64 entries_lba;
 		u32 n, esz, i, blocks;
@@ -208,6 +270,8 @@ static void ufs_read_test(u64 utrl)
 		r = ufs_read(lun, 1, 1, buf);	/* the GPT header: LBA 1 */
 		if (r) {
 			pr("ufs: lun %u: read failed (%d)\n", lun, r);
+			if (r == -3)
+				break;		/* a timeout: the others would time out too */
 			continue;
 		}
 		if (memcmp((const void *)(uptr)buf, "EFI PART", 8)) {

@@ -138,6 +138,7 @@ def fake_mmio():
     w32(0x300034, 1)                          # HCE
     w32(0x300050, MMIO_BASE + 0x380000)       # UTRLBA
     w32(0x300060, 1)                          # UTRLRSR
+    w32(0x300090, 0x17)                       # UICCMD: DME_HIBER_ENTER, as the Pixel's bootloader leaves it
     w32(0x380000, 0x21000000)                 # UTRD: command type UFS storage, data in
     w32(0x380010, MMIO_BASE + 0x381000)       # UCD
     w32(0x380018, (0x80 << 16) | 0x20)        # response @ dword 0x80, 0x20 dwords
@@ -385,7 +386,12 @@ SCENARIOS = {
         "ufs:   PRDT @dw @ 0x50381220: 50390000 00000000 00000000 00000fff",
         "ufs: verdict: UP: the bootloader left the link running",
         "--- ufs read test (READ(10) only, through the bootloader's request list) ---",
-        "ufs: lun 0: read failed (-3)",       # the fake controller never completes a request
+        "ufs: last UIC command 0x17 (DME_HIBER_ENTER: the link is in Hibern8)",
+        "ufs: sending DME_HIBER_EXIT",
+        # (fake registers are RAM: the write-1-to-clear of IS leaves the bits set, so the UIC
+        # command seems to complete; the request list still never does)
+        "ufs: DME_HIBER_EXIT: result 0",
+        "ufs: lun 0: read failed (-3)",
         "ufs: no partition named super found",
         "=== caiman-probe end ===",
     ],
