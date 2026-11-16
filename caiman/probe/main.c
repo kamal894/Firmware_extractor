@@ -415,6 +415,15 @@ void probe_main(u64 dtb, u64 load_base, u64 cur_el)
 	pr("=== caiman-probe %s on %s ===\n", PROBE_VERSION, PLAT_NAME);
 	pr("hello from bare metal: loaded at 0x%llx (file 0x%llx bytes, 0x%llx with bss+stack),"
 	   " x0/DTB=0x%llx\n", load_base, (u64)(__file_end - __image_start), g.image_size, dtb);
+	{
+		u64 sctlr = g.el == 2 ? read_sysreg(sctlr_el2) : read_sysreg(sctlr_el1);
+
+		pr("entry: EL%u SCTLR=0x%llx MMU=%s D-cache=%s I-cache=%s%s\n", g.el, sctlr,
+		   (sctlr & 1) ? "ON" : "off", (sctlr & 4) ? "ON" : "off",
+		   (sctlr & (1 << 12)) ? "on" : "off",
+		   (sctlr & 5) ? "  (boot protocol says MMU and D-cache off; log is flushed to RAM anyway)"
+			       : "");
+	}
 	log_flush();
 
 	cpu_report();

@@ -15,15 +15,25 @@
 set -euo pipefail
 
 here=$(cd "$(dirname "$0")" && pwd)
+RAW=https://raw.githubusercontent.com/kamal894/Firmware_extractor/claude/new-session-yom1ka
 fetch_only=0
 if [ "${1:-}" = "--fetch" ]; then
 	fetch_only=1
 	shift
 	log=${1:-probe-log.txt}
 else
-	img=${1:-$here/../prebuilt/probe-boot.img}
+	img=${1:-}
+	if [ -z "$img" ]; then
+		for c in "$here/../prebuilt/probe-boot.img" ./probe-boot.img; do
+			[ -f "$c" ] && { img=$c; break; }
+		done
+	fi
 	log=${2:-probe-log.txt}
-	[ -f "$img" ] || { echo "image not found: $img" >&2; exit 1; }
+	if [ ! -f "${img:-}" ]; then
+		echo "image not found: ${img:-probe-boot.img}. Download it with:" >&2
+		echo "  curl -LO $RAW/caiman/prebuilt/${1:-probe-boot.img}" >&2
+		exit 1
+	fi
 fi
 
 for t in adb fastboot; do
@@ -71,9 +81,9 @@ if [ $fetch_only = 0 ]; then
 	fastboot boot "$img"
 	echo "probe started; it reboots into Android by itself. Waiting up to 4 minutes..."
 	if ! wait_android 240; then
-		echo "Android did not come back. The probe may be hanging: force-restart the phone" >&2
-		echo "(hold Power until it restarts), let Android boot, then run:" >&2
-		echo "  $0 --fetch $log" >&2
+		echo "Android did not come back, so the probe is running (or stuck)." >&2
+		echo "Force-restart the phone (hold Power until it restarts), let Android boot, then run:" >&2
+		echo "  bash $0 --fetch $log" >&2
 		exit 2
 	fi
 else
@@ -93,8 +103,16 @@ if grep -q '=== caiman-probe' "$log"; then
 		tail -n 15 "$log"
 	fi
 else
-	echo "no caiman-probe text in pstore (saved what was there to $log)." >&2
-	echo "the reset may have cleared RAM: try  $0 $here/../prebuilt/probe-boot-hang.img" >&2
-	echo "then force-restart by hand and run  $0 --fetch" >&2
+	echo "no caiman-probe text in pstore (saved what was there to $log)."
+	echo "--- diagnostics (paste all of this) ---"
+	echo "pstore log: $(wc -c < "$log" | tr -d ' ') bytes, last lines:"
+	tail -n 8 "$log"
+	for p in ro.boot.bootreason sys.boot.reason sys.boot.reason.last persist.sys.boot.reason.history; do
+		echo "$p = $(adb shell getprop "$p" 2>/dev/null | tr -d '\r' | tr '\n' ' ')"
+	done
+	echo "--- next test ---"
+	echo "download the 'hang' probe, which never reboots by itself:"
+	echo "  curl -LO $RAW/caiman/prebuilt/probe-boot-hang.img"
+	echo "  bash $0 probe-boot-hang.img"
 	exit 3
 fi

@@ -24,13 +24,31 @@
 static struct {
 	volatile u8 *zone;
 	u64 base;
-	u32 cap, pos;
+	u32 cap, pos, synced;
 	int attached;
 } rz;
 
 static char mirror[MIRROR_SZ];
 static u32 mirror_len;
 static int uart_on, uart_quiet;
+static u64 dline;
+
+/*
+ * Clean + invalidate [start, end) to the point of coherency. With the MMU
+ * off (as the boot protocol requires) our stores are non-cacheable and this
+ * is a no-op. But if the bootloader handed over with caches on, the log
+ * would otherwise sit in a dirty cache line and vanish at reset.
+ */
+static void clean_range(u64 start, u64 end)
+{
+	u64 a;
+
+	if (!dline)
+		dline = 4ULL << ((read_sysreg(ctr_el0) >> 16) & 0xf);	/* CTR_EL0.DminLine */
+	for (a = start & ~(dline - 1); a < end; a += dline)
+		__asm__ volatile("dc civac, %0" : : "r"(a) : "memory");
+	dsb_sy();
+}
 
 static void rz_sync(void)
 {
@@ -39,6 +57,9 @@ static void rz_sync(void)
 	/* start == size: Linux reads data[start..size) + data[0..start) = all of it */
 	h[1] = rz.pos;
 	h[2] = rz.pos;
+	clean_range(rz.base + PRZ_HDR + rz.synced, rz.base + PRZ_HDR + rz.pos);
+	clean_range(rz.base, rz.base + PRZ_HDR);
+	rz.synced = rz.pos;
 }
 
 void log_attach_ramoops(u64 zone_base, u64 zone_size)
@@ -52,6 +73,7 @@ void log_attach_ramoops(u64 zone_base, u64 zone_size)
 	rz.base = zone_base;
 	rz.cap = (u32)((zone_size - PRZ_HDR) > 0x1000000 ? 0x1000000 : zone_size - PRZ_HDR);
 	rz.pos = 0;
+	rz.synced = 0;
 	h = (volatile u32 *)rz.zone;
 	h[1] = 0;
 	h[2] = 0;
