@@ -134,6 +134,62 @@ static void screen_report(void)
 	}
 }
 
+#define DUMP_W		256
+#define DUMP_H		571			/* 2856 * 256 / 1280 */
+#define SCREEN_DUMP_ROOM	(256 * 1024)
+
+/*
+ * The panel's picture at 256 x 571, one byte a pixel (RGB 3-3-2), in base64 lines between
+ * "=== screen dump" and "=== end of screen dump": tools/screen_dump.py makes a PNG of it.
+ */
+static void screen_dump(void)
+{
+	static const char b64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+	u8 in[3];
+	char line[80];
+	u32 x, y, n = 0, k = 0;
+
+	if (!g.fb_addr || g.fb_bpp != 4 || !g.fb_width || !g.fb_height || log_space_left() < SCREEN_DUMP_ROOM - 8192)
+		return;
+	pr("=== screen dump %ux%u rgb332 base64 ===\n", DUMP_W, DUMP_H);
+	for (y = 0; y < DUMP_H; y++) {
+		u32 sy = y * g.fb_height / DUMP_H;
+
+		for (x = 0; x < DUMP_W; x++) {
+			u32 sx = x * g.fb_width / DUMP_W;
+			u32 px = *(volatile u32 *)(uptr)(g.fb_addr + (u64)sy * g.fb_stride + sx * 4ULL);
+			u32 b = px & 0xff, gr = (px >> 8) & 0xff, r = (px >> 16) & 0xff;
+
+			in[n++] = (u8)((r & 0xe0) | ((gr >> 3) & 0x1c) | (b >> 6));
+			if (n == 3) {
+				line[k++] = b64[in[0] >> 2];
+				line[k++] = b64[((in[0] & 3) << 4) | (in[1] >> 4)];
+				line[k++] = b64[((in[1] & 15) << 2) | (in[2] >> 6)];
+				line[k++] = b64[in[2] & 63];
+				n = 0;
+				if (k == 76) {
+					line[k] = 0;
+					pr("%s\n", line);
+					k = 0;
+				}
+			}
+		}
+		if (!(y % 64))
+			wdt_kick();
+	}
+	if (n) {			/* 256 * 571 = 146176 = 3 * 48725 + 1: one byte left */
+		in[n] = 0;
+		line[k++] = b64[in[0] >> 2];
+		line[k++] = b64[(in[0] & 3) << 4];
+		line[k++] = '=';
+		line[k++] = '=';
+	}
+	line[k] = 0;
+	if (k)
+		pr("%s\n", line);
+	pr("=== end of screen dump ===\n");
+}
+
 static void snapshot(u32 base, u32 seconds, int last)
 {
 	u32 len = xnu.log_len_pa ? rd32pa(xnu.log_len_pa) : 0;
@@ -143,9 +199,12 @@ static void snapshot(u32 base, u32 seconds, int last)
 	pr("\n=== XNU after %u s%s: loader_log %u bytes ===\n", seconds, last ? " (last look)" : "",
 	   len);
 	space = log_space_left();
-	if (space > 4096 && xnu.log_pa) {
-		if (len > space - 4096)
-			len = (u32)(space - 4096);
+	/* the last look keeps room for the screen picture (screen_dump(): ~200 KB of base64) */
+	if (space > (last ? SCREEN_DUMP_ROOM : 4096) + 4096 && xnu.log_pa) {
+		u64 keep = last ? SCREEN_DUMP_ROOM : 4096;
+
+		if (len > space - keep)
+			len = (u32)(space - keep);
 		log_write_raw((const volatile u8 *)(uptr)xnu.log_pa, len);
 	}
 	if (xnu.panic_str_va) {
@@ -162,6 +221,8 @@ static void snapshot(u32 base, u32 seconds, int last)
 		}
 	}
 	screen_report();
+	if (last)
+		screen_dump();
 	pr("\n=== end of XNU snapshot ===\n");
 	log_flush();
 }

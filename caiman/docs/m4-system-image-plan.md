@@ -342,3 +342,14 @@ two widgets, Calendar/Photos/Notes/Reminders, Clock/Settings, Search, the dock:
 
 Next: touch and the buttons (the event server asks for HID properties we do not have), the GPU-less
 drawing (widgets plain white), and a longer run than 150 s.
+
+### The picture in colour
+
+The 64 x 48 text picture shows where things are, not what they are. `watcher.c` `screen_dump()` now
+writes the frame buffer at 256 x 571 (RGB 3-3-2, base64, ~200 KB kept free in the log for it) at the
+last look, and `tools/screen_dump.py LOG OUT.png` decodes it:
+
+![The Pixel 9 Pro's frame buffer after 150 s of iOS](m4-home-screen.png)
+
+The icons and their names are there. The date is THU 1 (1 January 1970: nothing gives the kernel the
+time yet); the search pill and the dock are flat white (no GPU, so no blur).
