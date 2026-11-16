@@ -47,6 +47,23 @@
 #define UIC_HIBER_ENTER	0x17
 #define UIC_HIBER_EXIT	0x18
 
+/*
+ * Tensor (zuma) vendor registers, relative to PLAT_UFS_VS, and the PHY's PMA block: Google's
+ * drivers/ufs/ufs-vs-regs.h and zuma/ufs-cal.h (google-modules/soc/gs, reference/google/ufs/).
+ */
+#define VS_CLKSTOP_CTRL		0xb0	/* clock stop requests */
+#define  CLK_STOP_ALL		0x17	/* REFCLKOUT 4, REFCLK 2, UNIPRO_MCLK 1, UNIPRO_PCLK 0 */
+#define VS_FORCE_HCS		0xb4	/* which clocks the hardware may stop */
+#define  MPHY_APBCLK_STOP_EN	(1u << 10)
+#define  UNIPRO_MCLK_STOP_EN	(1u << 5)
+#define VS_FSM_MONITOR		0xc0
+#define UNIP_PA_AVAILTXDATALANES	0x3080
+#define UNIP_PA_ACTIVETXDATALANES	0x3180
+#define UNIP_PA_CONNECTEDTXDATALANES	0x3184
+#define UNIP_PA_ACTIVERXDATALANES	0x3200
+#define UNIP_PA_CONNECTEDRXDATALANES	0x3204
+#define PMA_LANE		0x800	/* per-lane (TRSV) register stride */
+
 static int rd(u64 a, u32 *v)
 {
 	int ok;
@@ -208,6 +225,76 @@ static int wait_is(u32 bits, u32 ms)
 	return 1;
 }
 
+static u32 rd_or(u64 a, u32 dflt)
+{
+	u32 v;
+
+	return rd(a, &v) ? v : dflt;
+}
+
+static void pma_show(const char *when, u32 lanes)
+{
+	const u64 pma = PLAT_UFS_PHY;
+	u32 l;
+
+	pr("ufs: PHY %s: common 0x000=0x%02x", when, rd_or(pma, 0xdead));
+	for (l = 0; l < lanes; l++)
+		pr("  lane %u: 0x9f4=0x%02x 0xa00=0x%02x 0xb64=0x%02x", l, rd_or(pma + l * PMA_LANE + 0x9f4, 0xdead),
+		   rd_or(pma + l * PMA_LANE + 0xa00, 0xdead), rd_or(pma + l * PMA_LANE + 0xb64, 0xdead));
+	pr("\n");
+}
+
+/*
+ * Run 9: DME_HIBER_EXIT alone came back with power mode status 5 (PWR_FATAL_ERROR). On Tensor the
+ * Hibern8 entry is followed by the vendor steps of Google's exynos_ufs_hibern8_notify(): the CAL
+ * table post_h8_enter (PHY common 0x000 = 0x51, ...) and the controller's internal clocks stopped.
+ * Before an exit the same driver undoes both: exynos_ufs_gate_clk(false), then, inside
+ * ufs_call_cal() (PHY APB and UniPro clocks forced on), the zuma table pre_h8_exit. This is that
+ * sequence, with every value printed before and after.
+ */
+static void hibern8_exit_prepare(void)
+{
+	const u64 vs = PLAT_UFS_VS, pma = PLAT_UFS_PHY;
+	u32 clkstop, force, lanes, l;
+
+	if (!rd(vs + VS_CLKSTOP_CTRL, &clkstop) || !rd(vs + VS_FORCE_HCS, &force)) {
+		pr("ufs: vendor clock registers not readable; skipping the Tensor wake steps\n");
+		return;
+	}
+	pr("ufs: before wake: CLKSTOP_CTRL 0x%08x FORCE_HCS 0x%08x FSM 0x%08x\n", clkstop, force,
+	   rd_or(vs + VS_FSM_MONITOR, 0xdead));
+	wr32(vs + VS_CLKSTOP_CTRL, clkstop & ~CLK_STOP_ALL);	/* internal clocks on */
+	wr32(vs + VS_FORCE_HCS, force & ~(UNIPRO_MCLK_STOP_EN | MPHY_APBCLK_STOP_EN));
+	dsb_sy();
+	delay_us(10);
+	pr("ufs: clocks on: CLKSTOP_CTRL 0x%08x FORCE_HCS 0x%08x\n", rd32(vs + VS_CLKSTOP_CTRL),
+	   rd32(vs + VS_FORCE_HCS));
+	log_flush();
+	lanes = rd_or(PLAT_UFS_UNIPRO + UNIP_PA_AVAILTXDATALANES, 0);
+	pr("ufs: UniPro: available tx lanes %u, connected tx %u rx %u\n", lanes,
+	   rd_or(PLAT_UFS_UNIPRO + UNIP_PA_CONNECTEDTXDATALANES, 0xdead),
+	   rd_or(PLAT_UFS_UNIPRO + UNIP_PA_CONNECTEDRXDATALANES, 0xdead));
+	if (lanes < 1 || lanes > 2)
+		lanes = 2;		/* zuma-ufs.dtsi: ufs,pmd-attr-lane = 2 */
+	pma_show("before", lanes);
+	log_flush();
+	/* zuma/ufs-cal.h pre_h8_exit[], entry by entry, each TRSV entry on every lane */
+	wr32(pma + 0x000, 0x11);
+	delay_us(10);
+	for (l = 0; l < lanes; l++)
+		wr32(pma + l * PMA_LANE + 0x9f4, 0x00);
+	for (l = 0; l < lanes; l++)
+		wr32(pma + l * PMA_LANE + 0xa00, 0x30);
+	for (l = 0; l < lanes; l++)
+		wr32(pma + l * PMA_LANE + 0xb64, 0x32);
+	for (l = 0; l < lanes; l++)
+		wr32(pma + l * PMA_LANE + 0xb64, 0x22);
+	dsb_sy();
+	pma_show("after ", lanes);
+	wr32(vs + VS_FORCE_HCS, rd32(vs + VS_FORCE_HCS) | MPHY_APBCLK_STOP_EN);	/* as ufs_call_cal() */
+	dsb_sy();
+}
+
 /*
  * Run 8: every READ timed out. Run 7's register dump says why: UICCMD (0x90) held 0x17,
  * DME_HIBER_ENTER, the bootloader's last act before "shutdown complete". The link is in Hibern8
@@ -226,6 +313,7 @@ static int hibern8_exit(void)
 		pr("ufs: UIC command interface not ready; not sending DME_HIBER_EXIT\n");
 		return -1;
 	}
+	hibern8_exit_prepare();
 	wr32(hci + IS, IS_UCCS | IS_UHXS | IS_UHES | IS_UPMS);
 	wr32(hci + UCMDARG1, 0);
 	wr32(hci + UCMDARG2, 0);
@@ -244,8 +332,11 @@ static int hibern8_exit(void)
 	pr("ufs: DME_HIBER_EXIT: result %u (0 = success), IS 0x%08x (exit status %s), HCS 0x%08x "
 	   "(power mode status %u, 1 = done)\n", arg2 & 0xff, is, (is & IS_UHXS) ? "set" : "NOT set",
 	   hcs, (hcs >> 8) & 7);
+	pr("ufs: after exit: UniPro active tx %u rx %u lanes, FSM 0x%08x\n",
+	   rd_or(PLAT_UFS_UNIPRO + UNIP_PA_ACTIVETXDATALANES, 0xdead),
+	   rd_or(PLAT_UFS_UNIPRO + UNIP_PA_ACTIVERXDATALANES, 0xdead), rd_or(PLAT_UFS_VS + VS_FSM_MONITOR, 0xdead));
 	wr32(hci + IS, IS_UCCS | IS_UHXS | IS_UPMS);
-	return (arg2 & 0xff) == 0 && (is & IS_UHXS) ? 0 : -3;
+	return (arg2 & 0xff) == 0 && (is & IS_UHXS) && ((hcs >> 8) & 7) == 1 ? 0 : -3;
 }
 
 /* The GPT of each LUN, and in super the LP (dynamic partitions) metadata header. */
@@ -375,7 +466,7 @@ void ufs_probe(void)
 		u32 v;
 
 		if (rd(PLAT_UFS_VS, &v))
-			dump_words("vendor (0x13201100)", PLAT_UFS_VS, 16);
+			dump_words("vendor 0x00-0xcf", PLAT_UFS_VS, 52);
 	}
 
 	utrl = ((u64)utrlbau << 32) | (utrlba & ~0x3ffu);

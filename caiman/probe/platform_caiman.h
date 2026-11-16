@@ -77,6 +77,8 @@
 /* UFS (zuma-ufs.dtsi, "samsung,exynos-ufs"): UFSHCI standard registers, vendor registers */
 #define PLAT_UFS_HCI		0x13200000ULL
 #define PLAT_UFS_VS		0x13201100ULL
+#define PLAT_UFS_UNIPRO		0x13280000ULL
+#define PLAT_UFS_PHY		0x13204000ULL		/* PMA: common at +0, lane n at +0x800 * n */
 #define PLAT_UFS_SCRATCH	0x900000000ULL		/* read-test buffer: free high-bank DRAM */
 
 /* Panel (s6e3hc3), for sanity-checking what the registers say. */

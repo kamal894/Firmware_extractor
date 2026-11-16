@@ -139,6 +139,14 @@ def fake_mmio():
     w32(0x300050, MMIO_BASE + 0x380000)       # UTRLBA
     w32(0x300060, 1)                          # UTRLRSR
     w32(0x300090, 0x17)                       # UICCMD: DME_HIBER_ENTER, as the Pixel's bootloader leaves it
+    w32(0x3011b0, 0x17)                       # vendor CLKSTOP_CTRL: internal clocks stopped (Hibern8)
+    w32(0x3011b4, 0xde0)                      # vendor FORCE_HCS: CLK_STOP_CTRL_EN_ALL
+    w32(0x323080, 2)                          # UniPro PA_AvailTxDataLanes (PLAT_UFS_UNIPRO on qemu)
+    w32(0x304000, 0x51)                       # PHY common 0x000 after the CAL's post_h8_enter
+    for lane in (0, 1):
+        w32(0x304000 + 0x800 * lane + 0x9f4, 0x08)
+        w32(0x304000 + 0x800 * lane + 0xa00, 0x3a)
+        w32(0x304000 + 0x800 * lane + 0xb64, 0x33)
     w32(0x380000, 0x21000000)                 # UTRD: command type UFS storage, data in
     w32(0x380010, MMIO_BASE + 0x381000)       # UCD
     w32(0x380018, (0x80 << 16) | 0x20)        # response @ dword 0x80, 0x20 dwords
@@ -387,6 +395,11 @@ SCENARIOS = {
         "ufs: verdict: UP: the bootloader left the link running",
         "--- ufs read test (READ(10) only, through the bootloader's request list) ---",
         "ufs: last UIC command 0x17 (DME_HIBER_ENTER: the link is in Hibern8)",
+        "ufs: before wake: CLKSTOP_CTRL 0x00000017 FORCE_HCS 0x00000de0",
+        "ufs: clocks on: CLKSTOP_CTRL 0x00000000 FORCE_HCS 0x000009c0",
+        "ufs: UniPro: available tx lanes 2",
+        "ufs: PHY before: common 0x000=0x51  lane 0: 0x9f4=0x08 0xa00=0x3a 0xb64=0x33  lane 1: 0x9f4=0x08 0xa00=0x3a 0xb64=0x33",
+        "ufs: PHY after : common 0x000=0x11  lane 0: 0x9f4=0x00 0xa00=0x30 0xb64=0x22  lane 1: 0x9f4=0x00 0xa00=0x30 0xb64=0x22",
         "ufs: sending DME_HIBER_EXIT",
         # (fake registers are RAM: the write-1-to-clear of IS leaves the bits set, so the UIC
         # command seems to complete; the request list still never does)

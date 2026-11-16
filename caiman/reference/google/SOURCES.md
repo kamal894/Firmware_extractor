@@ -24,3 +24,21 @@ To refresh a file:
 ```bash
 curl -s "https://android.googlesource.com/kernel/devices/google/zumapro/+/refs/heads/android-gs-caimito-6.1-android16/dts/zumapro-rmem.dtsi?format=TEXT" | base64 -d
 ```
+
+## UFS (added for M4)
+
+From `kernel/google-modules/soc/gs`, same branch, `drivers/ufs/`:
+
+| File here | Used for |
+|---|---|
+| `ufs/ufs-exynos.c` | `exynos_ufs_hibern8_notify()`: clock gating and CAL tables around Hibern8; quirks (`fixed-prdt-req_list-ocs`) |
+| `ufs/ufs-vs-regs.h` | vendor registers: `HCI_CLKSTOP_CTRL` 0xB0, `HCI_FORCE_HCS` 0xB4, UniPro `PA_*` offsets |
+| `ufs/ufs-exynos-gs.h`, `ufs/ufs-vs-mmio.h`, `ufs/ufs-cal-if.h` | context |
+| `ufs/zuma/ufs-cal.h` | zuma PHY tables: `post_h8_enter`, `pre_h8_exit` |
+| `ufs/zuma/ufs-cal-if.c`, `ufs/zuma/ufs-cal-if.h`, `ufs/zuma/ufs-vs-mmio.h` | how a table is applied (PMA lane stride 0x800, per-lane loop) |
+
+`zuma-ufs.dtsi` (already here) gives the register map: HCI 0x13200000, vendor 0x13201100, UniPro
+0x13280000, PHY 0x13204000.
+
+`../linux/ufs-exynos.c` and `ufs-exynos.h` are upstream Linux's `drivers/ufs/host/` (torvalds/linux
+master, GPL-2.0), for comparison.

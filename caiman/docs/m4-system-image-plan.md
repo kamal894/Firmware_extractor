@@ -66,3 +66,33 @@ link bring-up. The next probe (PROBE_UFS=2) does exactly that, read-only: every 
 
 The IPSW is on Apple's CDN (`updates.cdn-apple.com/2023SpringFCS/fullrestores/032-85130/6AB0D10A-8AF9-4F6C-8CF5-A1B315CABE88/`),
 SHA-1 `6ee6e5b447902dbb36a3991ca20d032d6b4cc759` (per ipsw.me's index).
+
+### Run 8 (PROBE_UFS=2): every READ timed out
+
+`ufs: lun 0..3: read failed (-3)`. Run 7's dump already showed why: `UICCMD` (0x90) held 0x17,
+DME_HIBER_ENTER. The bootloader put the link in Hibern8 before handing over, so requests wait.
+
+### Run 9: DME_HIBER_EXIT alone is not enough
+
+```
+ufs: DME_HIBER_EXIT: result 0 (0 = success), IS 0x00000420 (exit status set), HCS 0x0000050f (power mode status 5, 1 = done)
+ufs: lun 0: read failed (-3)
+```
+
+Power mode status 5 is PWR_FATAL_ERROR. Google's Tensor UFS driver
+(`google-modules/soc/gs` `drivers/ufs/ufs-exynos.c`, copied to `reference/google/ufs/`) shows the
+missing part. After every Hibern8 entry it runs the CAL table `post_h8_enter` (PHY common register
+0x000 = 0x51, ...) and stops the controller's internal clocks (`HCI_CLKSTOP_CTRL`). Before every exit
+it undoes both:
+
+1. `exynos_ufs_gate_clk(false)`: clear `CLK_STOP_ALL` (0x17) in vendor `HCI_CLKSTOP_CTRL` (+0xB0);
+2. `ufs_call_cal()`: clear `UNIPRO_MCLK_STOP_EN | MPHY_APBCLK_STOP_EN` in `HCI_FORCE_HCS` (+0xB4),
+   apply zuma's `pre_h8_exit` table to the PHY (0x13204000: common 0x000 = 0x11, wait 10 us; per
+   lane, stride 0x800: 0x9F4 = 0x00, 0xA00 = 0x30, 0xB64 = 0x32 then 0x22), set `MPHY_APBCLK_STOP_EN`
+   again;
+3. then DME_HIBER_EXIT, and power mode status must read 1 (PWR_LOCAL).
+
+zuma's DT has `fixed-prdt-req_list-ocs`, so the PRDT, UTRLCLR and OCS behave as the UFSHCI standard
+says (no Exynos byte-granularity quirk), which matches the bootloader's own descriptors.
+
+The next `probe-boot-ufs.img` does steps 1-3, printing every register before and after.
