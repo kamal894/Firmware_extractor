@@ -14,6 +14,8 @@ the monitor and decodes the ramoops console zone exactly like Linux.
 Scenarios:  default | el1 (entered at EL1, PSCI over HVC) |
             xnu (LOADER=1: HackiOS's prebuilt kernel started by the loader, its log from pstore;
                  needs HAKIOS_KERNEL, default the hackios-xnu-kernel checkout's prebuilt/) |
+            hello (the same with HackiOS's raw-syscall `hello` as the RAM disk: process 1 in user
+                   space, then the kernel's panic when it exits; needs HAKIOS_HELLO) |
             bare-dt (no caiman nodes in the DT: built-in fallbacks) |
             paint (PROBE_PAINT=1) | crash (PROBE_CRASHTEST=1)
 
@@ -181,37 +183,42 @@ def build(scenario, work):
     out = f"out/qemu-{scenario}"
     flags = {"default": [], "el1": [], "bare-dt": [], "paint": ["PROBE_PAINT=1"],
              "crash": ["PROBE_CRASHTEST=1"],
-             "xnu": ["LOADER=1", "PROBE_XNU_SECONDS=40"]}[scenario]
+             "xnu": ["LOADER=1", "PROBE_XNU_SECONDS=40"],
+             "hello": ["LOADER=1", "PROBE_XNU_SECONDS=40"]}[scenario]
     run(["make", "-s", "-C", PROBE, "PLATFORM=qemu", f"OUT={out}", "PROBE_FINISH_DELAY_MS=100"]
         + flags, stdout=subprocess.DEVNULL)
     image = os.path.join(PROBE, out, "probe.Image")
-    if scenario != "xnu":
+    if scenario not in XNU_SCENARIOS:
         return image
     combined = os.path.join(work, "xnu.Image")
+    extra = ["--ramdisk", HAKIOS_HELLO] if scenario == "hello" else []
     run([sys.executable, os.path.join(HERE, "..", "tools", "mkxnuimg.py"), "--loader", image,
          "--kernel", HAKIOS_KERNEL, "--kernel-sha256", HAKIOS_KERNEL_SHA256, "--cmdline=-v",
-         "--out-image", combined], stdout=subprocess.DEVNULL)
+         *extra, "--out-image", combined], stdout=subprocess.DEVNULL)
     return combined
 
 
 HAKIOS_KERNEL = os.environ.get(
     "HAKIOS_KERNEL", "/home/user/oosexgang/hackios-xnu-kernel/prebuilt/hakios-kernel")
 HAKIOS_KERNEL_SHA256 = "03e794e8e1d389a6abb9bcd2431eaccf9747271ff8c1234922225718c70441e9"
+HAKIOS_HELLO = os.environ.get(
+    "HAKIOS_HELLO", "/home/user/oosexgang/hackios-xnu-kernel/prebuilt/userland/hello")
+XNU_SCENARIOS = ("xnu", "hello")
 
 
 def machine(scenario):
     # el1: no virtualization extensions -> entered at EL1, PSCI over HVC
     if scenario == "el1":
         return "virt"
-    # xnu: GICv3 as on the Pixel (Tensor G4), for HackiOS's kernel
-    return "virt,virtualization=on,gic-version=3" if scenario == "xnu" else "virt,virtualization=on"
+    # xnu, hello: GICv3 as on the Pixel (Tensor G4), for HackiOS's kernel
+    return "virt,virtualization=on,gic-version=3" if scenario in XNU_SCENARIOS else "virt,virtualization=on"
 
 
 def qemu_size(scenario):
     # xnu: XNU's 4 GiB window at 0x80000000 and a second core for the watcher. Two NUMA nodes
     # make QEMU list RAM as two adjacent ranges with XNU's window across the seam, as the Pixel
     # lists its high bank as seven adjacent 2 GiB ranges.
-    if scenario == "xnu":
+    if scenario in XNU_SCENARIOS:
         return ["-smp", "2", "-m", "6G",
                 "-object", "memory-backend-ram,id=m0,size=3G", "-numa", "node,memdev=m0",
                 "-object", "memory-backend-ram,id=m1,size=3G", "-numa", "node,memdev=m1"]
@@ -249,7 +256,7 @@ def boot(image, dtb, work, scenario):
     ])
     try:
         mon = Monitor(sock)
-        deadline = time.time() + (240 if scenario == "xnu" else 60)
+        deadline = time.time() + (240 if scenario in XNU_SCENARIOS else 60)
         while time.time() < deadline:
             st = mon.cmd("info status")
             if "paused" in st or "shutdown" in st:
@@ -336,6 +343,19 @@ SCENARIOS = {
         "!BSD", "Waiting on <dict",
         "watcher: 40 s are up; resetting the phone",
     ],
+    "hello": COMMON + EL2 + [
+        "xnu: kernel 16809112 bytes, ramdisk 16480 bytes",
+        "xnu: boot-args: debug=0x8 serial=3 cpus=1 rd=md0 -v",
+        "watcher: running on MPIDR 0x80000001 at EL2",
+        "Darwin Kernel Version 22.5.0",
+        "BSD root: md0, major 1, minor 0",
+        "load_init_program: attempting to load /sbin/launchd",
+        "Hello from user space on Darwin!",
+        "I am process",
+        "panic(cpu 0 caller", "initproc failed to start",
+        "=== panic: ",
+        "watcher: 40 s are up; resetting the phone",
+    ],
     "paint": COMMON + EL2 + ["paint: colour bars into 0x58000000 (1280x2856, stride 5120)", "paint: done",
                        "kick: TRIG_CON=0x00000010 (hw trigger, masked) FRAME_COUNT=1234",
                        "kick: TRIG_CON now 0x00000001;",
@@ -364,7 +384,8 @@ def main():
             print(f"== scenario: {sc}")
             d = os.path.join(work, sc)
             os.makedirs(d)
-            if sc == "xnu" and not os.path.exists(HAKIOS_KERNEL):
+            if sc in XNU_SCENARIOS and not (os.path.exists(HAKIOS_KERNEL) and
+                                            (sc != "hello" or os.path.exists(HAKIOS_HELLO))):
                 print(f"   SKIP: no HackiOS kernel at {HAKIOS_KERNEL} (set HAKIOS_KERNEL)")
                 continue
             log, uart, fb = boot(build(sc, d), make_dtb(work, sc), d, sc)
@@ -376,14 +397,14 @@ def main():
                 # UART got the replay of the early log plus the rest (bootloader log muted)
                 expect(uart, ["=== caiman-probe", "uart: hello over serial", "=== SUMMARY ==="],
                        sc + " uart")
-                if sc == "xnu" and "Darwin Kernel Version" in uart:
+                if sc in XNU_SCENARIOS and "Darwin Kernel Version" in uart:
                     raise AssertionError("XNU's console reached the UART: it must go only to loader_log")
                 if "fake-abl: starting kernel" in uart:
                     raise AssertionError("bootloader log should not be sent to the UART")
                 first = struct.unpack_from("<I", fb, 0)[0]
                 if sc == "paint" and first != 0xFFFFFFFF:
                     raise AssertionError(f"frame buffer not painted (first pixel 0x{first:08x})")
-                if sc not in ("paint", "xnu") and first != 0:
+                if sc not in ("paint", "xnu", "hello") and first != 0:
                     raise AssertionError("frame buffer modified without PROBE_PAINT")
                 print(f"   PASS ({len(log)} bytes of log)")
             except AssertionError as e:

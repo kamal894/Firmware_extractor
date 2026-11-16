@@ -27,10 +27,15 @@ if [ -f "$HAKIOS_KERNEL" ]; then
 	python3 ../tools/mkxnuimg.py --loader out/pb-xnu/probe.Image --kernel "$HAKIOS_KERNEL" \
 		--kernel-sha256 03e794e8e1d389a6abb9bcd2431eaccf9747271ff8c1234922225718c70441e9 \
 		--out-image out/pb-xnu/xnu.Image --out-bootimg "$dest/xnu-boot.img" >/dev/null
+	# M4 (first step): the same with HackiOS's raw-syscall hello as the RAM disk (process 1)
+	HAKIOS_HELLO=${HAKIOS_HELLO:-$(dirname "$HAKIOS_KERNEL")/userland/hello}
+	python3 ../tools/mkxnuimg.py --loader out/pb-xnu/probe.Image --kernel "$HAKIOS_KERNEL" \
+		--kernel-sha256 03e794e8e1d389a6abb9bcd2431eaccf9747271ff8c1234922225718c70441e9 \
+		--ramdisk "$HAKIOS_HELLO" --out-image out/pb-xnu/hello.Image --out-bootimg "$dest/hello-boot.img" >/dev/null
 else
-	echo "no HackiOS kernel at $HAKIOS_KERNEL: xnu-boot.img not rebuilt" >&2
+	echo "no HackiOS kernel at $HAKIOS_KERNEL: xnu-boot.img and hello-boot.img not rebuilt" >&2
 fi
 
 cd "$dest"
-sha256sum probe.Image probe-boot*.img xnu-boot.img > SHA256SUMS
+sha256sum probe.Image probe-boot*.img xnu-boot.img hello-boot.img > SHA256SUMS
 cat SHA256SUMS

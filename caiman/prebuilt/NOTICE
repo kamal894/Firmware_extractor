@@ -10,6 +10,14 @@ xnu-boot.img contains, after the caiman loader (MIT, this repository):
   The loader patches three instructions of it in RAM at boot (console -> loader_log), as
   HackiOS's own MediaTek loader does.
 
+hello-boot.img contains the same, and as its RAM disk:
+
+  hello -- HackiOS's raw-syscall first program (userland/src/hello.c, MIT, (c) the HakiOS
+  developers), taken unmodified from
+  https://github.com/oosexgang/hackios-xnu-kernel/blob/63fc2b4/prebuilt/userland/hello
+  sha256 48a910940230506813aa0b75692e58d1c6698feccf7c6f7771c8790b6c97522d
+  (matches that repository's prebuilt/SHA256SUMS). XNU's mockfs runs it as /sbin/launchd.
+
 No file of iOS or of any Apple firmware is included. The device identity in the loader's
 device tree is a placeholder (no Apple data).
 

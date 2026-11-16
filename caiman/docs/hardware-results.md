@@ -135,6 +135,10 @@ What this establishes:
 
 ## Next
 
+- M4, first step, ready: `prebuilt/hello-boot.img` (QEMU scenario `hello` passes). The kernel mounts
+  HackiOS's `hello` as its RAM-disk root and runs it as process 1. Expected: "Hello from user space on
+  Darwin! I am process 1", then `panic ... initproc failed to start` (the prebuilt hello exits at
+  once, and process 1 ending is a panic by design).
 - M3: confirm what the `-v` text console looked like on the panel (the TE trigger was unmasked
   before the jump).
 - M4: give the kernel a root disk. First an Apple-free one (HackiOS's `hello`/`init`), which should
