@@ -10,6 +10,7 @@
 #   PROBE_FINISH=0|1|2      0 warm reboot (default), 1 cold reboot, 2 hang
 #   PROBE_FINISH_DELAY_MS=N wait before rebooting (default 3000)
 #   PROBE_CRASHTEST=1       fault on purpose at the end (tests the handler)
+#   PROBE_TOUCH=1           read-only look at the touch screen's power (PMIC through ACPM), pins, SPI
 #   LOADER=1                the M2 loader: probe, then start XNU from an appended payload
 #                           (OUT=out/loader-$(PLATFORM); ../tools/mkxnuimg.py builds the image)
 #   BOOTIMG_ARGS="..."      extra args for tools/pack_bootimg.py, e.g.
@@ -43,6 +44,9 @@ CFLAGS := --target=aarch64-none-elf -march=armv8.2-a -O2 -g -std=gnu11 \
 ifdef PROBE_UFS
 CFLAGS += -DPROBE_UFS=$(PROBE_UFS)
 endif
+ifdef PROBE_TOUCH
+CFLAGS += -DPROBE_TOUCH=$(PROBE_TOUCH)
+endif
 ifdef PROBE_XNU_SECONDS
 CFLAGS += -DPROBE_XNU_SECONDS=$(PROBE_XNU_SECONDS)
 endif
@@ -52,7 +56,7 @@ endif
 LDFLAGS := -pie --no-dynamic-linker -z norelro -z noexecstack --build-id=none -T linker.ld
 
 LOADER ?= 0
-SRCS := start.S main.c log.c uart.c timer.c fdt.c psci.c exception.c display.c wdt.c ufs.c lib.c
+SRCS := start.S main.c log.c uart.c timer.c fdt.c psci.c exception.c display.c wdt.c ufs.c touch.c lib.c
 ifeq ($(LOADER),1)
 SRCS += xnu.c watcher.c handoff.S
 CFLAGS += -DPROBE_LOADER=1

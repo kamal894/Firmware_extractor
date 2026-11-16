@@ -34,6 +34,9 @@
 #define PROBE_UFS 0		/* 1: read-only look at the UFS host controller (ufs.c);
 				   2: and READ(10)s of the GPTs and super's LP metadata */
 #endif
+#ifndef PROBE_TOUCH
+#define PROBE_TOUCH 0		/* 1: read-only look at the touch screen (touch.c) */
+#endif
 #ifndef PROBE_LOADER
 #define PROBE_LOADER 0		/* 1: start XNU from the payload after probing (xnu.c) */
 #endif
