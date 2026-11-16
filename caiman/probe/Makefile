@@ -5,7 +5,8 @@
 #
 # Options (all optional):
 #   PROBE_UART=0            never touch the debug UART
-#   PROBE_PAINT=1           paint colour bars into the frame buffer it finds
+#   PROBE_PAINT=1           paint colour bars into the frame buffer it finds, send the
+#                           frame (command-mode panel) and keep the watchdog fed
 #   PROBE_FINISH=0|1|2      0 warm reboot (default), 1 cold reboot, 2 hang
 #   PROBE_FINISH_DELAY_MS=N wait before rebooting (default 3000)
 #   PROBE_CRASHTEST=1       fault on purpose at the end (tests the handler)
@@ -42,7 +43,7 @@ CFLAGS += -DPLATFORM_QEMU
 endif
 LDFLAGS := -pie --no-dynamic-linker -z norelro -z noexecstack --build-id=none -T linker.ld
 
-SRCS := start.S main.c log.c uart.c timer.c fdt.c psci.c exception.c display.c lib.c
+SRCS := start.S main.c log.c uart.c timer.c fdt.c psci.c exception.c display.c wdt.c lib.c
 OBJS := $(patsubst %,$(OUT)/%.o,$(SRCS))
 
 all: $(OUT)/probe.Image $(if $(filter caiman,$(PLATFORM)),$(OUT)/probe-boot.img)

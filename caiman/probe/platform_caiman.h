@@ -4,6 +4,12 @@
  *
  * Every value here is a FALLBACK: the probe reads the device tree the
  * bootloader passes in x0 first and only uses these if that fails.
+ *
+ * Confirmed on hardware (docs/hardware-results.md, run 2): entry at EL2,
+ * image loaded at 0x80000000, DTB at 0x8a000000, ramoops console zone
+ * 0xfd3ff000, boot frame buffer 0xfac00000 1280x2856 BGRA8888 stride 5120
+ * on DMA L0 / DECON window 5, DECON0 in command mode (hw TE trigger),
+ * cluster-0 watchdog left running, PSCI 1.1 over SMC.
  * Sources (copies in caiman/reference/google/):
  *   zumapro.dtsi        serial_0 uart@10870000, GICv3, /chosen earlycon
  *   zumapro-rmem.dtsi   ramoops_mem@fd3ff000, bldr_log_reserved@fd800000
@@ -45,6 +51,10 @@
 #define PLAT_DECON_NWIN		14		/* WINCON block is 0xE000 / 0x1000 */
 #define PLAT_DPUF0_DMA		0x19900000ULL	/* L0-L6, stride 0x1000 */
 #define PLAT_DPUF1_DMA		0x19D00000ULL	/* L7-L13 (hw channels 8-14) */
+
+/* Cluster-0 watchdog, left running by the bootloader (zumapro.dtsi watchdog_cl0). */
+#define PLAT_WDT_BASE		0x10060000ULL
+#define PLAT_WDT_CLK		24576000ULL	/* OSCCLK */
 
 /* Panel (s6e3hc3), for sanity-checking what the registers say. */
 #define PLAT_PANEL_W		1280

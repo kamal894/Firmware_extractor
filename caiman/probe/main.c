@@ -382,6 +382,9 @@ static void summary(void)
 	pr("decon mode   : %s, %u frames in 100 ms\n",
 	   g.decon_cmd_mode < 0 ? "unknown" : g.decon_cmd_mode ? "command" : "video",
 	   g.frame_count_delta);
+	pr("watchdog     : %s, period %u ms, %u ms left at probe time\n",
+	   g.wdt_running ? "RUNNING (bootloader left it armed)" : "not running",
+	   g.wdt_period_ms, g.wdt_left_ms);
 	pr("aborted reads: %d\n", g.faults);
 }
 
@@ -458,6 +461,10 @@ void probe_main(u64 dtb, u64 load_base, u64 cur_el)
 
 	bldr_log_copy(dtc.bldr_size ? dtc.bldr_base : PLAT_BLDR_LOG_BASE,
 		      dtc.bldr_size ? dtc.bldr_size : PLAT_BLDR_LOG_SIZE);
+
+	wdt_report();
+	if (PROBE_WDT_KICK)
+		wdt_kick();
 
 	display_probe();
 

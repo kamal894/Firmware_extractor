@@ -34,6 +34,9 @@
 #define PLAT_DPUF0_DMA		0x50100000ULL
 #define PLAT_DPUF1_DMA		0x50200000ULL
 
+#define PLAT_WDT_BASE		0x50280000ULL	/* fake, inside the test's RAM blob */
+#define PLAT_WDT_CLK		24576000ULL
+
 #define PLAT_PANEL_W		1280
 #define PLAT_PANEL_H		2856
 

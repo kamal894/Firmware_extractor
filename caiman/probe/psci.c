@@ -61,7 +61,15 @@ void probe_finish(const char *why)
 	   mode == 0 && g.psci_reset2 >= 0 ? "PSCI SYSTEM_RESET2 warm" : "PSCI SYSTEM_RESET");
 	pr("=== caiman-probe end ===\n");
 	log_flush();
-	delay_us((u64)PROBE_FINISH_DELAY_MS * 1000);
+	{
+		u32 ms;
+
+		for (ms = 0; ms < PROBE_FINISH_DELAY_MS; ms += 250) {
+			if (PROBE_WDT_KICK)
+				wdt_kick();
+			delay_us(250000);
+		}
+	}
 
 	if (mode == 0 && g.psci_reset2 >= 0)
 		psci_call(PSCI_SYSTEM_RESET2_64, 0 /* SYSTEM_WARM_RESET */, 0, 0);

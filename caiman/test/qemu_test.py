@@ -94,11 +94,17 @@ def fake_mmio():
     def w32(off, v):
         struct.pack_into("<I", m, off, v)
 
-    # DECON0 main: video mode, enabled, running; shadow copy at +0x800
+    # DECON0 main as the Pixel 9 Pro's bootloader leaves it (first hardware run):
+    # command mode, enabled, running, hw (TE) trigger masked; shadow copy at +0x800
     w32(0x0000, 0x09865000)
     w32(0x0004, 1234)
-    w32(0x0020, 0x13)
-    w32(0x0820, 0x13)
+    w32(0x0020, 0x113)
+    w32(0x0820, 0x113)
+    w32(0x0030, 0x10)
+    # cluster-0 watchdog: running, reset on, prescaler 256, /128 -> 750 Hz
+    w32(0x280000, 0xff39)
+    w32(0x280004, 0x8000)
+    w32(0x280008, 0x4000)
     # window 0: chmap 9 -> dpp 8 (DPUF1), full screen
     w32(0x20000 + 0 * 0x1000, (9 << 4) | 1)
     w32(0x10000 + 0 * 0x1000 + 0xC, 0)
@@ -256,7 +262,10 @@ COMMON = [
     "fake-abl: display: decon0 video mode, fb 0x58000000 1280x2856",
     "fake-abl: starting kernel",
     "display: DT handover memory-region -> splash@58000000: 0x58000000 size 0xdf2000",
-    "display: mode=VIDEO enabled=yes",
+    "display: mode=COMMAND enabled=yes",
+    "wdt: WTCON=0x0000ff39 WTDAT=0x00008000 WTCNT=0x00004000: RUNNING, reset on expiry ON",
+    "period 43690 ms, 21845 ms left",
+    "watchdog     : RUNNING (bootloader left it armed), period 43690 ms",
     "display: window 0 ON: WINCON=0x00000091 chmap=9 -> dpp 8",
     "[solid colour, no DMA]",
     "display:   reading RDMA @ 0x50201000",
@@ -286,6 +295,8 @@ SCENARIOS = {
         "fb (DT)      : no handover memory-region", "=== caiman-probe end ===",
     ],
     "paint": COMMON + EL2 + ["paint: colour bars into 0x58000000 (1280x2856, stride 5120)", "paint: done",
+                       "kick: TRIG_CON=0x00000010 (hw trigger, masked) FRAME_COUNT=1234",
+                       "kick: TRIG_CON now 0x00000001;",
                        "=== caiman-probe end ==="],
     "crash": COMMON + EL2 + ["crashtest: executing an undefined instruction",
                        "!!! EXCEPTION: sync from current EL (SPx) at EL2",

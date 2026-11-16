@@ -127,7 +127,7 @@ decon mode   : video|command, N frames in 100 ms
 | `probe-boot.img` | default: reboot 3 s after finishing (PSCI warm reset if available) |
 | `probe-boot-lz4.img` | same, kernel lz4-compressed, in case the bootloader wants that |
 | `probe-boot-hang.img` | `PROBE_FINISH=2`: stays in a loop at the end; you force-restart |
-| `probe-boot-paint.img` | `PROBE_PAINT=1`: also paints colour bars into the frame buffer it found |
+| `probe-boot-paint.img` | `PROBE_PAINT=1`: paints colour bars into the frame buffer, sends the frame (command-mode panel), feeds the watchdog and holds them 10 s before rebooting |
 
 `SHA256SUMS` lists their hashes.
 
@@ -209,13 +209,14 @@ caiman/
 ## Status
 
 - QEMU: all five scenarios pass.
-- Pixel 9 Pro: **not run yet**. These things are unverified on hardware:
-  - whether the bootloader accepts a non-Linux Image (try the lz4 variant if not)
-  - whether a PSCI reset keeps DRAM, so pstore survives (fall back to the hang variant if not)
-  - whether the window/DMA registers read back as expected
+- Pixel 9 Pro: **the probe runs**. Results are in
+  [`docs/hardware-results.md`](docs/hardware-results.md):
+  - entry at EL2, image at 0x80000000, DTB at 0x8a000000
+  - frame buffer at 0xfac00000 (1280×2856, BGRA8888), command-mode panel
+  - the bootloader leaves the watchdog running
+  - the pstore log works
 
-  Every address used is a fallback; the probe prefers what the bootloader's
-  device tree says.
+  Next test: `probe-boot-paint.img` (colour bars on screen).
 
 When the log comes back, record the frame buffer address and the entry EL
 in `probe/platform_caiman.h` and in the plan's progress log. This probe is

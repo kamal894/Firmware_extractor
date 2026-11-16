@@ -21,6 +21,9 @@
 #ifndef PROBE_FINISH_DELAY_MS
 #define PROBE_FINISH_DELAY_MS 3000
 #endif
+#ifndef PROBE_WDT_KICK
+#define PROBE_WDT_KICK PROBE_PAINT	/* keep the watchdog fed while waiting to reboot */
+#endif
 #ifndef PROBE_BLDR_LOG_MAX
 #define PROBE_BLDR_LOG_MAX (512 * 1024)	/* bytes of bootloader log text to copy */
 #endif

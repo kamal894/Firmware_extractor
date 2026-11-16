@@ -139,6 +139,11 @@ void __attribute__((noreturn)) probe_finish(const char *why);
 
 void display_probe(void);
 
+/* ---- wdt.c ------------------------------------------------------------ */
+
+void wdt_report(void);
+void wdt_kick(void);
+
 /* ---- main.c: shared state -------------------------------------------- */
 
 #define MAX_MEM_RANGES 16
@@ -178,6 +183,9 @@ struct probe_state {
 	s64 psci_version;
 	s64 psci_reset2;		/* PSCI_FEATURES(SYSTEM_RESET2) */
 	int faults;			/* guarded reads that aborted */
+
+	int wdt_running;
+	u32 wdt_period_ms, wdt_left_ms;
 };
 
 extern struct probe_state g;

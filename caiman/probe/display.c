@@ -28,6 +28,13 @@
 #define  GCON_DECON_EN		(1u << 1)
 #define  GCON_DECON_EN_F	(1u << 0)
 #define TRIG_CON		0x0030
+#define  HW_TRIG_EN		(1u << 0)
+#define  SW_TRIG_DET_EN		(1u << 1)
+#define  HW_TRIG_MASK_DECON	(1u << 4)
+#define  SW_TRIG_EN		(1u << 8)
+#define SHD_REG_UP_REQ		0x0050
+#define  SHD_UP_REQ_CMP		(1u << 20)
+#define  SHD_UP_REQ_GLOBAL	(1u << 31)
 #define DECON_SHADOW		0x0800
 
 /* DECON_WINCON / DECON_WIN: one 0x1000 page per window */
@@ -198,27 +205,86 @@ static void print_chan(const char *tag, const struct chan *c)
 	   c->base1, c->stride);
 }
 
-static void paint(void)
+/* An opaque pixel of colour (r,g,b) in the scan-out format (drm fourcc naming, little endian). */
+static u32 pixel(u32 fmt, u32 r, u32 g8, u32 b)
 {
-	static const u32 bars[8] = {
-		0xffffffffu, 0xff0000ffu, 0xff00ff00u, 0xffff0000u,
-		0xffffff00u, 0xffff00ffu, 0xff00ffffu, 0xff808080u,
+	switch (fmt) {
+	case 0:	/* BGRA8888: [31:0] B:G:R:A */
+	case 4:	/* BGRX8888 */
+		return (b << 24) | (g8 << 16) | (r << 8) | 0xffu;
+	case 1:	/* RGBA8888: [31:0] R:G:B:A */
+	case 5:	/* RGBX8888 */
+		return (r << 24) | (g8 << 16) | (b << 8) | 0xffu;
+	case 2:	/* ABGR8888: [31:0] A:B:G:R */
+	case 6:	/* XBGR8888 */
+		return 0xff000000u | (b << 16) | (g8 << 8) | r;
+	default: /* ARGB8888 / XRGB8888: [31:0] A:R:G:B */
+		return 0xff000000u | (r << 16) | (g8 << 8) | b;
+	}
+}
+
+/*
+ * Command-mode panels keep showing their own frame memory until the DECON
+ * sends a new frame. Do what the driver's decon_reg_update_req_and_unmask()
+ * does: request a shadow update, then unmask the TE-driven (hw) trigger so a
+ * frame goes out on every tearing-effect pulse from the panel.
+ */
+static void kick_frames(u64 main)
+{
+	u32 trig, fc0, fc1, up;
+	int ok;
+
+	trig = safe_rd32(main + TRIG_CON, &ok);
+	if (!ok)
+		return;
+	fc0 = rd32(main + FRAME_COUNT);
+	pr("kick: TRIG_CON=0x%08x (%s trigger, %s) FRAME_COUNT=%u\n", trig,
+	   (trig & SW_TRIG_EN) ? "sw" : "hw", (trig & HW_TRIG_MASK_DECON) ? "masked" : "unmasked",
+	   fc0);
+	log_flush();
+	up = rd32(main + SHD_REG_UP_REQ);
+	wr32(main + SHD_REG_UP_REQ, up | SHD_UP_REQ_GLOBAL | SHD_UP_REQ_CMP);
+	if (trig & SW_TRIG_EN)
+		wr32(main + TRIG_CON, trig | SW_TRIG_EN | SW_TRIG_DET_EN);
+	else
+		wr32(main + TRIG_CON, (trig & ~HW_TRIG_MASK_DECON) | HW_TRIG_EN);
+	delay_us(200000);
+	fc1 = rd32(main + FRAME_COUNT);
+	pr("kick: TRIG_CON now 0x%08x; FRAME_COUNT %u -> %u in 200 ms (%s)\n",
+	   rd32(main + TRIG_CON), fc0, fc1,
+	   fc1 != fc0 ? "frames are going out: the bars should be on screen"
+		      : "still no frames");
+}
+
+static void paint(u64 decon_main)
+{
+	static const u8 rgb[8][3] = {
+		{ 255, 255, 255 }, { 255, 0, 0 }, { 0, 255, 0 }, { 0, 0, 255 },
+		{ 255, 255, 0 }, { 0, 255, 255 }, { 255, 0, 255 }, { 128, 128, 128 },
 	};
+	u32 bars[8];
 	u64 size = (u64)g.fb_stride * g.fb_height;
-	u32 x, y;
+	u32 x, y, i;
+	int panel_sized = g.fb_width == PLAT_PANEL_W && g.fb_height == PLAT_PANEL_H;
 
 	if (g.fb_bpp != 4 || !g.fb_width || !g.fb_height || g.fb_stride < g.fb_width * 4 ||
 	    (g.fb_addr & 3)) {
 		pr("paint: skipped (need a 32bpp linear buffer)\n");
 		return;
 	}
-	if (!addr_in_dram(g.fb_addr, size) ||
+	/*
+	 * The bootloader may leave the splash buffer out of the DT memory nodes,
+	 * so a panel-sized buffer the DMA is actively reading is trusted too.
+	 */
+	if (!(addr_in_dram(g.fb_addr, size) || (panel_sized && g.fb_addr >= 0x80000000ULL)) ||
 	    overlaps(g.fb_addr, size, g.load_base, g.image_size) ||
 	    (g.have_fdt && overlaps(g.fb_addr, size, g.dtb, g.fdt.totalsize)) ||
 	    overlaps(g.fb_addr, size, g.console.base, g.console.size)) {
 		pr("paint: skipped (buffer not in free DRAM)\n");
 		return;
 	}
+	for (i = 0; i < 8; i++)
+		bars[i] = pixel(g.fb_format, rgb[i][0], rgb[i][1], rgb[i][2]);
 	pr("paint: colour bars into 0x%llx (%ux%u, stride %u)\n", g.fb_addr, g.fb_width,
 	   g.fb_height, g.fb_stride);
 	log_flush();
@@ -228,11 +294,17 @@ static void paint(void)
 		for (x = 0; x < g.fb_width; x++)
 			row[x] = bars[(x * 8) / g.fb_width];
 	}
+	/* the display DMA reads DRAM directly: push the pixels out of any cache */
+	for (y = 0; y < g.fb_height; y++) {
+		u64 a = g.fb_addr + (u64)y * g.fb_stride, e = a + (u64)g.fb_width * 4;
+
+		for (a &= ~63ULL; a < e; a += 64)
+			__asm__ volatile("dc civac, %0" : : "r"(a) : "memory");
+	}
 	dsb_sy();
+	pr("paint: done (white red green blue yellow cyan magenta grey, left to right)\n");
 	if (g.decon_cmd_mode == 1)
-		pr("paint: DECON is in command mode: the panel only shows new pixels after a\n"
-		   "       frame update is triggered, so the bars may not appear.\n");
-	pr("paint: done\n");
+		kick_frames(decon_main);
 }
 
 void display_probe(void)
@@ -341,8 +413,8 @@ void display_probe(void)
 		   g.fb_addr, g.fb_width, g.fb_height, fmt_name(g.fb_format), g.fb_stride,
 		   g.fb_channel);
 		if (!addr_in_dram(g.fb_addr, 1))
-			pr("display: note: address is outside the DT memory ranges: may be an IOVA\n"
-			   "         (display SysMMU enabled) rather than a physical address\n");
+			pr("display: note: address is outside the DT memory nodes (the bootloader may\n"
+			   "         carve the splash buffer out of them, or it is an IOVA)\n");
 		if (g.fb_handover.size)
 			pr("display: DT handover region %s the register address\n",
 			   (g.fb_addr >= g.fb_handover.base &&
@@ -353,5 +425,5 @@ void display_probe(void)
 	}
 
 	if (PROBE_PAINT && found)
-		paint();
+		paint(m.main);
 }
