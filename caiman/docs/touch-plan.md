@@ -53,8 +53,29 @@ The interrupt line went from 0 (unpowered) to 1 with the supplies on: the chip s
 powered. It did not pull it low within 1 s of the reset; a TCM chip may wait for the host to read
 before it signals again, so the next answer has to come over SPI.
 
+## Step 2b: the SPI bus (not moving yet), 2026-11-16
+
+`spi@111D0000` is BLK_HSI0's USI2 (`zumapro-usi.dtsi`: clocks `VDOUT_CLK_HSI0_USI2_USI`,
+`GATE_HSI0_USI2_USI`; Android's node has an empty `pinctrl-0`, and no pin controller of HSI0 shows up in
+Android's debugfs). The probe sets it up as Google's `spi-s3c64xx.c` and mainline `exynos-usi.c` do:
+`sysreg_hsi0` + 0x101c = 2 (SPI; the write takes), `USI_OPTION` CLKREQ_ON, `USI_CON` out of reset,
+master, mode 0, 8 bits, 64-byte FIFO, polled, chip select by hand. CMU_HSI0's USI2 gates (zuma CAL
+offsets 0x2120/0x20fc/0x2100/0x20bc) read `0x00200000` (clock value 1) and were forced on manually too.
+
+The controller keeps what is written to it, but a 48-byte read never runs: `STATUS 0xbc0`, 47 bytes left
+in the TX FIFO, none received. One byte went into the shifter and no clock edges followed.
+
+What it rules out and leaves:
+- not the register clock, the USI mode, the USI reset, `CLKREQ_ON`, or the gates as zuma names them;
+- left: the USI2 functional clock's source (mux `0x101c` and divider `0x181c` read 0: zuma offsets,
+  unchecked for Tensor G4), and the pins (none muxed by Android: dedicated pads, or set up by firmware).
+
+The chip itself: once powered, its interrupt line goes high, and a few seconds after the reset it pulls
+it low (seen after the SPI attempts): it has a report waiting.
+
 ## Next
 
-2b. The SPI bus (the two PMIC writes above), reset it, and read its identify report over SPI
+2c. Find the USI2 clock source on Tensor G4 (its CAL tables are not in the public google-modules
+    tree; Android's kernel does not expose `clk_summary` or `/dev/mem`), or the pads (the two PMIC writes above), reset it, and read its identify report over SPI
    (USI SPI: clocks, USI mode, FIFO, polled).
 3. A kernel driver feeding `/dev/hakios-touch`, in a HackiOS kernel built on the Mac.

@@ -184,7 +184,7 @@ static void power_on(int l4, int l25)
 	delay_us(2000);
 	set_pin(PIN_RESET_BANK, PIN_RESET, 1, 1);		/* out of reset */
 	start = timer_ticks();
-	for (ms = 0; ms < 1000; ms++) {
+	for (ms = 0; ms < 3000; ms++) {
 		if (!((rd32(PIN_IRQ_BANK + 4) >> PIN_IRQ) & 1)) {
 			if (!lows)
 				first_low = timer_ticks();
@@ -193,12 +193,173 @@ static void power_on(int l4, int l25)
 		delay_us(1000);
 	}
 	if (lows)
-		pr("touch: interrupt line LOW %u of 1000 ms, first %llu ms after reset: the chip is up and has a report\n",
+		pr("touch: interrupt line LOW %u of 3000 ms, first %llu ms after reset: the chip is up and has a report\n",
 		   lows, (first_low - start) * 1000 / timer_freq());
 	else
-		pr("touch: interrupt line stayed high for 1 s after reset: no sign of the chip\n");
+		pr("touch: interrupt line stayed high for 3 s after reset: no sign of the chip\n");
 	pin("interrupt (after)", PIN_IRQ_BANK, PIN_IRQ);
 	pin("reset (after)", PIN_RESET_BANK, PIN_RESET);
+}
+#endif
+
+#if PROBE_TOUCH >= 2
+/*
+ * The USI SPI (Google's spi-s3c64xx.c, "samsung,exynos-spi": clock from the CMU, FIFO 64, RX level
+ * at STATUS bits 15+), polled, chip select by hand. SPI mode 0, 8 bits.
+ */
+#define USI_SYSREG	(0x11020000ULL + 0x101c)	/* sysreg_hsi0 + samsung,usi-offset */
+#define SPI_CH_CFG	0x00
+#define SPI_MODE_CFG	0x08
+#define SPI_SLAVE_SEL	0x0c
+#define SPI_INT_EN	0x10
+#define SPI_STATUS	0x14
+#define SPI_TX_DATA	0x18
+#define SPI_RX_DATA	0x1c
+#define SPI_PACKET_CNT	0x20
+#define SPI_PENDING_CLR	0x24
+#define SPI_SWAP_CFG	0x28
+#define SPI_USI_CON	0xc4
+#define SPI_USI_OPTION	0xc8
+#define CH_SW_RST	(1u << 5)
+#define CH_RXCH_ON	(1u << 1)
+#define CH_TXCH_ON	(1u << 0)
+#define SLAVE_SIG_INACT	(1u << 0)
+#define PACKET_CNT_EN	(1u << 16)
+#define RX_LVL(st)	(((st) >> 15) & 0x7f)
+#define TX_LVL(st)	(((st) >> 6) & 0x7f)
+
+static void spi_flush(void)
+{
+	const u64 b = TOUCH_SPI;
+
+	wr32(b + SPI_CH_CFG, rd32(b + SPI_CH_CFG) | CH_SW_RST);
+	delay_us(10);
+	wr32(b + SPI_CH_CFG, rd32(b + SPI_CH_CFG) & ~(CH_SW_RST | CH_RXCH_ON | CH_TXCH_ON));
+	wr32(b + SPI_PACKET_CNT, 0);
+}
+
+/*
+ * CMU_HSI0's clocks of USI2 (the SPI's usi-offset 0x101c is HSI0's third USI), at the offsets of
+ * Google's zuma CAL tables (cal-if/zuma/cmucal-sfr.c; Tensor G4's may differ: printed first). A gate:
+ * bit 20 manual, bit 21 the clock's value when manual, bit 28 automatic gating.
+ */
+#define CMU_HSI0	0x11000000ULL
+static const struct { char name[20]; u32 off; int gate; } usi2_clk[] = {
+	{ "MUX  USI2", 0x101c, 0 }, { "DIV  USI2", 0x181c, 0 }, { "GATE USI2", 0x2120, 1 },
+	{ "GATE USI2 IPCLK", 0x20fc, 1 }, { "GATE USI2 PCLK", 0x2100, 1 }, { "GATE USI2 RSTNSYNC", 0x20bc, 1 },
+};
+
+static void usi2_clocks(void)
+{
+	u32 i, v;
+	int ok;
+
+	for (i = 0; i < sizeof(usi2_clk) / sizeof(usi2_clk[0]); i++) {
+		v = safe_rd32(CMU_HSI0 + usi2_clk[i].off, &ok);
+		if (!ok) {
+			pr("touch: CMU_HSI0 +0x%04x %s: read aborted\n", usi2_clk[i].off, usi2_clk[i].name);
+			continue;
+		}
+		pr("touch: CMU_HSI0 +0x%04x %-18s 0x%08x%s\n", usi2_clk[i].off, usi2_clk[i].name, v,
+		   usi2_clk[i].gate ? ((v & (1u << 20)) ? ((v & (1u << 21)) ? " (manual, on)" : " (manual, OFF)")
+					      : ((v & (1u << 28)) ? " (automatic)" : " (?)")) : "");
+		/* a gate as the CAL tables describe it (only bits 20, 21, 28 and the low status bits): force it on */
+		if (usi2_clk[i].gate && !(v & ~((1u << 20) | (1u << 21) | (1u << 28) | 0xffu)) &&
+		    !((v & (1u << 20)) && (v & (1u << 21)))) {
+			wr32(CMU_HSI0 + usi2_clk[i].off, v | (1u << 20) | (1u << 21));
+			pr("touch:   set to manual, on: 0x%08x\n", rd32(CMU_HSI0 + usi2_clk[i].off));
+		}
+	}
+}
+
+static int spi_init(void)
+{
+	const u64 b = TOUCH_SPI;
+	u32 conf = rd32(USI_SYSREG), v;
+
+	pr("touch: USI mode register 0x%08x (SW_CONF %u; 2 = SPI)\n", conf, conf & 7);
+	usi2_clocks();
+	if ((conf & 7) != 2) {
+		wr32(USI_SYSREG, (conf & ~7u) | 2);
+		pr("touch: USI mode register after writing SPI: 0x%08x%s\n", rd32(USI_SYSREG),
+		   (rd32(USI_SYSREG) & 7) == 2 ? "" : " (the write did not take: the register is not ours)");
+	}
+	/*
+	 * exynos_usi_configure() (mainline drivers/soc/samsung/exynos-usi.c): ask for the clock and do
+	 * not let hardware auto clock gating stop it (CLKREQ_ON, not CLKSTOP_ON), then out of reset
+	 */
+	wr32(b + SPI_USI_OPTION, (rd32(b + SPI_USI_OPTION) & ~(1u << 2)) | (1u << 1));
+	wr32(b + SPI_USI_CON, 0);			/* USI_RESET released */
+	wr32(b + SPI_SLAVE_SEL, SLAVE_SIG_INACT);
+	wr32(b + SPI_INT_EN, 0);
+	wr32(b + SPI_MODE_CFG, 0);
+	wr32(b + SPI_PACKET_CNT, 0);
+	wr32(b + SPI_PENDING_CLR, 0x1e);
+	wr32(b + SPI_PENDING_CLR, 0);
+	wr32(b + SPI_SWAP_CFG, 0);
+	wr32(b + SPI_MODE_CFG, 0x3ffu << 19);		/* trailing count; byte transfers */
+	spi_flush();
+	wr32(b + SPI_CH_CFG, rd32(b + SPI_CH_CFG) & ~0x1cu);	/* master, CPOL 0, CPHA 0 */
+	v = rd32(b + SPI_MODE_CFG);
+	pr("touch: SPI after set-up: USI_CON 0x%08x USI_OPTION 0x%08x MODE_CFG 0x%08x (want 0x%08x) CH_CFG 0x%08x"
+	   " STATUS 0x%08x\n", rd32(b + SPI_USI_CON), rd32(b + SPI_USI_OPTION), v, 0x3ffu << 19, rd32(b + SPI_CH_CFG),
+	   rd32(b + SPI_STATUS));
+	if (v != 0x3ffu << 19) {
+		pr("touch: the SPI controller does not keep what is written: its clock is off\n");
+		return -1;
+	}
+	return 0;
+}
+
+/* Clock n bytes in (0xff out) with chip select low. Returns how many came back. */
+static u32 spi_read(u8 *buf, u32 n)
+{
+	const u64 b = TOUCH_SPI;
+	u64 start;
+	u32 i, got = 0;
+
+	spi_flush();
+	wr32(b + SPI_PACKET_CNT, n & 0xffff);
+	wr32(b + SPI_PACKET_CNT, (n & 0xffff) | PACKET_CNT_EN);
+	wr32(b + SPI_SLAVE_SEL, 0);				/* chip select on (active low) */
+	delay_us(10);
+	for (i = 0; i < n; i++)
+		wr32(b + SPI_TX_DATA, 0xff);
+	wr32(b + SPI_CH_CFG, rd32(b + SPI_CH_CFG) | CH_RXCH_ON | CH_TXCH_ON);
+	start = timer_ticks();
+	while (got < n && timer_ticks() - start < timer_freq() / 50) {
+		u32 st = rd32(b + SPI_STATUS), lvl = RX_LVL(st);
+
+		while (lvl-- && got < n)
+			buf[got++] = (u8)rd32(b + SPI_RX_DATA);
+	}
+	wr32(b + SPI_CH_CFG, rd32(b + SPI_CH_CFG) & ~(CH_RXCH_ON | CH_TXCH_ON));
+	wr32(b + SPI_SLAVE_SEL, SLAVE_SIG_INACT);
+	return got;
+}
+
+static void spi_identify(void)
+{
+	u8 buf[48];
+	u32 got, i, t;
+
+	if (spi_init())
+		return;
+	for (t = 0; t < 3; t++) {
+		memset(buf, 0, sizeof(buf));
+		got = spi_read(buf, sizeof(buf));
+		pr("touch: SPI read %u: %u of %u bytes:", t, got, (u32)sizeof(buf));
+		for (i = 0; i < got; i++)
+			pr(" %02x", buf[i]);
+		pr("\n");
+		if (got >= 4 && buf[0] == 0xa5) {
+			pr("touch: Synaptics TCM message: status 0x%02x, %u bytes of payload%s\n", buf[1],
+			   buf[2] | (buf[3] << 8), buf[1] == 0x10 ? " (the identify report)" : "");
+			break;
+		}
+		delay_us(20000);
+	}
+	pin("interrupt (after SPI)", PIN_IRQ_BANK, PIN_IRQ);
 }
 #endif
 
@@ -240,6 +401,7 @@ void touch_probe(void)
 				pin("reset", PIN_RESET_BANK, PIN_RESET);
 				pin("interrupt", PIN_IRQ_BANK, PIN_IRQ);
 				power_on(l4, l25);
+				spi_identify();
 			} else {
 				pr("touch: LDO voltages are not 0x3c/0x2c: not powering anything\n");
 			}
