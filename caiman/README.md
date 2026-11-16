@@ -225,7 +225,10 @@ caiman/
     IOMedia" (no root disk yet). Its log comes back through pstore
     ([plan](docs/m2-loader-plan.md), [results](docs/hardware-results.md))
 
-  Next: a root disk (M4).
+  - **M3: XNU's text console on the panel**, read back from the frame buffer
+  - **First user-space process**: `hello` as process 1 ("Hello from user space on Darwin!")
+
+  Next: iOS's own user space, which needs your IPSW and a way to get its ~2.5 GB system image to the kernel.
 
 When the log comes back, record the frame buffer address and the entry EL
 in `probe/platform_caiman.h` and in the plan's progress log. This probe is

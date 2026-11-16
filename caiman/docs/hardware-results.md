@@ -168,9 +168,31 @@ cpu_start() cpu: 0
 - On the Mac, `tr` choked on the panic's binary stackshot (`tr: Illegal byte sequence`) and only
   65 KB of the 107 KB log was saved; `run_probe.sh` now runs it with `LC_ALL=C`.
 
+## Run 6: `hello-boot.img` (c8e52a7): **XNU's console on the panel (M3)**
+
+The same run as run 5, with the watcher's screen picture. DECON0 sent 2721 frames
+(60 Hz for the whole run), and the frame buffer at 0xfac00000 holds XNU's `-v` console. The
+upper part of the panel is rows of text, as in the QEMU run (649 cells lit there):
+
+```
+screen: DECON FRAME_COUNT 2721
+screen: 1280x2856 at 0xfac00000, 64x48 cells (' ' dark .. '#' bright):
+| # ### ############ ## ## # ## # #### ## ##                     |
+|## ######################### #########                          |
+|## ######################################### ################## |
+|## ############################# #### #####                     |
+   ... (20 rows of text, the lower 28 rows dark)
+screen: 636 of 3072 cells lit
+```
+
+- **M3 gate met**: something XNU drew is on the Pixel's screen. It goes through a plain buffer at
+  0xfac00000, with the DECON's TE trigger left unmasked by the loader. No display driver was needed.
+- After the panic the kernel printed `MACH Reboot` but could not reset the board itself (the BCM2837
+  platform has no reset path here). The watcher did, at 45 s, as designed.
+
 ## Next
 
-- M3 objectively: the watcher now draws a 64×48 text picture of the frame buffer (and DECON's
+- M3 objectively (done in run 6): the watcher now draws a 64×48 text picture of the frame buffer (and DECON's
   frame counter) into each snapshot, so the next run shows what the panel showed.
 - Real iOS user space (launchd → SpringBoard) needs your iOS 16.5 IPSW and a way to get a ~2.5 GB
   system image to the kernel: `fastboot boot` can't carry it, so either a storage driver (UFS) or
