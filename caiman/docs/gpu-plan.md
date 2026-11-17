@@ -65,6 +65,14 @@ v11.xml COMPUTE SR (SRT r0, FAU r8, SPD r16, TSD r24, WG_SIZE r33 = 63, JOB_SIZE
   +0x34 and +0x38. Next: find in mali_kbase.ko what r54p3 does for a group to get shader endpoints
   (CSG status update, GLB shader power requests, the iterator/endpoint config layout for interface 2.8).
 
+Runs gpu13-gpu16 (after docs/mali-endpoints.md from Codex): shader and descriptor pages mapped before AS1
+goes live (no AS1 fault either way); tiler/shader power left to the firmware (gpu14: then nobody powers
+them, SHADER_READY 0) and powered by us after the MCU boots (gpu15). With a CSG status update (CSG_REQ
+bit 5, acked) the snapshot is: CS0 command pointer 0x1000a0 = the RUN_COMPUTE, CSG0 output +0x10 0
+(current endpoints, Panthor's layout) and +0x14 0x00070707 (requested). So the stream waits at
+RUN_COMPUTE for shader endpoints the firmware does not grant. Open: what grants them in r54p3 (GLB
+requests not made yet: progress/poweroff/idle timers, shader-core host/firmware handshake).
+
 ## Next
 
 6. Simple jobs (a fill, a copy), then a triangle; then a Metal back end (HackiOS's hakios-metal, for

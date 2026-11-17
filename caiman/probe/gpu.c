@@ -130,10 +130,17 @@ static void gpu_power_up(void)
 	gpu_wr(0x48, gpu_rd(0x48) | (1u << 24));
 	gpu_wr(0x304, 31);				/* COHERENCY_ENABLE: none */
 	pr("gpu: L2_CONFIG now 0x%08x (Android reads 0x01140000)\n", gpu_rd(0x48));
-	if (gpu_block_on("L2", L2_PWRON, L2_READY, L2_PWRTRANS, gpu_rd(L2_PRESENT)) ||
-	    gpu_block_on("tiler", TILER_PWRON, TILER_READY, TILER_PWRTRANS, gpu_rd(TILER_PRESENT)) ||
+	if (gpu_block_on("L2", L2_PWRON, L2_READY, L2_PWRTRANS, gpu_rd(L2_PRESENT)))
+		return;
+#if PROBE_GPU < 5
+	/*
+	 * With the firmware running (step 5 on), the tiler and shader cores are left to it, as kbase leaves them
+	 * (docs/mali-endpoints.md): run gpu13, cores powered here, a compute job never got any.
+	 */
+	if (gpu_block_on("tiler", TILER_PWRON, TILER_READY, TILER_PWRTRANS, gpu_rd(TILER_PRESENT)) ||
 	    gpu_block_on("shader cores", SHADER_PWRON, SHADER_READY, SHADER_PWRTRANS, gpu_rd(SHADER_PRESENT)))
 		return;
+#endif
 	pr("gpu: all on; IRQ_RAWSTAT 0x%08x GPU_STATUS 0x%08x\n", gpu_rd(GPU_IRQ_RAWSTAT), gpu_rd(0x34));
 	log_flush();
 #if PROBE_GPU >= 3
@@ -188,7 +195,9 @@ static u64 pool = POOL_BASE, root;
 #define Q_VA		0x05000000u	/* a stream's queue input and output pages, in AS0 */
 #define SUSP_VA		0x05100000u	/* group 0's suspend buffer, in AS0 */
 #define SUSP_PAGES	64
-static u64 q_pa, susp_pa, job_root, target_page;
+#define SHADER_VA	0x00300000u	/* step 5: the shader, in AS1 */
+#define DESC_VA		0x00400000u	/* step 5: its SPD (+0) and TSD (+0x40), in AS1 */
+static u64 q_pa, susp_pa, job_root, target_page, code_page, desc_page;
 static volatile u32 *kick_csg_in, *kick_csg_out, *kick_glb_in, *kick_glb_out;
 static void gpu_first_job(u64 shared_pa);
 #endif
@@ -275,6 +284,8 @@ static void gpu_faults(const char *when)
 	   "AS0 fault 0x%08x @0x%08x%08x status 0x%x\n", when, gpu_rd(MCU_STATUS), gpu_rd(JOB_IRQ_RAWSTAT),
 	   gpu_rd(GPU_IRQ_RAWSTAT), gpu_rd(0x3c), gpu_rd(0x40), gpu_rd(MMU_IRQ_RAWSTAT), gpu_rd(AS0 + AS_FAULTSTATUS),
 	   gpu_rd(AS0 + AS_FAULTADDR + 4), gpu_rd(AS0 + AS_FAULTADDR), gpu_rd(AS0 + AS_STATUS));
+	pr("gpu: %s: AS1 fault 0x%08x @0x%08x%08x status 0x%x\n", when, gpu_rd(0x2440 + AS_FAULTSTATUS),
+	   gpu_rd(0x2440 + AS_FAULTADDR + 4), gpu_rd(0x2440 + AS_FAULTADDR), gpu_rd(0x2440 + AS_STATUS));
 }
 
 /*
@@ -358,8 +369,6 @@ static int wait_bits(volatile u32 *req, volatile u32 *ack, u32 mask, const char 
  * 64. SPD: type 8 (shader), stage 1 (compute), 64 registers a thread, preload r60 (bit 12), binary at
  * 0x300000 (an executable page). TSD: no thread or workgroup storage (WLS instances log2 = 31).
  */
-#define SHADER_VA	0x00300000u
-#define DESC_VA		0x00400000u
 
 static const u64 shader_id[4] = {
 	0x00b4c00119c0c83cULL,	/* LSHIFT_OR.i32 r0, r60, 0x3020100.b2222, 0x0 */
@@ -381,16 +390,8 @@ static u64 cs_move32(u32 reg, u32 v)
 static void gpu_first_compute(u64 *ring, volatile u64 *q_in, volatile u64 *q_out, volatile u32 *cs_out)
 {
 	volatile u32 *buf = (volatile u32 *)(uptr)target_page;
-	u64 code_pa = page_alloc(1), desc_pa = page_alloc(1), saved_root = root, start;
+	u64 code_pa = code_page, desc_pa = desc_page, start;
 	u32 *spd, *tsd, i, n = 8, good = 0;
-
-	root = job_root;
-	if (!code_pa || !desc_pa || map_pages(SHADER_VA, code_pa, 0x1000, 0x40000005) ||
-	    map_pages(DESC_VA, desc_pa, 0x1000, 0x40000003)) {
-		root = saved_root;
-		return;
-	}
-	root = saved_root;
 	memcpy((void *)(uptr)code_pa, shader_id, sizeof(shader_id));
 	spd = (u32 *)(uptr)desc_pa;
 	spd[0] = 8 | (1u << 4);
@@ -401,21 +402,6 @@ static void gpu_first_compute(u64 *ring, volatile u64 *q_in, volatile u64 *q_out
 	tsd[1] = 31;
 	for (i = 0; i < 64; i++)
 		buf[i] = 0xdeadbeef;
-
-	/*
-	 * Run gpu10: RUN_COMPUTE fetched (extract at it), GPU_STATUS busy, but CSG0's current endpoints (output
-	 * +0x10) 0: the group got no shader cores. Panthor toggles CSG_REQ bit 4 (endpoint config) with START;
-	 * do that now, with the group's bell, and wait for the ack.
-	 */
-	/* the extended endpoint word (+0x38) too, in case this firmware reads that one (docs/mali-csf-submit.md) */
-	kick_csg_in[14] = kick_csg_in[13];
-	toggle(&kick_csg_in[0], kick_csg_out[0], 1u << 4);
-	toggle(&kick_glb_in[2], kick_glb_out[2], 1);
-	dsb_sy();
-	gpu_wr(DOORBELL(0), 1);
-	wait_bits(&kick_csg_in[0], &kick_csg_out[0], 1u << 4, "CSG0 endpoint config");
-	pr("gpu: CSG0 endpoints now: current 0x%08x requested 0x%08x (asked 0x%08x)\n", kick_csg_out[4], kick_csg_out[5],
-	   kick_csg_in[13]);
 
 	ring[n++] = cs_move48(0, 0);				/* SRT */
 	ring[n++] = cs_move48(8, 0);				/* FAU */
@@ -451,6 +437,12 @@ static void gpu_first_compute(u64 *ring, volatile u64 *q_in, volatile u64 *q_out
 	   "CS0 status 0x%08x blocked 0x%08x fault 0x%08x fatal 0x%08x (info 0x%08x%08x)\n", good,
 	   (timer_ticks() - start) * 1000000 / timer_freq(), good == 64 ? ": THE SHADER CORES RAN OUR SHADER" : "",
 	   buf[0], buf[1], buf[2], buf[63], q_out[0], cs_out[18], cs_out[24], cs_out[32], cs_out[33], cs_out[35], cs_out[34]);
+	/* a fresh status snapshot (CSG_REQ bit 5, kbase's status update; docs/mali-endpoints.md) before reading */
+	toggle(&kick_csg_in[0], kick_csg_out[0], 1u << 5);
+	toggle(&kick_glb_in[2], kick_glb_out[2], 1);
+	dsb_sy();
+	gpu_wr(DOORBELL(0), 1);
+	wait_bits(&kick_csg_in[0], &kick_csg_out[0], 1u << 5, "CSG0 status update");
 	pr("gpu: compute state: SHADER_READY 0x%08x SHADER_PWRTRANS 0x%08x GPU_STATUS 0x%08x; CSG0 out %08x %08x %08x %08x "
 	   "%08x %08x %08x %08x; CS0 out +0x40..: %08x %08x %08x %08x %08x %08x %08x %08x %08x %08x; GLB out %08x %08x %08x\n",
 	   gpu_rd(SHADER_READY), gpu_rd(SHADER_PWRTRANS), gpu_rd(0x34), kick_csg_out[0], kick_csg_out[1], kick_csg_out[2],
@@ -483,6 +475,12 @@ static void gpu_first_job(u64 shared_pa)
 	cs_in = sh(shared_pa, cs_ctl[1]);
 	cs_out = sh(shared_pa, cs_ctl[2]);
 
+#if PROBE_GPU >= 5
+	/* the tiler and shader cores, now that the firmware runs (run gpu14: it does not power them itself) */
+	if (gpu_block_on("tiler", TILER_PWRON, TILER_READY, TILER_PWRTRANS, gpu_rd(TILER_PRESENT)) ||
+	    gpu_block_on("shader cores", SHADER_PWRON, SHADER_READY, SHADER_PWRTRANS, gpu_rd(SHADER_PRESENT)))
+		return;
+#endif
 	/* global: the shader cores the firmware may use (GLB_ALLOC_EN, request bit 2) */
 	glb_in[6] = (u32)shaders;
 	glb_in[7] = (u32)(shaders >> 32);
@@ -504,6 +502,16 @@ static void gpu_first_job(u64 shared_pa)
 		root = saved_root;
 		return;
 	}
+#if PROBE_GPU >= 5
+	/* step 5's shader and descriptor pages, while AS1 is not yet live (no TLB maintenance needed) */
+	code_page = page_alloc(1);
+	desc_page = page_alloc(1);
+	if (!code_page || !desc_page || map_pages(SHADER_VA, code_page, 0x1000, 0x40000005) ||
+	    map_pages(DESC_VA, desc_page, 0x1000, 0x40000003)) {
+		root = saved_root;
+		return;
+	}
+#endif
 	root = saved_root;
 	job_root = as1_root;
 	target_page = target_pa;
