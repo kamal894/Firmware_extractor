@@ -37,7 +37,20 @@ the S2MPU, which reads disabled, and not the address: 0xd0000000 failed the same
 Then MCU_CONTROL = 2: **JOB_IRQ bit 31 after 3.4 ms**, global interface version 0x02080000, input VA
 0x04002000, output VA 0x04006000, 8 CSGs (stride 0xa0). No faults.
 
+## Step 4: the first job (PROBE_GPU=4, run gpu7, docs/probe-log-gpu7.txt)
+
+From docs/mali-csf-submit.md (Codex, from mali_kbase.ko and Mesa's arch 11 CS encodings). After boot:
+GLB_ALLOC_EN = 0x1110055 (request bit 2, bell 0) acknowledged; AS1 with its own tables (ring page at VA
+0x100000, target page at 0x200000, both MEMATTR slot 5 = non-cacheable); CS0 of CSG0 (ring, queue pages
+and a 26368-byte suspend buffer in AS0, doorbell 1) and CSG0 (all cores, AS1) started: CSG/CS ack state 1.
+The ring: MOVE48 r0 = 0x200000, MOVE32 r2 = 0x89abcdef, SET_STATE SB_SEL_OTHER 0, STORE_MULTIPLE r2 ->
+[r0], WAIT slot 0; INSERT = 64, bells 1 and 0.
+
+**The target read 0x89abcdef 191 us later**: the GPU ran our first command stream. Queue extract 64,
+no CS fault. Open: MMU_IRQ_RAWSTAT shows 0x20000 (bit 17, AS1 bus-fault bit) from the AS1 set-up; it
+did not stop the job.
+
 ## Next
 
-4. Simple jobs (a fill, a copy), then a triangle; then a Metal back end (HackiOS's hakios-metal, for
+5. Simple jobs (a fill, a copy), then a triangle; then a Metal back end (HackiOS's hakios-metal, for
    Adreno today) with a Valhall shader compiler.

@@ -184,6 +184,13 @@ static void gpu_power_up(void)
 #define SHARED_VA	0x04000000u
 
 static u64 pool = POOL_BASE, root;
+#if PROBE_GPU >= 4
+#define Q_VA		0x05000000u	/* a stream's queue input and output pages, in AS0 */
+#define SUSP_VA		0x05100000u	/* group 0's suspend buffer, in AS0 */
+#define SUSP_PAGES	64
+static u64 q_pa, susp_pa;
+static void gpu_first_job(u64 shared_pa);
+#endif
 
 static u32 le32(const u8 *p)
 {
@@ -299,6 +306,171 @@ static void s2mpu_open(void)
 	log_flush();
 }
 
+#if PROBE_GPU >= 4
+/*
+ * Step 4 (PROBE_GPU=4): the first job, polled (docs/mali-csf-submit.md, from mali_kbase.ko r54p3 and Mesa's
+ * arch 11 CS encodings). The firmware's interface is in its shared section (VA 0x04000000, here at
+ * shared_pa): global control +0, CSG 0 control at 0x04001000, CS 0 control at CSG control + 0x40; the
+ * input/output pages they point to. The job runs in AS1 (CSG_CONFIG = 1), tables of its own: a ring of one
+ * page at VA 0x100000 and the target page at 0x200000, both non-cacheable (MEMATTR slot 5, 0x4c). Its
+ * queue input/output pages and the group's suspend buffer are in AS0 (mapped before the MCU started).
+ * The program: r0:r1 = 0x200000, r2 = 0x89abcdef, scoreboard slot 0 for stores, STORE_MULTIPLE r2 ->
+ * [r0], WAIT slot 0; INSERT = 64. Kicked through the group's doorbell and the global one (bell 0 at
+ * 0x1f080000, bell n at +n * 0x10000). Success: the CPU reads 0x89abcdef at the target.
+ */
+#define DOORBELL(n)	(0x80000u + (n) * 0x10000u)
+#define RING_VA		0x00100000u
+#define TARGET_VA	0x00200000u
+#define AS1		0x2440
+
+static u32 *sh(u64 shared_pa, u32 va)
+{
+	return (u32 *)(uptr)(shared_pa + (va - SHARED_VA));
+}
+
+/* toggle the bits of mask in *req to differ from ack, as kbase does for a request */
+static void toggle(volatile u32 *req, u32 ack, u32 mask)
+{
+	*req = (*req & ~mask) | ((ack ^ mask) & mask);
+}
+
+static int wait_bits(volatile u32 *req, volatile u32 *ack, u32 mask, const char *what)
+{
+	u64 start = timer_ticks();
+
+	while (((*req ^ *ack) & mask) && timer_ticks() - start < timer_freq() / 10)
+		;
+	if ((*req ^ *ack) & mask) {
+		pr("gpu: %s: no ack in 100 ms (req 0x%08x ack 0x%08x)\n", what, *req, *ack);
+		return -1;
+	}
+	return 0;
+}
+
+static void gpu_first_job(u64 shared_pa)
+{
+	volatile u32 *glb_in = sh(shared_pa, 0x04002000), *glb_out = sh(shared_pa, 0x04006000);
+	u32 *csg_ctl = sh(shared_pa, 0x04001000), *cs_ctl = sh(shared_pa, 0x04001040);
+	volatile u32 *csg_in, *csg_out, *cs_in, *cs_out, *target;
+	u64 ring_pa, target_pa, saved_root = root, as1_root, shaders = ((u64)gpu_rd(0x104) << 32) | gpu_rd(SHADER_PRESENT);
+	u64 *ring, start;
+	volatile u64 *q_in = (volatile u64 *)(uptr)q_pa, *q_out = (volatile u64 *)(uptr)(q_pa + 0x1000);
+
+	pr("gpu: CSG0 control: features 0x%08x input 0x%08x output 0x%08x suspend %u/%u bytes, %u streams (stride 0x%x); "
+	   "CS0 control: features 0x%08x input 0x%08x output 0x%08x\n", csg_ctl[0], csg_ctl[1], csg_ctl[2], csg_ctl[3], csg_ctl[4],
+	   csg_ctl[5], csg_ctl[6], cs_ctl[0], cs_ctl[1], cs_ctl[2]);
+	if (csg_ctl[3] > SUSP_PAGES * 0x1000) {
+		pr("gpu: the suspend buffer needs more than %u pages\n", SUSP_PAGES);
+		return;
+	}
+	csg_in = sh(shared_pa, csg_ctl[1]);
+	csg_out = sh(shared_pa, csg_ctl[2]);
+	cs_in = sh(shared_pa, cs_ctl[1]);
+	cs_out = sh(shared_pa, cs_ctl[2]);
+
+	/* global: the shader cores the firmware may use (GLB_ALLOC_EN, request bit 2) */
+	glb_in[6] = (u32)shaders;
+	glb_in[7] = (u32)(shaders >> 32);
+	dsb_sy();
+	toggle(&glb_in[0], glb_out[0], 1u << 2);
+	dsb_sy();
+	gpu_wr(DOORBELL(0), 1);
+	if (wait_bits(&glb_in[0], &glb_out[0], 1u << 2, "GLB ALLOC_EN"))
+		return;
+	pr("gpu: GLB_ALLOC_EN 0x%llx acknowledged\n", shaders);
+
+	/* AS1: the job's own tables */
+	as1_root = page_alloc(1);
+	ring_pa = page_alloc(1);
+	target_pa = page_alloc(1);
+	root = as1_root;
+	if (!as1_root || !ring_pa || !target_pa || map_pages(RING_VA, ring_pa, 0x1000, 0x40000007) ||
+	    map_pages(TARGET_VA, target_pa, 0x1000, 0x40000003)) {
+		root = saved_root;
+		return;
+	}
+	root = saved_root;
+	target = (volatile u32 *)(uptr)target_pa;
+	*target = 0x11111111;
+	ring = (u64 *)(uptr)ring_pa;
+	ring[0] = (0x01ULL << 56) | (0ULL << 48) | TARGET_VA;		/* MOVE48 r0:r1, target */
+	ring[1] = (0x02ULL << 56) | (2ULL << 48) | 0x89abcdefULL;		/* MOVE32 r2 */
+	ring[2] = (0x1cULL << 56) | (1ULL << 32) | 0;			/* SET_STATE_IMM32 SB_SEL_OTHER = 0 */
+	ring[3] = (0x15ULL << 56) | (2ULL << 48) | (0ULL << 40) | (1ULL << 16);	/* STORE_MULTIPLE r2 -> [r0] */
+	ring[4] = (0x03ULL << 56) | (1ULL << 16);				/* WAIT slot 0 */
+	ring[5] = ring[6] = ring[7] = 0;					/* NOP */
+	dsb_sy();
+	gpu_wr(AS1 + AS_TRANSCFG, 0x42000006);
+	gpu_wr(AS1 + AS_TRANSCFG + 4, 0);
+	gpu_wr(AS1 + AS_TRANSTAB, (u32)as1_root);
+	gpu_wr(AS1 + AS_TRANSTAB + 4, (u32)(as1_root >> 32));
+	gpu_wr(AS1 + AS_MEMATTR, 0x888d8f88);
+	gpu_wr(AS1 + AS_MEMATTR + 4, 0x00084c8d);
+	gpu_wr(AS1 + AS_COMMAND, 1);
+	start = timer_ticks();
+	while ((gpu_rd(AS1 + AS_STATUS) & 1) && timer_ticks() - start < timer_freq() / 100)
+		;
+
+	/* CS 0 of group 0: ring, queue pages, priority 1, doorbell 1; then START */
+	cs_in[4] = RING_VA;
+	cs_in[5] = 0;
+	cs_in[6] = 0x1000;
+	cs_in[12] = Q_VA;
+	cs_in[13] = 0;
+	cs_in[14] = Q_VA + 0x1000;
+	cs_in[15] = 0;
+	cs_in[16] = cs_in[17] = 0;
+	cs_in[1] = 1 | (1u << 8);
+	cs_in[0] = (cs_in[0] & ~7u) | 1;
+
+	/* group 0: all cores for compute/fragment, the tiler, priority 1, AS1, suspend buffer; then START */
+	csg_in[6] = csg_in[7] = 0;
+	csg_in[8] = (u32)shaders;
+	csg_in[9] = (u32)(shaders >> 32);
+	csg_in[10] = (u32)shaders;
+	csg_in[11] = (u32)(shaders >> 32);
+	csg_in[12] = 1;
+	csg_in[13] = 7 | (7u << 8) | (1u << 16) | (1u << 28);
+	csg_in[14] = 0;
+	csg_in[16] = SUSP_VA;
+	csg_in[17] = 0;
+	csg_in[18] = csg_in[19] = 0;
+	csg_in[20] = 1;
+	csg_in[21] = 0;
+	dsb_sy();
+	csg_in[0] = (csg_in[0] & ~7u) | 1;
+	toggle(&csg_in[2], csg_out[2], 1);			/* stream 0 changed */
+	dsb_sy();
+	toggle(&glb_in[2], glb_out[2], 1);			/* group 0 */
+	dsb_sy();
+	gpu_wr(DOORBELL(0), 1);
+	start = timer_ticks();
+	while (((csg_out[0] & 7) != 1 || (cs_out[0] & 7) != 1) && timer_ticks() - start < timer_freq() / 10)
+		;
+	pr("gpu: CSG0 ack 0x%08x (state %u), CS0 ack 0x%08x (state %u)\n", csg_out[0], csg_out[0] & 7, cs_out[0], cs_out[0] & 7);
+	gpu_faults("group started");
+	log_flush();
+
+	/* the work: INSERT past the eight words, the stream's doorbell, and the kernel's way too */
+	q_in[0] = 64;
+	dsb_sy();
+	gpu_wr(DOORBELL(1), 1);
+	toggle(&csg_in[2], csg_out[2], 1);
+	toggle(&glb_in[2], glb_out[2], 1);
+	dsb_sy();
+	gpu_wr(DOORBELL(0), 1);
+	start = timer_ticks();
+	while (*target != 0x89abcdef && timer_ticks() - start < timer_freq())
+		;
+	pr("gpu: target now 0x%08x after %llu us%s; queue extract %llu active %u; CS0 cmd ptr 0x%08x%08x status 0x%08x "
+	   "blocked 0x%08x fault 0x%08x fatal 0x%08x\n", *target, (timer_ticks() - start) * 1000000 / timer_freq(),
+	   *target == 0x89abcdef ? ": THE GPU RAN OUR FIRST JOB" : "", q_out[0], (u32)q_out[1], cs_out[17], cs_out[16],
+	   cs_out[18], cs_out[24], cs_out[32], cs_out[33]);
+	gpu_faults("after the job");
+	log_flush();
+}
+#endif
+
 static void gpu_firmware(void)
 {
 	const u8 *b = (const u8 *)(uptr)(g.load_base + GPU_BLOB_OFFSET), *fw = b + 0x1000;
@@ -344,6 +516,14 @@ static void gpu_firmware(void)
 		}
 		off += size;
 	}
+#if PROBE_GPU >= 4
+	/* for step 4: a stream's queue input/output pages and a group suspend buffer, in the firmware's AS0 */
+	q_pa = page_alloc(2);
+	susp_pa = page_alloc(SUSP_PAGES);
+	if (!q_pa || !susp_pa || map_pages(Q_VA, q_pa, 0x2000, 0x40000003) ||
+	    map_pages(SUSP_VA, susp_pa, SUSP_PAGES * 0x1000, 0x40000003))
+		return;
+#endif
 	dsb_sy();
 	pr("gpu: %u sections, tables at 0x%llx, %llu KiB of the pool used\n", sections, root, (pool - POOL_BASE) / 1024);
 
@@ -383,6 +563,10 @@ static void gpu_firmware(void)
 		pr("gpu: FIRMWARE BOOTED after %llu us: global interface version 0x%08x features 0x%08x input va 0x%08x "
 		   "output va 0x%08x, %u CSGs (stride 0x%x)\n", (timer_ticks() - start) * 1000000 / timer_freq(),
 		   glb[0], glb[1], glb[2], glb[3], glb[4], glb[5]);
+#if PROBE_GPU >= 4
+		log_flush();
+		gpu_first_job(shared_pa);
+#endif
 	} else {
 		pr("gpu: the firmware did not raise its interrupt in 1 s\n");
 	}
