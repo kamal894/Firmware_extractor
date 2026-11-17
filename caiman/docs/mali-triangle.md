@@ -59,6 +59,33 @@ Position shader: x/y from the vertex id (r60), position written with STORE.i128.
 LEA_BUF_IMM gives for the internal id (r59), table 0x3d. Fragment shader: constant red, ATEST then BLEND
 to RT 0 with blend_descriptor_0.
 
+## Values worked out so far (64x64 RGBA8 linear, one render target)
+
+- **Render target** (64 bytes, after the 128-byte framebuffer parameters): word 0 = internal format
+  R8G8B8A8 (1) << 26 = 0x04000000 (writeback mode compat 0, internal buffer offset 0); word 1 = write
+  enable (bit 0) | writeback format R8G8B8A8 (19) << 3 | block format linear (2) << 8 | dithering (bit 15)
+  | swizzle identity 0x688 << 16 = 0x06888299; words 8-9 base, word 10 row stride 256, word 11 surface
+  stride; words 12-15 clear colour (internal RGBA8: R | G << 8 | B << 16 | A << 24). From pan_desc.c
+  `pan_emit_rt` (:1084) and the linear attachment emit (:918), `get_rt_formats` (:693); channels R0 G1 B2
+  A3, 3 bits each (v11.xml enum Channel).
+- **Framebuffer pointer** (FRAGMENT FBD_POINTER, v11.xml `Framebuffer pointer`): address | type bit 0
+  | (render targets - 1) << 2; framebuffer = 128 bytes of parameters (section Padding at 72) then RTs.
+- **Framebuffer parameters**: word 8 = 63 | 63 << 16; words 9/10 bounds 0 / 63 | 63 << 16; word 11
+  sample count log2(1) = 0, pattern single 0, tie-break MINUS_180_IN_0_OUT (2) << 6, effective tile size
+  log2(256) = 8 << 9, render target count - 1 = 0, colour buffer allocation 1024 >> 10 = 1 << 24; word 12
+  Z internal format D24 and no Z/S enables; +14 tiler context address. (pan_desc.c :1487-1560.)
+- **Tiler context** (128 bytes, words 24-31 private state zero): polygon list 0; word 2 hierarchy mask
+  (TILER_FEATURES 0x809: max levels 8 -> 0xff, pan_desc.c :1846) | sample pattern 0; word 3 = 63 | 63 << 16;
+  word 4 layer count - 1 = 0; words 6-7 Tiler Heap descriptor address; words 8-9 geometry buffer
+  (address | size >> 12, 64 KiB, 4 KiB aligned); words 10-13 completed top/bottom 0 (cmd_draw.c :1591-1625).
+- **Tiler heap descriptor**: word 0 = 9 | (tiler heap buffer type) << 4; word 1 chunk size; base, bottom =
+  base + 64 (64-byte chunk header), top = base + size.
+- **Blend descriptor** (16 bytes, BLEND_DESC = address | count): word 0 enable (bit 9); word 1 equation
+  replace = 0xf0122122 (rgb and alpha: A src, B src, C zero; colour mask 0xf; pan_blend.c :607); word 2
+  internal mode opaque 1 | (num comps 4 - 1) << 3, RT 0; word 3 conversion memory format RGBA8_TB (237)
+  << 12 | component order RGBA 0 = 0xed000 (pan_format.c :22, panvk_vX_blend.c :162-174).
+- **Fragment**: FBD_POINTER, BBOX_MIN 0, BBOX_MAX 63 | 63 << 16 (cmd_draw.c :4966), RUN_FRAGMENT Z order.
+
 ## Still to read
 
 panvk's build_dcd_flags, the tiler context fill (get_tiler_desc), the fragment pass (framebuffer
