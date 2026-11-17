@@ -1,0 +1,44 @@
+dvfs: reply 1 after 24 us: 00010000 00144380 00000001 00000000
+dvfs: now: cl0 A520 (domain 2) 1328000 kHz (min 820000, max 1950000, resume 1425000)
+dvfs: reply 2 after 23 us: 00020000 00104028 00000001 00000000
+dvfs: now: cl1 A720 (domain 3) 1065000 kHz (min 357000, max 2600000, resume 1797000)
+dvfs: reply 3 after 25 us: 00030000 0011c2e0 00000001 00000000
+dvfs: now: cl2 X4   (domain 4) 1164000 kHz (min 500000, max 3105000, resume 1164000)
+dvfs: reply 4 after 22 us: 00040000 00066c88 00000001 00000000
+dvfs: now: MIF  (domain 0) 421000 kHz
+dvfs: reply 5 after 25 us: 00050000 00056ea0 00000001 00000000
+dvfs: now: INT  (domain 1) 356000 kHz
+dvfs: reply 6 after 25 us: 00060000 001243c8 00000001 00000000
+dvfs: now: DSU  (domain 5) 1197000 kHz
+dvfs: reply 7 after 23 us: 00070000 000cd140 00000001 00000000
+dvfs: now: BCI  (domain 6) 840000 kHz
+dvfs: reply 8 after 25 us: 00080000 00061a80 00000001 00000000
+dvfs: now: DISP (domain 14) 400000 kHz
+dvfs: asking for 1696000 kHz on cl0 A520
+dvfs: reply 9 after 418 us: 00090000 0019e100 00000000 00000000
+dvfs: asking for 2130000 kHz on cl1 A720
+dvfs: reply 10 after 222 us: 000a0000 00208050 00000000 00000000
+dvfs: asking for 2499000 kHz on cl2 X4
+dvfs: reply 11 after 237 us: 000b0000 002621b8 00000000 00000000
+dvfs: asking for 2028000 kHz on MIF
+dvfs: reply 12 after 3526 us: 000c0000 001ef1e0 00000000 00000000
+dvfs: asking for 664000 kHz on INT
+dvfs: reply 13 after 201 us: 000d0000 000a21c0 00000000 00000000
+dvfs: asking for 533000 kHz on DISP
+dvfs: reply 14 after 68 us: 000e0000 00082208 00000000 00000000
+dvfs: reply 15 after 13 us: 000f0000 0019e100 00000001 00000000
+dvfs: after: cl0 A520 (domain 2) 1696000 kHz (min 820000, max 1950000, resume 1425000)
+dvfs: reply 16 after 17 us: 00100000 00208050 00000001 00000000
+dvfs: after: cl1 A720 (domain 3) 2130000 kHz (min 357000, max 2600000, resume 1797000)
+dvfs: reply 17 after 17 us: 00110000 002621b8 00000001 00000000
+dvfs: after: cl2 X4   (domain 4) 2499000 kHz (min 500000, max 3105000, resume 1164000)
+dvfs: reply 18 after 13 us: 00120000 001ef1e0 00000001 00000000
+dvfs: after: MIF  (domain 0) 2028000 kHz
+dvfs: reply 19 after 13 us: 00130000 000a21c0 00000001 00000000
+dvfs: after: INT  (domain 1) 664000 kHz
+dvfs: reply 20 after 17 us: 00140000 001243c8 00000001 00000000
+dvfs: after: DSU  (domain 5) 1197000 kHz
+dvfs: reply 21 after 16 us: 00150000 000cd140 00000001 00000000
+dvfs: after: BCI  (domain 6) 840000 kHz
+dvfs: reply 22 after 17 us: 00160000 00082208 00000001 00000000
+dvfs: after: DISP (domain 14) 533000 kHz

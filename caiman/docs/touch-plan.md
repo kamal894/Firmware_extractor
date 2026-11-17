@@ -618,3 +618,20 @@ max on purpose: nothing in iOS here slows the clocks when the phone gets hot.
 Run darwin-fast1 (`LOADER=1 ... PROBE_DVFS=2`, `cpus=5`): 5 of 5 processors, 8-12 ms a frame in the
 framebuffer (11-20 with the boot clocks), up to 40 frames a second, touch's first move after 41 ms.
 With `cpus=7` (run smp3) only 5 of 7 came up; the two small cores are not looked into yet.
+
+## Memory clock, and the black frames (2026-11-17)
+
+The boot loader leaves the memory (ACPM domain 0, MIF) at its lowest step, **421 MHz** (max 3744; Android
+idles at 546), INT at 356 MHz and DISP at 400. `dvfs.c` now also asks for MIF 2028 MHz, INT 664, DISP 533
+(steps of Android's devfreq tables; docs/probe-log-dvfs5.txt). Run darwin-mif1 (5 cores, CPU and memory
+clocks up): **2.3-7 ms a frame** in the framebuffer driver (8-12 with the CPU clocks alone, 20-80 at the
+start of the day), touch's first move after 32 ms on average. The frame rate (10-40 a second) is now set
+by iOS's software rendering, not by the driver.
+
+Black frames seen while swiping (two videos from the person at the phone): only in SpringBoard's page and
+App Library transitions; Settings' scrolling never goes black. iOS draws those materials plain without a
+GPU (`no GPU draws, vibrant views are plain`) over a black wallpaper: not the display path.
+
+`fb_flip=1` (two buffers, kernel patch; the loader gives `/chosen/fb-flip`, second buffer 0xf0000000)
+does not work yet: DPP0's +0x440 never shows the new address, every other frame waited 50 ms. Off by
+default; left in for later.

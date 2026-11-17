@@ -157,10 +157,25 @@ static void show_rates(const char *when)
 	}
 }
 
+/*
+ * The other domains of zuma.h that the display depends on: memory (MIF), the internal bus (INT), DSU, BCI,
+ * DISP. The boot loader leaves MIF at its lowest step, 421 MHz (of 3744; Android idles at 546), INT at 356
+ * and DISP at 400: with the CPUs writing 14 MB a frame, the screen went black for a refresh now and then
+ * (17 November, a video). want: a step of Android's devfreq tables, 0 to leave it.
+ */
+static const struct {
+	char name[8];
+	u32 domain, want;
+} other[] = { { "MIF", 0, 2028000 }, { "INT", 1, 664000 }, { "DSU", 5, 0 }, { "BCI", 6, 0 }, { "DISP", 0xe, 533000 } };
+
 void dvfs_probe(void)
 {
+	u32 j;
+
 	pr("\n--- CPU clocks through ACPM (channel %u) ---\n", DVFS_CHANNEL);
 	show_rates("now");
+	for (j = 0; j < sizeof(other) / sizeof(other[0]); j++)
+		pr("dvfs: now: %-4s (domain %u) %lld kHz\n", other[j].name, other[j].domain, cluster_rate(other[j].domain));
 #if PROBE_DVFS >= 2
 	{
 		u32 i;
@@ -176,7 +191,19 @@ void dvfs_probe(void)
 			acpm_xchg(DVFS_CHANNEL, cmd, 500);
 			delay_us(20000);
 		}
+		for (j = 0; j < sizeof(other) / sizeof(other[0]); j++) {
+			u32 cmd[4] = { other[j].domain, other[j].want, FREQ_REQ, 0 };
+
+			if (!other[j].want)
+				continue;
+			pr("dvfs: asking for %u kHz on %s\n", other[j].want, other[j].name);
+			acpm_xchg(DVFS_CHANNEL, cmd, 500);
+			delay_us(20000);
+		}
 		show_rates("after");
+		for (j = 0; j < sizeof(other) / sizeof(other[0]); j++)
+			pr("dvfs: after: %-4s (domain %u) %lld kHz\n", other[j].name, other[j].domain,
+			   cluster_rate(other[j].domain));
 	}
 #endif
 	log_flush();

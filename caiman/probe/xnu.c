@@ -471,6 +471,17 @@ static u32 build_adt(u64 dt_pa, u64 rd_pa, u64 rd_size, u64 res_pa, u64 res_size
 	dt_u32(&w, "display-scale", 3);
 	dt_u32(&w, "display-rotation", 0);
 	dt_str(&w, "psci-method", g.psci_hvc ? "hvc" : "smc");
+	if (g.fb_addr && g.fb_bpp == 4 && g.fb_channel == 0 && (u64)g.fb_stride * g.fb_height <= 0x6200000) {
+		/*
+		 * A second buffer for the kernel's fb_flip (MiniIOMobileFramebuffer.cpp): free DRAM below the
+		 * modem's cp_msi_rmem (0xf6200000) and outside XNU's; then DPP 0's RDMA_BASEADDR_P0 (the
+		 * display reads that address), DECON0's SHD_REG_UP_REQ, and its FRAME_COUNT.
+		 */
+		u64 flip[5] = { g.fb_addr, PLAT_FB_FLIP, PLAT_DPUF0_DMA + 0x40, PLAT_DECON0_MAIN + 0x50,
+				PLAT_DECON0_MAIN + 0x4 };
+
+		dt_prop(&w, "fb-flip", flip, sizeof(flip));
+	}
 	if (more_cores)		/* the cores start at EL2: through handoff.S's secondary_entry (psci_smp.c) */
 		dt_u64(&w, "secondary-entry", (u64)(uptr)secondary_entry);
 	if (boot_epoch)

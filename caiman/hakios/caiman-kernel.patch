@@ -336,6 +336,195 @@ index c390093..de72f4d 100755
  	if [ ! -d MacOSX13.3.sdk/System/Library/Frameworks/Kernel.framework/Headers/DriverKit ]; then
  		log "downloading the macOS 13.3 SDK for its DriverKit headers"
  		curl -L --fail --retry 3 -s -o macos-sdk.tar.xz "$MACOS_SDK_URL" || die "download failed: $MACOS_SDK_URL"
+diff --git a/xnu/files/iokit/Kernel/MiniIOMobileFramebuffer.cpp b/xnu/files/iokit/Kernel/MiniIOMobileFramebuffer.cpp
+index 724e156..be98354 100644
+--- a/xnu/files/iokit/Kernel/MiniIOMobileFramebuffer.cpp
++++ b/xnu/files/iokit/Kernel/MiniIOMobileFramebuffer.cpp
+@@ -261,6 +261,7 @@ static TUNABLE(uint32_t, gMeasure, "fb_measure", 0);
+  */
+ static TUNABLE(uint32_t, gBeam, "fb_beam", 1);
+ extern "C" vm_offset_t ml_io_map(vm_offset_t phys_addr, vm_size_t size);
++extern "C" vm_offset_t ml_io_map_unmappable(vm_offset_t phys_addr, vm_size_t size, unsigned int flags);
+ static inline uint32_t refreshHz(void);
+ 
+ /*
+@@ -269,6 +270,17 @@ static inline uint32_t refreshHz(void);
+  * abort a minute after boot, so on a SoC not known here nothing is read and frames stay on their beat.
+  */
+ static TUNABLE(uint64_t, gIntfPhysical, "fb_intf", 0);
++/*
++ * Boot-arg fb_flip=1: two buffers, for a display controller that the loader says how to point at either
++ * (/chosen fb-flip: the two buffers' physical addresses, the register that holds the address the display
++ * reads, and the controller's register that asks for its shadow registers to be taken over at the next
++ * frame; the caiman loader, probe/xnu.c). Each frame is drawn into the buffer the panel is not reading and
++ * then the controller is pointed at it: on the Pixel 9 Pro the controller (command mode, a frame every
++ * TE) reads the one buffer while it is written, and the screen flickered where things moved (17 November).
++ * A frame is not begun in a buffer until the display's shadow register says it has gone over to the other.
++ * What a frame's layers do not cover is two frames old in that buffer: iOS's bottom layer covers the screen.
++ */
++static TUNABLE(uint32_t, gFlip, "fb_flip", 0);
+ 
+ static vm_offset_t
+ panelInterface(void)
+@@ -346,7 +358,15 @@ class IOMobileFramebuffer : public IOService
+ 
+ public:
+ 	IOLock *        fLock;
+-	uint8_t *       fBase;                  /* the boot framebuffer: the panel */
++	uint8_t *       fBase;                  /* the boot framebuffer: the panel (with fb_flip: the one being drawn) */
++	uint8_t *       fFlipBuffer[2];         /* fb_flip: the two buffers, mapped */
++	uint64_t        fFlipPhysical[2];
++	volatile uint32_t * fFlipAddress;      /* the display's register of the address it reads */
++	volatile uint32_t * fFlipUpdate;       /* ... and the controller's shadow update request; its frame counter */
++	volatile uint32_t * fFlipFrames;
++	unsigned        fFlipShown;             /* the buffer the display has been pointed at */
++	uint32_t        fFlipFrameAt;           /* its frame counter then */
++	uint32_t        fFlipCount, fFlipWaits, fFlipLate;  /* frames that had to wait for the switch, and gave up after 50 ms */
+ 	uint32_t        fPanelWidth, fPanelHeight, fRowBytes;
+ 	uint32_t        fWidth, fHeight;        /* the display as user space sees it */
+ 	MiniIOSurface * fDefaultSurface;
+@@ -431,6 +451,9 @@ public:
+ 	void present(const uint8_t * swap);
+ 	void show(const uint8_t * swap, MiniIOSurface ** surfaces);
+ 	void settle(const uint8_t * swap, MiniIOSurface ** surfaces);
++	void flipInit(void);
++	void flipBegin(void);
++	void flipEnd(void);
+ 	bool fSettling;                 /* drawing the last frame again, filtered (fb_filter=2) */
+ 	bool fFilterFrame;              /* this frame came slowly: filtered as it is (fb_filter=2) */
+ 	void presenter(void);
+@@ -603,6 +626,9 @@ IOMobileFramebuffer::start(IOService * provider)
+ 	fPanelWidth = vinfo.v_width;
+ 	fPanelHeight = vinfo.v_height;
+ 	fRowBytes = vinfo.v_rowbytes;
++	if (gFlip) {
++		flipInit();
++	}
+ 	fWidth = gFBWidth ? gFBWidth : fPanelWidth;
+ 	fHeight = gFBHeight ? gFBHeight : fPanelHeight;
+ 	if (gFBScale != 0 && gFBScale != kFBDefaultScale) {
+@@ -1396,6 +1422,89 @@ IOMobileFramebuffer::presenter(void)
+ 	}
+ }
+ 
++/* fb_flip: the loader's /chosen fb-flip, the second buffer mapped and made a copy of the first. */
++void
++IOMobileFramebuffer::flipInit(void)
++{
++	IORegistryEntry * chosen = IORegistryEntry::fromPath("/chosen", gIODTPlane);
++	OSData * data = chosen ? OSDynamicCast(OSData, chosen->getProperty("fb-flip")) : NULL;
++	const uint64_t * at;
++	size_t size = (size_t) fRowBytes * fPanelHeight;
++
++	/* front, back, the display's address register, the controller's update request register, its frame counter */
++	if (data == NULL || data->getLength() != 5 * sizeof(uint64_t)) {
++		IOLog("MiniIOMobileFramebuffer: fb_flip: no fb-flip from the loader; one buffer\n");
++		OSSafeReleaseNULL(chosen);
++		return;
++	}
++	at = (const uint64_t *) data->getBytesNoCopy();
++	fFlipPhysical[0] = at[0];
++	fFlipPhysical[1] = at[1];
++	fFlipBuffer[0] = fBase;
++	/* as the console maps the first (video_console.c): write-combined, out of the way of io_map's small range */
++	fFlipBuffer[1] = (uint8_t *) ml_io_map_unmappable((vm_offset_t) at[1], round_page(size), 0x6 /* VM_WIMG_WCOMB */);
++	fFlipAddress = (volatile uint32_t *) (ml_io_map((vm_offset_t) trunc_page(at[2]), PAGE_SIZE) + (at[2] & PAGE_MASK));
++	fFlipUpdate = (volatile uint32_t *) (ml_io_map((vm_offset_t) trunc_page(at[3]), PAGE_SIZE) + (at[3] & PAGE_MASK));
++	fFlipFrames = (volatile uint32_t *) (ml_io_map((vm_offset_t) trunc_page(at[4]), PAGE_SIZE) + (at[4] & PAGE_MASK));
++	OSSafeReleaseNULL(chosen);
++	if (fFlipBuffer[1] == NULL || *fFlipAddress != (uint32_t) fFlipPhysical[0]) {
++		IOLog("MiniIOMobileFramebuffer: fb_flip: the display reads %#x, not the first buffer %#llx; one buffer\n",
++		    fFlipAddress ? *fFlipAddress : 0, fFlipPhysical[0]);
++		fFlipBuffer[1] = NULL;
++		return;
++	}
++	for (uint32_t y = 0; y < fPanelHeight; y++) {
++		memcpy(fFlipBuffer[1] + (size_t) y * fRowBytes, fBase + (size_t) y * fRowBytes, (size_t) fPanelWidth * 4);
++	}
++	fFlipShown = 0;
++	fFlipFrameAt = *fFlipFrames - 1;
++	IOLog("MiniIOMobileFramebuffer: fb_flip: buffers %#llx and %#llx, the display's address at %#llx, frame %u\n",
++	    fFlipPhysical[0], fFlipPhysical[1], at[2], *fFlipFrames);
++}
++
++/* A frame is about to be drawn: into the buffer the display is not reading, once it has stopped reading it. */
++void
++IOMobileFramebuffer::flipBegin(void)
++{
++	uint64_t deadline;
++
++	if (fFlipBuffer[1] == NULL) {
++		return;
++	}
++	/* the display's shadow copy of the address (+0x400: what it reads now) says when it has switched */
++	if (fFlipAddress[0x100] != (uint32_t) fFlipPhysical[fFlipShown]) {
++		fFlipWaits++;
++		clock_interval_to_deadline(50, NSEC_PER_MSEC, &deadline);
++		while (fFlipAddress[0x100] != (uint32_t) fFlipPhysical[fFlipShown]) {
++			if (mach_absolute_time() > deadline) {
++				fFlipLate++;
++				break;
++			}
++			delay(200);
++		}
++	}
++	fBase = fFlipBuffer[fFlipShown ^ 1];
++}
++
++/* ... and drawn: the display pointed at it from its next frame on. */
++void
++IOMobileFramebuffer::flipEnd(void)
++{
++	if (fFlipBuffer[1] == NULL) {
++		return;
++	}
++	__builtin_arm_dsb(0xf);
++	fFlipShown ^= 1;
++	fFlipFrameAt = *fFlipFrames;
++	if (++fFlipCount % 600 == 0) {
++		IOLog("MiniIOMobileFramebuffer: fb_flip: %u frames, %u waited for the display to switch, %u gave up waiting\n",
++		    fFlipCount, fFlipWaits, fFlipLate);
++	}
++	*fFlipAddress = (uint32_t) fFlipPhysical[fFlipShown];
++	*fFlipUpdate = *fFlipUpdate | (1u << 31) | (1u << 20);  /* SHD_UP_REQ_GLOBAL, SHD_UP_REQ_CMP */
++	__builtin_arm_dsb(0xf);
++}
++
+ /*
+  * The frame on the panel once more, filtered (fb_filter=2): the same layers from the same surfaces where show() put
+  * them, nothing else (no turn to wait for, no swap to hand on, nothing counted). Its surfaces were held since.
+@@ -1409,6 +1518,7 @@ IOMobileFramebuffer::settle(const uint8_t * swap, MiniIOSurface ** surfaces)
+ 		return;
+ 	}
+ 	fSettling = true;
++	flipBegin();
+ 	for (unsigned layer = 0; layer < SWAP_LAYERS; layer++) {
+ 		MiniIOSurface * s = surfaces[layer];
+ 
+@@ -1419,6 +1529,7 @@ IOMobileFramebuffer::settle(const uint8_t * swap, MiniIOSurface ** surfaces)
+ 		memcpy(dst, swap + SWAP_DEST(layer), sizeof(dst));
+ 		drawLayer(s, src, dst);
+ 	}
++	flipEnd();
+ 	fSettling = false;
+ 	fStatSettled++;
+ }
+@@ -1494,6 +1605,7 @@ IOMobileFramebuffer::show(const uint8_t * swap, MiniIOSurface ** surfaces)
+ 		    swapWord(swap, SWAP_ID), fSwapsShown, swapWord(swap, SWAP_SURFACE(0)), swapWord(swap, SWAP_SURFACE(1)),
+ 		    swapWord(swap, SWAP_SURFACE(2)), swapWord(swap, SWAP_SURFACE(3)), set, swapWord(swap, SWAP_LAYERS_CLEARED));
+ 	}
++	flipBegin();
+ 	for (unsigned layer = 0; layer < SWAP_LAYERS; layer++) {
+ 		uint32_t sid = swapWord(swap, SWAP_SURFACE(layer));
+ 		int32_t src[4], dst[4];
+@@ -1543,6 +1655,7 @@ IOMobileFramebuffer::show(const uint8_t * swap, MiniIOSurface ** surfaces)
+ 			}
+ 		}
+ 	}
++	flipEnd();
+ 	drawn = mach_absolute_time();
+ 	if (recorded != NULL) {
+ 		record(recorded);
 diff --git a/xnu/files/osfmk/arm64/psci_smp.c b/xnu/files/osfmk/arm64/psci_smp.c
 index 221defa..94452e6 100644
 --- a/xnu/files/osfmk/arm64/psci_smp.c

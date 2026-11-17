@@ -52,6 +52,7 @@
 #define PLAT_DECON0_WIN		0x19480000ULL	/* per-window position */
 #define PLAT_DECON0_WINCON	0x194A0000ULL	/* per-window enable + channel map */
 #define PLAT_DECON_NWIN		14		/* WINCON block is 0xE000 / 0x1000 */
+#define PLAT_FB_FLIP		0xf0000000ULL	/* a second framebuffer for fb_flip (xnu.c): free DRAM */
 #define PLAT_DPUF0_DMA		0x19900000ULL	/* L0-L6, stride 0x1000 */
 #define PLAT_DPUF1_DMA		0x19D00000ULL	/* L7-L13 (hw channels 8-14) */
 
