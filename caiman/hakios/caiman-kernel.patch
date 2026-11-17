@@ -336,3 +336,45 @@ index c390093..de72f4d 100755
  	if [ ! -d MacOSX13.3.sdk/System/Library/Frameworks/Kernel.framework/Headers/DriverKit ]; then
  		log "downloading the macOS 13.3 SDK for its DriverKit headers"
  		curl -L --fail --retry 3 -s -o macos-sdk.tar.xz "$MACOS_SDK_URL" || die "download failed: $MACOS_SDK_URL"
+diff --git a/xnu/files/osfmk/arm64/psci_smp.c b/xnu/files/osfmk/arm64/psci_smp.c
+index 221defa..94452e6 100644
+--- a/xnu/files/osfmk/arm64/psci_smp.c
++++ b/xnu/files/osfmk/arm64/psci_smp.c
+@@ -65,6 +65,13 @@ extern unsigned long gVirtBase, gPhysBase;
+ /* The firmware is called with HVC, not SMC. (start.s reads this too, at its physical address.) */
+ uint32_t psci_smp_hvc;
+ 
++/*
++ * /chosen/secondary-entry: where the loader wants a new core to start instead (the Pixel 9 Pro's
++ * firmware starts cores at EL2; the caiman loader's secondary_entry drops to EL1 and goes on to the
++ * reset vector, which it is given as CPU_ON's context). 0: the reset vector itself.
++ */
++static uint64_t psci_smp_trampoline;
++
+ /*
+  * Left by a core that took an exception between its first instruction and the kernel's vectors
+  * (Lsecondary_early_exception in start.s). That core writes it with its cache off; it has a
+@@ -124,6 +131,10 @@ psci_smp_init(void)
+ 	    size >= 3 && strncmp((const char *)prop, "hvc", 3) == 0) {
+ 		psci_smp_hvc = 1;
+ 	}
++	if (SecureDTLookupEntry(NULL, "/chosen", &chosen) == kSuccess &&
++	    SecureDTGetProperty(chosen, "secondary-entry", &prop, &size) == kSuccess && size == sizeof(uint64_t)) {
++		psci_smp_trampoline = *(const uint64_t *)prop;
++	}
+ }
+ 
+ /* A processor other than the boot processor says how far it has come. */
+@@ -186,7 +197,11 @@ psci_smp_start_cpu(int cpu)
+ 	__builtin_arm_dsb(DSB_SY);
+ 
+ 	os_atomic_store(&psci_smp_cpu_stage[cpu], PSCI_SMP_CPU_ASKED, release);
+-	status = psci_call(PSCI_CPU_ON, phys_id, entry, 0);
++	if (psci_smp_trampoline != 0) {
++		status = psci_call(PSCI_CPU_ON, phys_id, psci_smp_trampoline, entry);
++	} else {
++		status = psci_call(PSCI_CPU_ON, phys_id, entry, 0);
++	}
+ 	if (status != 0) {
+ 		os_atomic_store(&psci_smp_cpu_stage[cpu], 0, release);
+ 		printf("psci: cpu %d (MPIDR 0x%x) was not started: the firmware answers %lld (%s)\n",

@@ -380,6 +380,47 @@ static void dt_identity(struct dt_writer *w, const struct identity_prop *props, 
 
 static u64 boot_epoch;	/* xnu_boot(): seconds since 1970 now, 0 if unknown */
 
+/*
+ * More processors for the kernel: when the payload's arguments have "cpus=N", the cores that are
+ * off (PSCI AFFINITY_INFO) are listed after the boot core, the big ones first (caiman: 7 the X4,
+ * 6 to 4 the A720s, then the A520s), without the watcher's (PLAT_WATCH_MPIDR); the kernel starts
+ * the first N-1 of them itself with CPU_ON (HackiOS psci_smp.c). Without it, "cpus=1" as before.
+ * As HackiOS's xnuloader does it (loader.c, "The processors").
+ */
+#define PSCI_AFFINITY_INFO	0xc4000004ULL
+
+static int more_cores;
+static u64 cpu_mpidr[8];
+static u32 cpu_count;
+
+static void pick_cores(void)
+{
+	static const u8 order[] = { 7, 6, 5, 4, 3, 2, 1, 0 };
+	u64 self = read_sysreg(mpidr_el1) & 0xffffff;
+	u32 i;
+
+	cpu_mpidr[0] = self;
+	cpu_count = 1;
+	if (!more_cores)
+		return;
+	for (i = 0; i < sizeof(order); i++) {
+		u64 mpidr = (u64)order[i] << 8;
+		s64 state;
+
+		if (mpidr == self || mpidr == PLAT_WATCH_MPIDR)
+			continue;
+		state = psci_call(PSCI_AFFINITY_INFO, mpidr, 0, 0);
+		if (state == 1)
+			cpu_mpidr[cpu_count++] = mpidr;
+		else
+			pr("xnu: core 0x%llx is not off (AFFINITY_INFO %lld): not the kernel's\n", mpidr, state);
+	}
+	pr("xnu: cores for the kernel, in the order it takes them:");
+	for (i = 0; i < cpu_count; i++)
+		pr(" 0x%llx", cpu_mpidr[i]);
+	pr("\n");
+}
+
 static u32 build_adt(u64 dt_pa, u64 rd_pa, u64 rd_size, u64 res_pa, u64 res_size)
 {
 	static u8 nvram[NVRAM_BANK_SIZE];
@@ -430,6 +471,8 @@ static u32 build_adt(u64 dt_pa, u64 rd_pa, u64 rd_size, u64 res_pa, u64 res_size
 	dt_u32(&w, "display-scale", 3);
 	dt_u32(&w, "display-rotation", 0);
 	dt_str(&w, "psci-method", g.psci_hvc ? "hvc" : "smc");
+	if (more_cores)		/* the cores start at EL2: through handoff.S's secondary_entry (psci_smp.c) */
+		dt_u64(&w, "secondary-entry", (u64)(uptr)secondary_entry);
 	if (boot_epoch)
 		dt_u64(&w, "boot-epoch", boot_epoch);
 	dt_u64(&w, "unique-chip-id", 0x000043414930001ULL);
@@ -472,6 +515,12 @@ static u32 build_adt(u64 dt_pa, u64 rd_pa, u64 rd_size, u64 res_pa, u64 res_size
 		dt_prop(&w, "RAMDisk", rd, sizeof(rd));
 	}
 	dt_end(&w);
+	if (more_cores) {
+		/* every "machine timeout" of the kernel longer, as xnuloader does on several cores */
+		dt_begin(&w, "machine-timeouts");
+		dt_u32(&w, "global-scale", 20);
+		dt_end(&w);
+	}
 	dt_end(&w);	/* chosen */
 
 	dt_begin(&w, "defaults");
@@ -501,20 +550,26 @@ static u32 build_adt(u64 dt_pa, u64 rd_pa, u64 rd_size, u64 res_pa, u64 res_size
 	dt_prop(&w, "reg", pram_reg, sizeof(pram_reg));
 	dt_end(&w);
 
-	/* one processor: the one we run on, Aff1/Aff0 as the kernel compares them */
+	/* the processors: the one we run on first, Aff1/Aff0 as the kernel compares them (pick_cores) */
 	dt_begin(&w, "cpus");
-	dt_begin(&w, "cpu0");
-	dt_str(&w, "device_type", "cpu");
-	dt_str(&w, "state", "running");
-	dt_u32(&w, "reg", (u32)(read_sysreg(mpidr_el1) & 0xffffff));
-	dt_u32(&w, "cpu-id", 0);
-	dt_u64(&w, "timebase-frequency", cntfrq);
-	dt_u64(&w, "fixed-frequency", cntfrq);
-	dt_u64(&w, "clock-frequency", 1800000000ULL);
-	dt_u64(&w, "bus-frequency", 100000000ULL);
-	dt_u64(&w, "memory-frequency", 100000000ULL);
-	dt_u64(&w, "peripheral-frequency", 24000000ULL);
-	dt_end(&w);
+	for (i = 0; i < cpu_count; i++) {
+		char name[5] = { 'c', 'p', 'u', (char)('0' + i), 0 };
+
+		dt_begin(&w, name);
+		dt_str(&w, "device_type", "cpu");
+		dt_str(&w, "state", i == 0 ? "running" : "waiting");
+		dt_u32(&w, "reg", (u32)cpu_mpidr[i]);
+		dt_u32(&w, "cpu-id", i);
+		dt_u64(&w, "timebase-frequency", cntfrq);
+		dt_u64(&w, "fixed-frequency", cntfrq);
+		dt_u64(&w, "clock-frequency", 1800000000ULL);
+		dt_u64(&w, "bus-frequency", 100000000ULL);
+		dt_u64(&w, "memory-frequency", 100000000ULL);
+		dt_u64(&w, "peripheral-frequency", 24000000ULL);
+		if ((cpu_mpidr[i] >> 8) < 4)
+			dt_u32(&w, "small-core", 1);
+		dt_end(&w);
+	}
 	dt_end(&w);
 
 	dt_begin(&w, "arm-io");
@@ -554,6 +609,43 @@ static u32 build_adt(u64 dt_pa, u64 rd_pa, u64 rd_size, u64 res_pa, u64 res_size
  * boot-epoch and as the time at its start, so the loader drops it from the boot-args and dates the
  * kernel itself: that time plus the ~90 s spent here (mostly reading xnusys).
  */
+static u32 append(char *dst, u32 n, const char *s);
+
+/* `word` at the start of an argument of c */
+static int has_word(const char *c, const char *word)
+{
+	u32 n = strlen(word);
+	const char *p;
+
+	for (p = c; p && *p; p++)
+		if ((p == c || p[-1] == ' ') && !strncmp(p, word, n))
+			return 1;
+	return 0;
+}
+
+/* s without its "cpus=..." argument: the payload's own is the one the kernel is to take */
+static u32 append_no_cpus(char *dst, u32 n, const char *s)
+{
+	char buf[256];
+	u32 i = 0;
+	const char *p = s;
+
+	while (*p && i < sizeof(buf) - 1) {
+		if ((p == s || p[-1] == ' ') && !strncmp(p, "cpus=", 5)) {
+			while (*p && *p != ' ')
+				p++;
+			while (*p == ' ')
+				p++;
+			continue;
+		}
+		buf[i++] = *p++;
+	}
+	while (i && buf[i - 1] == ' ')
+		i--;
+	buf[i] = 0;
+	return append(dst, n, buf);
+}
+
 static u64 payload_epoch(const char *c)
 {
 	u64 v = 0;
@@ -698,6 +790,8 @@ void xnu_boot(void)
 	/* everything up to topOfKernelData is the kernel's static region: it must cover xnusys too */
 	dt_pa = res_size ? res_pa + res_size : rd_pa + rd_size;
 	boot_epoch = payload_epoch(pl.cmdline);
+	more_cores = has_word(pl.cmdline, "cpus=");
+	pick_cores();
 	if (boot_epoch) {
 		u64 here = (timer_ticks() - g.entry_ticks) / timer_freq();
 
@@ -729,7 +823,7 @@ void xnu_boot(void)
 		ba->video.v_height = g.fb_height;
 		ba->video.v_depth = 32;
 	}
-	n = append(ba->commandLine, 0, PLAT_XNU_ARGS);
+	n = more_cores ? append_no_cpus(ba->commandLine, 0, PLAT_XNU_ARGS) : append(ba->commandLine, 0, PLAT_XNU_ARGS);
 	if (rd_size || res_size)
 		n = append(ba->commandLine, n, " rd=md0");
 	if (pl.cmdline && pl.cmdline[0]) {

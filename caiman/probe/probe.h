@@ -170,6 +170,7 @@ void xnu_boot(void);
 void watcher_start(void);
 void watcher_main(void);
 void watcher_entry(void);
+void secondary_entry(void);	/* handoff.S: the kernel's other cores, EL2 to EL1 */
 void watcher_go(void);
 void mmu_on(u64 l1_table);
 void __attribute__((noreturn)) jump_to_xnu(u64 entry_pa, u64 boot_args_pa);

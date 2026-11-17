@@ -582,3 +582,19 @@ BOOT_ARGS="touchscreen=2 buttons=2" tools/run_darwin.sh probe/out/loader-touch/p
 Result: `syna: so far 4060 messages, 4054 touch reports, 0 unreadable`. Somebody at the phone opened
 Settings > General and scrolled it with a finger (docs/darwin-touch1.png); orientation is right with
 `touch_flip=0`. Log: docs/darwin-log-touch1.txt.
+
+## More cores for iOS (2026-11-17, runs darwin-smp1/smp2)
+
+With `cpus=N` in the payload's arguments the loader (`probe/xnu.c` pick_cores) lists the cores PSCI
+reports off, big first (0x700, 0x600..0x400, then 0x300, 0x200), never the watcher's 0x100, drops its own
+`cpus=1`, and adds `/chosen/machine-timeouts` global-scale 20 as HackiOS's xnuloader does.
+
+Run smp1: CPU_ON granted, but no core reached the kernel (`1 of 4 processors are running`). The Pixel's
+firmware starts cores at **EL2**; XNU's reset vector wants EL1 as the boot core gets it. Fix: `handoff.S`
+`secondary_entry` (the same EL2 set-up as `jump_to_xnu`, then ERET to x0 at EL1h), published as
+`/chosen/secondary-entry`; the kernel's `psci_smp.c` (in `hakios/caiman-kernel.patch`) then calls
+CPU_ON(mpidr, secondary-entry, LowResetVectorBase).
+
+Run smp2 (`cpus=4`): `4 of 4 processors are running`. The framebuffer's scaling (fb_threads=3) now has
+cores: 11-20 ms a frame in the driver (was 20-80), up to 24 frames a second (was 2-20). By hand: "much
+faster". Touch: first move after ~50 ms on average (was ~107). Log: docs/darwin-log-smp2.txt.

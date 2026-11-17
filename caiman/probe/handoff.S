@@ -9,17 +9,10 @@
  * The Pixel's bootloader enters us at EL2 with nothing set up for a guest, so do what Linux's
  * EL2 setup does for its own EL1 before dropping down.
  */
-	.text
-	.globl	jump_to_xnu
-jump_to_xnu:
-	msr	daifset, #0xf
-	mov	x16, x0
-	mov	x17, x1
-	mrs	x2, CurrentEL
-	ubfx	x2, x2, #2, #2
-	cmp	x2, #2
-	b.ne	1f
-
+/*
+ * What Linux's EL2 setup does for its own EL1 before dropping down (uses x2 only).
+ */
+	.macro	el2_for_el1
 	/* HCR_EL2: EL1 is AArch64 (RW); pointer authentication not trapped (API, APK): iOS's
 	 * arm64e code signs pointers. No virtualization, no traps. */
 	mov	x2, #(1 << 31)
@@ -53,6 +46,20 @@ jump_to_xnu:
 	/* EL1 starts with MMU and caches off (RES1 bits only) */
 	ldr	x2, =0x30d00800
 	msr	sctlr_el1, x2
+	.endm
+
+	.text
+	.globl	jump_to_xnu
+jump_to_xnu:
+	msr	daifset, #0xf
+	mov	x16, x0
+	mov	x17, x1
+	mrs	x2, CurrentEL
+	ubfx	x2, x2, #2, #2
+	cmp	x2, #2
+	b.ne	1f
+
+	el2_for_el1
 	/* ERET to EL1h with interrupts masked */
 	mov	x2, #0x3c5
 	msr	spsr_el2, x2
@@ -80,6 +87,32 @@ jump_to_xnu:
 	mov	x1, xzr
 	mov	x2, xzr
 	mov	x3, xzr
+	br	x16
+
+/*
+ * The kernel's other cores (cpus=N): XNU's psci_smp.c asks for CPU_ON with this as the entry and its
+ * own reset vector (LowResetVectorBase, physical) as the context, because the Pixel's firmware
+ * starts a core at EL2 and the kernel's vector wants EL1, MMU and caches off, as the boot core
+ * got it from jump_to_xnu. x0 = where to go.
+ */
+	.globl	secondary_entry
+secondary_entry:
+	msr	daifset, #0xf
+	mov	x16, x0
+	mrs	x2, CurrentEL
+	ubfx	x2, x2, #2, #2
+	cmp	x2, #2
+	b.ne	6f
+	el2_for_el1
+	mov	x2, #0x3c5
+	msr	spsr_el2, x2
+	msr	elr_el2, x16
+	ic	iallu
+	dsb	sy
+	isb
+	mov	x0, xzr
+	eret
+6:	mov	x0, xzr
 	br	x16
 
 /* The watcher core, started by PSCI CPU_ON: MMU off, at EL2 or EL1. */

@@ -1,0 +1,42 @@
+dt: psci method=smc
+--- psci ---
+psci: conduit=smc version=1.1 (raw 0x10001)
+psci: SYSTEM_RESET2 supported (PSCI_FEATURES=0)
+psci         : version 0x10001, SYSTEM_RESET2 yes
+xnu: cores for the kernel, in the order it takes them: 0x0 0x700 0x600 0x500 0x400 0x300 0x200
+xnu: boot-args: debug=0x8 serial=3 -v rd=md0 touchscreen=2 buttons=2 cpus=4
+skip attaching fsw to lo0 using legacy TX modelGenericARMPE: 4 of 4 processors are running
+MiniIOMobileFramebuffer: 52 frames in 5089 ms (10 a second), 13311 us each in the driver, after 1 us waiting for the GPU and, 4 of them, 6485 us for the next refresh; 1 swaps waited for the frame befo
+MiniIOMobileFramebuffer: 122 frames in 9413 ms (12 a second), 10812 us each in the driver, after 0 us waiting for the GPU and, 67 of them, 5653 us for the next refresh; 23 swaps waited for the frame b
+MiniIOMobileFramebuffer: 7 frames in 6399 ms (1 a second), 20576 us each in the driver, after 1 us waiting for the GPU and, 0 of them, 0 us for the next refresh; 0 swaps waited for the frame before, 0
+MiniIOMobileFramebuffer: 53 frames in 5844 ms (9 a second), 18045 us each in the driver, after 1 us waiting for the GPU and, 9 of them, 7342 us for the next refresh; 3 swaps waited for the frame befor
+MiniIOMobileFramebuffer: 54 frames in 6058 ms (8 a second), 16227 us each in the driver, after 1 us waiting for the GPU and, 0 of them, 0 us for the next refresh; 0 swaps waited for the frame before, 
+MiniIOMobileFramebuffer: 126 frames in 5135 ms (24 a second), 11010 us each in the driver, after 0 us waiting for the GPU and, 90 of them, 7559 us for the next refresh; 0 swaps waited for the frame be
+MiniIOMobileFramebuffer: 3 frames in 5633 ms (0 a second), 18033 us each in the driver, after 1 us waiting for the GPU and, 0 of them, 0 us for the next refresh; 0 swaps waited for the frame before, 0
+MiniIOMobileFramebuffer: 31 frames in 19242 ms (1 a second), 20385 us each in the driver, after 1 us waiting for the GPU and, 0 of them, 0 us for the next refresh; 0 swaps waited for the frame before,
+MiniIOMobileFramebuffer: 119 frames in 5025 ms (23 a second), 13539 us each in the driver, after 0 us waiting for the GPU and, 53 of them, 6912 us for the next refresh; 0 swaps waited for the frame be
+MiniIOMobileFramebuffer: 19 frames in 7945 ms (2 a second), 13544 us each in the driver, after 1 us waiting for the GPU and, 0 of them, 0 us for the next refresh; 0 swaps waited for the frame before, 
+MiniIOMobileFramebuffer: 65 frames in 5081 ms (12 a second), 12840 us each in the driver, after 1 us waiting for the GPU and, 17 of them, 8659 us for the next refresh; 14 swaps waited for the frame be
+MiniIOMobileFramebuffer: 51 frames in 5014 ms (10 a second), 12365 us each in the driver, after 1 us waiting for the GPU and, 0 of them, 0 us for the next refresh; 0 swaps waited for the frame before,
+MiniIOMobileFramebuffer: 69 frames in 5010 ms (13 a second), 13552 us each in the driver, after 1 us waiting for the GPU and, 2 of them, 4349 us for the next refresh; 0 swaps waited for the frame befo
+MiniIOMobileFramebuffer: 51 frames in 5014 ms (10 a second), 12353 us each in the driver, after 1 us waiting for the GPU and, 0 of them, 0 us for the next refresh; 0 swaps waited for the frame before,
+MiniIOMobileFramebuffer: 51 frames in 5010 ms (10 a second), 13348 us each in the driver, after 1 us waiting for the GPU and, 0 of them, 0 us for the next refresh; 0 swaps waited for the frame before,
+MiniIOMobileFramebuffer: 51 frames in 5023 ms (10 a second), 12965 us each in the driver, after 1 us waiting for the GPU and, 0 of them, 0 us for the next refresh; 0 swaps waited for the frame before,
+MiniIOMobileFramebuffer: 51 frames in 5013 ms (10 a second), 12451 us each in the driver, after 1 us waiting for the GPU and, 0 of them, 0 us for the next refresh; 0 swaps waited for the frame before,
+MiniIOMobileFramebuffer: 51 frames in 5014 ms (10 a second), 12052 us each in the driver, after 1 us waiting for the GPU and, 0 of them, 0 us for the next refresh; 0 swaps waited for the frame before,
+MiniIOMobileFramebuffer: 51 frames in 5008 ms (10 a second), 12047 us each in the driver, after 1 us waiting for the GPU and, 0 of them, 0 us for the next refresh; 0 swaps waited for the frame before,
+MiniIOMobileFramebuffer: 52 frames in 5014 ms (10 a second), 12862 us each in the driver, after 1 us waiting for the GPU and, 0 of them, 0 us for the next refresh; 0 swaps waited for the frame before,
+MiniIOMobileFramebuffer: 51 frames in 5013 ms (10 a second), 12008 us each in the driver, after 1 us waiting for the GPU and, 0 of them, 0 us for the next refresh; 0 swaps waited for the frame before,
+MiniIOMobileFramebuffer: 51 frames in 5009 ms (10 a second), 12350 us each in the driver, after 1 us waiting for the GPU and, 0 of them, 0 us for the next refresh; 0 swaps waited for the frame before,
+MiniIOMobileFramebuffer: 51 frames in 5010 ms (10 a second), 12756 us each in the driver, after 1 us waiting for the GPU and, 0 of them, 0 us for the next refresh; 0 swaps waited for the frame before,
+MiniIOMobileFramebuffer: 51 frames in 5015 ms (10 a second), 12148 us each in the driver, after 1 us waiting for the GPU and, 0 of them, 0 us for the next refresh; 0 swaps waited for the frame before,
+MiniIOMobileFramebuffer: 51 frames in 5009 ms (10 a second), 11629 us each in the driver, after 1 us waiting for the GPU and, 0 of them, 0 us for the next refresh; 0 swaps waited for the frame before,
+MiniIOMobileFramebuffer: 51 frames in 5013 ms (10 a second), 11736 us each in the driver, after 1 us waiting for the GPU and, 0 of them, 0 us for the next refresh; 0 swaps waited for the frame before,
+MiniIOMobileFramebuffer: 51 frames in 5013 ms (10 a second), 12265 us each in the driver, after 1 us waiting for the GPU and, 0 of them, 0 us for the next refresh; 0 swaps waited for the frame before,
+MiniIOMobileFramebuffer: 39 frames in 5123 ms (7 a second), 14725 us each in the driver, after 1 us waiting for the GPU and, 0 of them, 0 us for the next refresh; 0 swaps waited for the frame before, 
+MiniIOMobileFramebuffer: 48 frames in 5127 ms (9 a second), 15228 us each in the driver, after 1 us waiting for the GPU and, 5 of them, 5513 us for the next refresh; 0 swaps waited for the frame befor
+MiniIOMobileFramebuffer: 34 frames in 5055 ms (6 a second), 17277 us each in the driver, after 1 us waiting for the GPU and, 9 of them, 8294 us for the next refresh; 0 swaps waited for the frame befor
+MiniIOMobileFramebuffer: 53 frames in 5498 ms (9 a second), 22587 us each in the driver, after 1 us waiting for the GPU and, 1 of them, 10542 us for the next refresh; 0 swaps waited for the frame befo
+MiniIOMobileFramebuffer: 6 frames in 9127 ms (0 a second), 19616 us each in the driver, after 1 us waiting for the GPU and, 0 of them, 0 us for the next refresh; 0 swaps waited for the frame before, 0
+MiniIOMobileFramebuffer: 38 frames in 5320 ms (7 a second), 13894 us each in the driver, after 0 us waiting for the GPU and, 20 of them, 9161 us for the next refresh; 17 swaps waited for the frame bef
+MiniIOMobileFramebuffer: 91 frames in 5080 ms (17 a second), 13350 us each in the driver, after 1 us waiting for the GPU and, 53 of them, 8586 us for the next refresh; 21 swaps waited for the frame be
