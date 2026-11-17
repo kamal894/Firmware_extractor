@@ -845,7 +845,10 @@ void touch_probe(void)
 
 	pr("\n--- touch screen (read-only) ---\n");
 	log_flush();
-#if PROBE_TOUCH == 5
+#if PROBE_TOUCH == 6
+	aoc_start();
+	return;
+#elif PROBE_TOUCH == 5
 	aoc_gates();
 	return;
 #elif PROBE_TOUCH == 4

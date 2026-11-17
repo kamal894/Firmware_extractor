@@ -145,6 +145,12 @@ void display_probe(void);
 void ufs_probe(void);
 void touch_probe(void);
 void trusty_aoc_probe(void);
+int trusty_ql_open(void);
+void trusty_ql_close(void);
+int trusty_ql_connect(const char *port);
+void trusty_ql_disconnect(int h);
+int trusty_ql_xchg(int h, const void *req, u32 req_len, void *rsp, u32 rsp_max, u32 polls);
+void aoc_start(void);
 u64 ufs_load_lp(const char *name, u64 dst, u64 max);
 void display_send_frames(void);
 void kick_frames(u64 decon_main);
@@ -186,6 +192,7 @@ struct probe_state {
 	u64 entry_ticks;	/* the counter at entry (the loader dates the kernel from it) */
 	u64 image_size;		/* text+data+bss+stack */
 	u64 dtb;		/* x0 at entry */
+	u64 initrd_start, initrd_end;	/* DT /chosen linux,initrd-* */
 	int have_fdt;
 	struct fdt fdt;
 

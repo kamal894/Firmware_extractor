@@ -56,7 +56,7 @@ endif
 LDFLAGS := -pie --no-dynamic-linker -z norelro -z noexecstack --build-id=none -T linker.ld
 
 LOADER ?= 0
-SRCS := start.S main.c log.c uart.c timer.c fdt.c psci.c exception.c display.c wdt.c ufs.c touch.c trusty.c lib.c
+SRCS := start.S main.c log.c uart.c timer.c fdt.c psci.c exception.c display.c wdt.c ufs.c touch.c trusty.c aoc.c lib.c
 ifeq ($(LOADER),1)
 SRCS += xnu.c watcher.c handoff.S
 CFLAGS += -DPROBE_LOADER=1

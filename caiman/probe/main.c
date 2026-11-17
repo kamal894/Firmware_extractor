@@ -249,6 +249,8 @@ static int visit_report(const struct fdt *f, int node, int depth, u32 pac, u32 p
 				p = fdt_getprop(f, node, "linux,initrd-end", &len);
 				s = p ? fdt_cells(p, len >= 8 ? 2 : 1) : 0;
 				pr("dt: /chosen initrd 0x%llx - 0x%llx\n", a, s);
+				g.initrd_start = a;
+				g.initrd_end = s;
 			}
 			p = fdt_getprop(f, node, "stdout-path", &len);
 			if (p)

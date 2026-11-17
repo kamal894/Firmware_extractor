@@ -220,3 +220,32 @@ program them. The SysMMU details in aoc-fw-load.md §C are kept only as a fallba
 - **Key 0x1011** is `get_random_u32()`: any value will do.
 
 This completes the fw-info block, apart from reading 0x10000000 in our boot.
+
+## 12. The AOC runs from our boot (PROBE_TOUCH=6, probe/aoc.c, 2026-11-17)
+
+How the image is built: the bootloader takes the ramdisk from init_boot and ignores ours. So
+aoc.bin rides in the kernel payload instead. `tools/pack_aoc_payload.py` pads probe.Image to
+1 MiB, then writes a blob header "AOCBLOB" with the size, then aoc.bin.
+
+Log in docs/probe-log-aoc2.txt:
+
+    aoc: aoc.bin at 0x80101000, 0x1bbaac0 bytes, header v2, ipc offset 0x1c00000, version 15231849-polygon
+    aoc: before: aoc_req 0x1 status 0x1; pad 72 0x79; ipc[0..3] 00000000 00000000 00041a41 00000000
+    aoc: copied 0x1bb9ac0 bytes to 0x94000000
+    aoc: GSA 0x5a: ... reply 0x8000005a status 0x0
+    aoc: fw-info at 0x95c00000: chip 0x09875000 (type 0x0, product 0x9875000)
+    trusty: connect com.android.trusty.gsa.hwmgr.aoc = 32 ... READY
+    aoc: hwmgr.aoc {1, 1}: 12 bytes: 0x80000001 0x0 0x2
+    aoc: after start: ... pad 72 0x89; ipc[0..3] a0c00a0c 00000000 00041a53 00000000
+
+What these lines show:
+1. **GSA accepted the image** (status 0). Physical addresses work as the "DMA" addresses.
+2. **Trusty `hwmgr.aoc {1, 1}` answered** with status 0 and result 2.
+3. **The firmware runs**, for two reasons:
+   - pad 72 went from 0x79 to **0x89**, the value in the AOC firmware's own boot pad table
+     (0x401209d8: pads 72-75 = 0x89);
+   - the AOC rewrote the IPC area: the fw-info block was replaced, and 0xa0c00a0c appeared.
+
+Next: Linux's AOC IPC handshake (aoc_core.ko, after the start: the a0c00a0c area, the rings and
+the mailbox at 0x15200000). After that comes the `com.google.tbn_service` request that hands the
+touch bus to the AP.

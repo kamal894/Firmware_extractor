@@ -275,25 +275,22 @@ static u32 ql_wait_event(u32 handle, u32 polls)
 	return 0;
 }
 
-void trusty_aoc_probe(void)
+static s32 ql_ver;
+
+/* API version, FF-A share of the page, CREATE_QL_TIPC_DEV. Returns 0 when the device is up. */
+int trusty_ql_open(void)
 {
 	u64 id;
-	s32 ver, ret, h;
-	u32 ev;
+	s32 ret;
 
-	pr("\n--- trusty (QL-TIPC) ---\n");
-	ver = smc3(SMC_FC_API_VERSION, 5, 0, 0);
-	pr("trusty: API_VERSION(5) = %d\n", ver);
-	if (ver < 3 || ver > 5) {
-		log_flush();
-		return;
-	}
-	if (ver < 5) {
+	ql_ver = smc3(SMC_FC_API_VERSION, 5, 0, 0);
+	pr("trusty: API_VERSION(5) = %d\n", ql_ver);
+	if (ql_ver < 3 || ql_ver > 5)
+		return -1;
+	if (ql_ver < 5)
 		ql_handle = (u64)(uptr)ql_page | NS_ATTR_CACHED_RW;
-	} else if (ffa_init() || ffa_share_page((u64)(uptr)ql_page, &ql_handle)) {
-		log_flush();
-		return;
-	}
+	else if (ffa_init() || ffa_share_page((u64)(uptr)ql_page, &ql_handle))
+		return -1;
 	id = ql_id();
 	ql_sync();
 	memset(ql_page, 0, QL_PAGE);
@@ -302,40 +299,16 @@ void trusty_aoc_probe(void)
 	ql_sync();	/* every call ends with this, so the page never holds a dirty line of Trusty's */
 	pr("trusty: CREATE_QL_TIPC_DEV(0x%llx, 0x%x) = %d\n", id, QL_PAGE, ret);
 	log_flush();
-	if (ret)
-		return;
+	return ret ? -1 : 0;
+}
 
-	{
-		/* which ports this client can reach: known ones, and a name that cannot exist */
-		static const char probe_ports[][40] = {
-			"com.android.trusty.gsa.hwmgr.tpu", "com.android.trusty.gsa.hwmgr.dsp",
-			"com.android.trusty.hdcp.auth", "com.android.trusty.apploader",
-			"com.android.trusty.hwkey", "com.android.trusty.no.such.port",
-		};
-		u32 k;
+void trusty_ql_close(void)
+{
+	u64 id = ql_id();
+	s32 ret = std_call(SMC_SC_SHUTDOWN_QL_TIPC_DEV, (u32)id, (u32)(id >> 32), QL_PAGE);
 
-		for (k = 0; k < ARRAY_SIZE(probe_ports); k++) {
-			s32 ph = ql_connect(probe_ports[k]);
-
-			pr("trusty: connect %s = %d\n", probe_ports[k], ph);
-			if (ph > 0)
-				ql_cmd(QL_TIPC_DEV_DISCONNECT, (u32)ph, 0);
-		}
-	}
-	h = ql_connect("com.android.trusty.gsa.hwmgr.aoc");
-	pr("trusty: connect com.android.trusty.gsa.hwmgr.aoc = %d (0x%x)\n", h, (u32)h);
-	log_flush();
-	if (h > 0) {
-		ev = ql_wait_event((u32)h, 200);
-		pr("trusty: event on handle 0x%x: 0x%x%s%s%s\n", (u32)h, ev,
-		   (ev & IPC_HANDLE_POLL_READY) ? " READY" : "", (ev & IPC_HANDLE_POLL_HUP) ? " HUP" : "",
-		   (ev & IPC_HANDLE_POLL_ERROR) ? " ERROR" : "");
-		ret = ql_cmd(QL_TIPC_DEV_DISCONNECT, (u32)h, 0);
-		pr("trusty: disconnect = %d\n", ret);
-	}
-	ret = std_call(SMC_SC_SHUTDOWN_QL_TIPC_DEV, (u32)id, (u32)(id >> 32), QL_PAGE);
 	pr("trusty: SHUTDOWN_QL_TIPC_DEV = %d\n", ret);
-	if (ver >= 5) {
+	if (ql_ver >= 5) {
 		struct smc_ret4 r = smc4(FFA_MEM_RECLAIM, (u32)ql_handle, ql_handle >> 32, 0, 0);
 
 		pr("trusty: FFA_MEM_RECLAIM = 0x%llx\n", r.r0);
@@ -343,4 +316,71 @@ void trusty_aoc_probe(void)
 		pr("trusty: FFA_RXTX_UNMAP = 0x%llx\n", r.r0);
 	}
 	log_flush();
+}
+
+/* Connect and wait for READY. Returns the handle (>= 32) or a negative error. */
+s32 trusty_ql_connect(const char *port)
+{
+	s32 h = ql_connect(port);
+	u32 ev;
+
+	pr("trusty: connect %s = %d\n", port, h);
+	if (h <= 0)
+		return h ? h : -1;
+	ev = ql_wait_event((u32)h, 200);
+	pr("trusty: event on handle 0x%x: 0x%x%s%s%s\n", (u32)h, ev,
+	   (ev & IPC_HANDLE_POLL_READY) ? " READY" : "", (ev & IPC_HANDLE_POLL_HUP) ? " HUP" : "",
+	   (ev & IPC_HANDLE_POLL_ERROR) ? " ERROR" : "");
+	log_flush();
+	if (!(ev & IPC_HANDLE_POLL_READY)) {
+		ql_cmd(QL_TIPC_DEV_DISCONNECT, (u32)h, 0);
+		return -1;
+	}
+	return h;
+}
+
+void trusty_ql_disconnect(s32 h)
+{
+	pr("trusty: disconnect 0x%x = %d\n", (u32)h, ql_cmd(QL_TIPC_DEV_DISCONNECT, (u32)h, 0));
+}
+
+/* One request, one reply (gsa.ko gsa_tz_chan_msg_xchg). Returns the reply length or < 0. */
+int trusty_ql_xchg(s32 h, const void *req, u32 req_len, void *rsp, u32 rsp_max, u32 polls)
+{
+	struct ql_hdr *hd = (struct ql_hdr *)ql_page;
+	u32 ev, n;
+	s32 ret;
+
+	ql_sync();
+	memcpy(ql_page + sizeof(*hd), req, req_len);
+	ret = ql_cmd(QL_TIPC_DEV_SEND, (u32)h, req_len);
+	pr("trusty: send %u bytes = %d\n", req_len, ret);
+	if (ret)
+		return -1;
+	ev = ql_wait_event((u32)h, polls);
+	pr("trusty: event after send: 0x%x\n", ev);
+	if (!(ev & IPC_HANDLE_POLL_MSG))
+		return -1;
+	ret = ql_cmd(QL_TIPC_DEV_RECV, (u32)h, 0);
+	n = hd->payload_len;
+	pr("trusty: recv = %d, %u bytes\n", ret, n);
+	if (ret)
+		return -1;
+	if (n > rsp_max)
+		n = rsp_max;
+	memcpy(rsp, ql_page + sizeof(*hd), n);
+	return (int)n;
+}
+
+void trusty_aoc_probe(void)
+{
+	s32 h;
+
+	pr("\n--- trusty (QL-TIPC) ---\n");
+	if (trusty_ql_open())
+		return;
+	h = trusty_ql_connect("com.android.trusty.gsa.hwmgr.aoc");
+	if (h > 0)
+		trusty_ql_disconnect(h);
+	trusty_ql_close();
 }
