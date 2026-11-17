@@ -370,3 +370,15 @@ clocks or power that the AOC firmware turns on.
 
 So the GPIOs and the pad CSRs match Android and the bus is still dead. What is left: the PCU pages
 the AP cannot read, and the AP side of the path (HSI0 pads or sysreg).
+
+### The AP side in Android (2026-11-17)
+
+- **pinctrl debugfs** (`mount -t debugfs none /sys/kernel/debug`):
+  - `111d0000.spi` has only dummy pinctrl states. The touch SPI has no AP pins; USI2's signals reach
+    AOC pads 72-75 inside the SoC.
+  - `spi20.0` (the touch chip) configures only gpn0-0 (the interrupt: no pull) and gpp1-1 (reset,
+    power-down state kept).
+- **Do not read `/sys/kernel/debug/regmap/dummy-sysreg_hsi0@0x0000000011020000/registers`.** Its
+  range is 0-0xfffc, and reading the whole of it hits a hole. Android panicked with an
+  asynchronous SError and rebooted ("kernel_panic,asynchroomus_serror_interrupt"). HSI0 sysreg
+  words have to be read one by one, at offsets known to exist.
