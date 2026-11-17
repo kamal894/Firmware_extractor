@@ -489,6 +489,105 @@ static void tcm_probe(void)
 }
 
 /*
+ * One TouchComm v1 message (docs/syna-tcm.md section 3): the header "A5 code len_lo len_hi" in one
+ * transaction, then "A5 03" + payload + 5A in the next. Returns the payload length, or -1 when the
+ * first byte is not A5. *code gets the report or status code.
+ */
+static int tcm_v1_msg(u8 *code, u8 *payload, u32 max)
+{
+	u8 h[4] = { 0 }, m[256];
+	u32 len, n;
+
+	spi_xfer(NULL, h, 4, 0);
+	if (h[0] != 0xa5)
+		return -1;
+	*code = h[1];
+	len = h[2] | (u32)h[3] << 8;
+	if (!len)
+		return 0;
+	n = len < sizeof(m) - 3 ? len : sizeof(m) - 3;
+	delay_us(100);
+	spi_xfer(NULL, m, n + 3, 0);
+	if (m[1] != 0x03)
+		pr("touch: tcm: continuation starts %02x %02x, not a5 03\n", m[0], m[1]);
+	memcpy(payload, m + 2, n < max ? n : max);
+	return (int)n;
+}
+
+/* v1 command: code, LE16 length, payload; the response comes as a message with status 01. */
+static int tcm_v1_cmd(u8 cmd, const u8 *arg, u32 alen, u8 *rsp, u32 max)
+{
+	u8 c[16], code = 0;
+	u32 ms;
+	int n;
+
+	c[0] = cmd;
+	c[1] = (u8)alen;
+	c[2] = (u8)(alen >> 8);
+	memcpy(c + 3, arg, alen);
+	spi_xfer(c, NULL, 3 + alen, 0);
+	for (ms = 0; ms < 500; ms++) {
+		delay_us(1000);
+		if ((rd32(PIN_IRQ_BANK + 4) >> PIN_IRQ) & 1)
+			continue;
+		n = tcm_v1_msg(&code, rsp, max);
+		if (n < 0)
+			continue;
+		if (code == 0x01)
+			return n;
+		pr("touch: tcm: cmd 0x%02x: message code 0x%02x, %d bytes (waiting for status 01)\n", cmd, code, n);
+		if (code >= 0x02 && code < 0x10)
+			return -1;	/* an error status */
+	}
+	pr("touch: tcm: cmd 0x%02x: no response\n", cmd);
+	return -1;
+}
+
+/*
+ * A clean run (PROBE_TOUCH=8): identify, the touch report config (GET_TOUCH_REPORT_CONFIG 0x25),
+ * then 20 s of messages, printed whole. Touch data is report 0x11.
+ */
+static void touch_clean(void)
+{
+	u8 buf[256], code;
+	u32 ms, count = 0;
+	int n;
+
+	tcm_probe();
+	n = tcm_v1_cmd(0x25, NULL, 0, buf, sizeof(buf));
+	pr("touch: tcm: touch report config: %d bytes\n", n);
+	if (n > 0)
+		hex("tcm: config", buf, (u32)n < 64 ? (u32)n : 64);
+	log_flush();
+	pr("touch: tcm: reading reports for 20 s (touch the screen now)\n");
+	log_flush();
+	for (ms = 0; ms < 20000 && count < 200; ms++) {
+		if ((rd32(PIN_IRQ_BANK + 4) >> PIN_IRQ) & 1) {
+			delay_us(1000);
+			continue;
+		}
+		n = tcm_v1_msg(&code, buf, sizeof(buf));
+		if (n < 0) {
+			delay_us(1000);
+			continue;
+		}
+		count++;
+		pr("touch: tcm: %5u ms: report 0x%02x, %d bytes:", ms, code, n);
+		{
+			int i;
+
+			for (i = 0; i < n && i < 32; i++)
+				pr(" %02x", buf[i]);
+		}
+		pr("\n");
+		if (!(count % 16))
+			log_flush();
+	}
+	pr("touch: tcm: %u messages\n", count);
+	log_flush();
+}
+
+/*
  * Which pads carry HSI0's USI2? Android's device tree does not say (the SPI's pinctrl-0 is empty and
  * HSI0 has no GPIO block). HSI0's USIs reach PERIC0/1 pads as a pin function (HSI0's USI4 uses gpp2,
  * function 3). Try every 4-pin USI pad group of PERIC0/1 (the uartN_bus_single groups) with functions
@@ -992,9 +1091,9 @@ void touch_probe(void)
 #elif PROBE_TOUCH == 4
 	buttons_watch();
 	return;
-#elif PROBE_TOUCH == 7
-	/* the usual power-up; the AOC is started just before the SPI read (below) */
-#elif PROBE_TOUCH >= 3
+#elif PROBE_TOUCH == 7 || PROBE_TOUCH == 8
+	/* the usual power-up; then (7) the AOC and the old SPI checks, or (8) the TouchComm client */
+#elif PROBE_TOUCH == 3
 	hsi0_scan();
 	return;
 #endif
@@ -1034,7 +1133,12 @@ void touch_probe(void)
 				aoc_start();
 				aoc_tbn_to_ap();
 #endif
+#if PROBE_TOUCH == 8
+				if (!spi_init())
+					touch_clean();
+#else
 				spi_identify();
+#endif
 			} else {
 				pr("touch: LDO voltages are not 0x3c/0x2c: not powering anything\n");
 			}

@@ -507,3 +507,35 @@ Next:
    writes.
 2. GET_TOUCH_REPORT_CONFIG (0x25), then touch reports (code 0x11).
 3. A touch driver for XNU.
+
+### A clean run: no AOC, no pad, GPIO or sysreg writes (PROBE_TOUCH=8, 2026-11-17)
+
+The run does only the PMIC rails, `spi_init`, the divider and the reset. The chip answers the same:
+
+    touch: tcm: startup read, 4 bytes (filler 00): a5 10 18 00
+    touch:   identify: version 1, mode 1, part S3908GA1B0-15.0, build 4432698, max write 1024
+    touch: tcm: touch report config: 128 bytes
+    touch: tcm: config: 10 08 1b 38 1e 08 17 08 18 08 04 01 06 04 07 04 08 10 09 10 0a 10 0b 08 0c 08 d2 08 d3 08 d1 08 03 00 ...
+    touch: tcm:     0 ms: report 0xc2, 2 bytes: 20 00
+    touch: tcm:    85 ms: report 0xc2, 2 bytes: 00 00
+
+So the SPI divider is all the touch bus needed. The AOC pad mux, the AOC GPIOs, HSI0 sysreg
++0x104/+0x700 and the AOC itself are not required.
+
+The touch report config came back with GET_TOUCH_REPORT_CONFIG (0x25), status 01, 128 bytes. It
+is a list of {entity code, bit width} pairs ending in 03 (end). Reading it this way is
+conventional TouchComm and still has to be checked against syna_touch.ko's parser:
+
+| Entity | Bits | | Entity | Bits |
+|---|---|---|---|---|
+| 0x10 | 8 | | 0x08 | 16 |
+| 0x1b | 56 | | 0x09 | 16 |
+| 0x1e | 8 | | 0x0a | 16 |
+| 0x17 | 8 | | 0x0b | 8 |
+| 0x18 | 8 | | 0x0c | 8 |
+| 0x04 | 1 | | 0xd2 | 8 |
+| 0x06 | 4 | | 0xd3 | 8 |
+| 0x07 | 4 | | 0xd1 | 8 |
+
+Nobody touched the screen in the 20 s window. The only messages were two vendor reports 0xc2.
+The next run needs a finger on the screen to get report 0x11.
