@@ -144,6 +144,7 @@ void __attribute__((noreturn)) probe_finish(const char *why);
 void display_probe(void);
 void ufs_probe(void);
 void touch_probe(void);
+void trusty_aoc_probe(void);
 u64 ufs_load_lp(const char *name, u64 dst, u64 max);
 void display_send_frames(void);
 void kick_frames(u64 decon_main);

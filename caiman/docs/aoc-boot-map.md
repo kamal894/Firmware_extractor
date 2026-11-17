@@ -111,3 +111,34 @@ The AOC needs only:
 - **The GSA mailbox answers when polled.** It had last been left at 0x80000041 by the bootloader.
   - 0x96: reply 0x80000096, status 0, after 3 ms;
   - 0x97: reply 0x80000097, status 0, after 1 ms.
+
+## 8. A Trusty client from our boot: QL-TIPC (probe/trusty.c, 2026-11-17)
+
+Bootloaders talk to Trusty through QL-TIPC (Trusty lib/trusty/tipc_dev_ql.c), not virtio:
+- one shared page;
+- std calls `SMC_SC_CREATE_QL_TIPC_DEV` (0x3200001e), `SHUTDOWN` (0x3200001f) and
+  `HANDLE_QL_TIPC_DEV_CMD` (0x32000020);
+- commands CONNECT 1, GET_EVENT 2, SEND 3, RECV 4, DISCONNECT 5;
+- replies carry opcode | 0x8000.
+
+Steps that work on hardware:
+1. **`SMC_FC_API_VERSION(5)` = 5.** Asking for 3 also returns 5: something after the bootloader
+   has already locked 5. So the page is shared with FF-A 1.0:
+   - FFA_VERSION 0x10000;
+   - FEATURES(MEM_SHARE) succeeds;
+   - ID_GET returns 0;
+   - RXTX_MAP64 of two pages;
+   - MEM_SHARE of one page to endpoint 0x8000, which gives handle 0xffffffc0.
+2. **The page must be shared cached** (attributes 0x2f). Sharing it uncached (0x27) made CREATE fail
+   with -7. Our MMU is off, so the page is cleaned and invalidated by VA (`dc civac`) around every
+   call.
+3. **CONNECT must send the name with its NUL.** Trusty requires strnlen(name) < length. Without the
+   NUL every port gave -2.
+4. **Results:**
+   - `hwmgr.aoc`, `hwmgr.tpu`, `hwmgr.dsp`, `hdcp.auth` and `apploader` connect (handle 0x20);
+   - `hwkey` and a made-up name give -7;
+   - `hwmgr.aoc` then reports **READY** (event 0x1). DISCONNECT, SHUTDOWN, MEM_RECLAIM and
+     RXTX_UNMAP all succeed.
+
+The client is now in place for `gsa_send_aoc_cmd`: SEND `{1, state}` and RECV
+`{0x80000001, 0, result}`. Nothing has been sent to the AOC service yet.

@@ -835,6 +835,7 @@ static void aoc_gates(void)
 	trusty_version();
 	if (gsa_mbox_cmd(0x96) == 0)
 		gsa_mbox_cmd(0x97);
+	trusty_aoc_probe();
 }
 
 void touch_probe(void)
