@@ -186,3 +186,24 @@ The client is now in place for `gsa_send_aoc_cmd`: SEND `{1, state}` and RECV
 - **Do not use `mem dump` on carveout addresses through the AOC console.** 0x99c00000 is not mapped
   in the A32 core's MMU. Reading it crashed the AOC (CONSOLE task, DFAR 0x99c00000, DFSR 5).
   Android restarted it.
+
+## 10. Correction: on the GSA path Linux does less (checked 2026-11-17)
+
+Codex's analysis is in docs/aoc-fw-load.md. Checked against the disassembly:
+- `aoc_fw_callback` 0x8a8 calls `of_find_property(.., "gsa-enabled")` (.rodata+0x5e4).
+- At 0x8b0, `cbnz` goes to 0x92c. `aoc_configure_iommu` and `write_reset_trampoline` (0x8bc, 0x8c4)
+  run only **without** GSA.
+- At 0x9a4, `cbnz` goes to 0x9b4. `aoc_release_from_reset` (0x9ac) also runs only without GSA.
+  With GSA the start is `gsa_send_aoc_cmd(1)` alone.
+
+So on caiman, which has `gsa-enabled`, Linux does this:
+1. `request_aoc_on`: write 1 to aoc_req at 0x154b0000.
+2. Check the image, then copy aoc.bin+0x1000 to the carveout at 0x94000000 (0x1bb9ac0 bytes).
+3. GSA mailbox 0x5a(DMA address of a copy of aoc.bin[0:0x1000], 0x94000000).
+4. Write the fw-info block at 0x95c00000. The table of 22 entries is in docs/aoc-fw-load.md §A.
+   Keys 0x1011-0x1013 and 0x1016 (random, chip revision, type, product) are still unknown.
+5. `disable_power_mode(0, 1)`. This is an import from another module, not yet found.
+6. Trusty `hwmgr.aoc` `{1, 1}`. Then Linux sleeps 2 s and calls `enable_power_mode(0, 1)`.
+
+The AOC SysMMU, the reset trampoline and the SRAM reset bit are presumably set up by GSA. We do not
+program them. The SysMMU details in aoc-fw-load.md §C are kept only as a fallback.
