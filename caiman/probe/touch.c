@@ -1112,8 +1112,8 @@ void touch_probe(void)
 #elif PROBE_TOUCH == 4
 	buttons_watch();
 	return;
-#elif PROBE_TOUCH == 7 || PROBE_TOUCH == 8
-	/* the usual power-up; then (7) the AOC and the old SPI checks, or (8) the TouchComm client */
+#elif PROBE_TOUCH >= 7
+	/* the usual power-up; then (7) the AOC and the old SPI checks, (8) the TouchComm client, (9) the chip readied for XNU */
 #elif PROBE_TOUCH == 3
 	hsi0_scan();
 	return;
@@ -1157,6 +1157,10 @@ void touch_probe(void)
 #if PROBE_TOUCH == 8
 				if (!spi_init())
 					touch_clean();
+#elif PROBE_TOUCH == 9
+				/* for XNU (touchscreen=2): the chip up and identified, its reports left to the kernel */
+				if (!spi_init())
+					tcm_probe();
 #else
 				spi_identify();
 #endif

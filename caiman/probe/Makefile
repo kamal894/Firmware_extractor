@@ -11,6 +11,7 @@
 #   PROBE_FINISH_DELAY_MS=N wait before rebooting (default 3000)
 #   PROBE_CRASHTEST=1       fault on purpose at the end (tests the handler)
 #   PROBE_TOUCH=1           read-only look at the touch screen's power (PMIC through ACPM), pins, SPI
+#   PROBE_TOUCH=9           with LOADER=1: the touch chip powered, its SPI set up and the chip identified for XNU (touchscreen=2)
 #   LOADER=1                the M2 loader: probe, then start XNU from an appended payload
 #                           (OUT=out/loader-$(PLATFORM); ../tools/mkxnuimg.py builds the image)
 #   BOOTIMG_ARGS="..."      extra args for tools/pack_bootimg.py, e.g.

@@ -564,3 +564,21 @@ Measured ranges: X 75-12799, Y 61-28451, so the touch grid is 10x the 1280x2856 
 Up to 5 fingers seen at once, indices stable while a finger stays down. Reports arrive every ~1.5 ms while touched;
 the IRQ line (low) says a message is waiting. Logs: docs/probe-log-touch9.txt, docs/probe-log-touch10.txt.
 Next: an XNU driver (power, divider, reset, v1 read on IRQ, this parser, scale /10).
+
+## Touch in iOS (2026-11-17, run darwin-touch1)
+
+`hakios/caiman-kernel.patch` now also adds `touchscreen=2` to `drivers/input/hakios.goodix.c`: the
+Synaptics on caiman. The loader, built with `PROBE_TOUCH=9`, powers the chip, sets up the SPI and the
+USI2 divider, resets it and reads its identify. The kernel's thread maps only the SPI (0x111d0000) and
+gpn0 (0x15060000), looks at the interrupt pin every 4 ms, reads v1 messages while it is low, parses report
+0x11 and posts DOWN/MOVE/UP to `/dev/hakios-touch`, X/12800 and Y/28560 scaled to 0..65535.
+
+```
+make LOADER=1 PROBE_UFS=2 PROBE_XNU_SECONDS=240 PROBE_TOUCH=9 OUT=out/loader-touch
+BOOT_ARGS="touchscreen=2 buttons=2" tools/run_darwin.sh probe/out/loader-touch/probe.Image \
+    .../mach.development.bcm2837 userland/root.apfs darwin-touch1.txt
+```
+
+Result: `syna: so far 4060 messages, 4054 touch reports, 0 unreadable`. Somebody at the phone opened
+Settings > General and scrolled it with a finger (docs/darwin-touch1.png); orientation is right with
+`touch_flip=0`. Log: docs/darwin-log-touch1.txt.

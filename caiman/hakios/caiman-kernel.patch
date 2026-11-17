@@ -95,6 +95,217 @@ index 27203ee..51e621a 100644
  		thread_deallocate(thread);
  	}
  }
+diff --git a/drivers/input/hakios.goodix.c b/drivers/input/hakios.goodix.c
+index 38c9ff2..13e5398 100644
+--- a/drivers/input/hakios.goodix.c
++++ b/drivers/input/hakios.goodix.c
+@@ -1548,6 +1548,197 @@ goodix_thread(__unused void *parameter, __unused wait_result_t result)
+ 	}
+ }
+ 
++/*
++ * boot-arg touchscreen=2: the Pixel 9 Pro (caiman, Tensor G4): a Synaptics S3908 speaking TouchComm v1
++ * on HSI0's USI2 as SPI (0x111d0000). The loader (caiman probe, PROBE_TOUCH=9) has done the parts that
++ * need the PMIC and the clocks: LDO4M then LDO25M on, the SPI set up, CMU_HSI0's USI2 divider at 3
++ * (about 3 MHz; at 0 the clock is over the chip's 10 MHz and nothing answers), the chip reset and its
++ * startup identify read. Here only the SPI and the interrupt pin (gpn0-0, low while the chip has a
++ * message) are used; nothing is written but the SPI's own registers.
++ *
++ * A message is "A5 code len_lo len_hi" in one transaction, then "A5 03" + payload + "5A" in the next.
++ * Report 0x11, in the layout the chip's report config (command 0x25) gives: 11 bytes of header (the
++ * number of fingers at [10]), then 12 bytes a finger: index | class << 4, X, Y, Z (16 bits each,
++ * little-endian), widths and three vendor bytes. X and Y are in tenths of a pixel of the 1280 x 2856
++ * panel. Checked on the phone with the loader's own copy of this reading (caiman docs/touch-plan.md).
++ */
++#define SYNA_SPI_PHYS           0x111d0000UL
++#define SYNA_IRQ_PHYS           0x15060000UL    /* gpn0: CON +0, DAT +4; the interrupt is pin 0 */
++#define SYNA_MAX_X              12800
++#define SYNA_MAX_Y              28560
++#define SYNA_FINGERS            10
++
++#define SPI_CH_CFG              0x00
++#define SPI_SLAVE_SEL           0x0c
++#define SPI_STATUS              0x14
++#define SPI_TX_DATA             0x18
++#define SPI_RX_DATA             0x1c
++#define SPI_PACKET_CNT          0x20
++#define SPI_CH_SW_RST           (1u << 5)
++#define SPI_CH_ON               3u              /* RX and TX channels */
++#define SPI_PACKET_CNT_EN       (1u << 16)
++#define SPI_RX_LVL(st)          (((st) >> 15) & 0x7f)
++#define SPI_TX_LVL(st)          (((st) >> 6) & 0x7f)
++
++static vm_offset_t syna_spi, syna_irq;
++static struct {
++	bool down;
++	uint32_t x, y;
++} syna_contact[SYNA_FINGERS];
++static struct {
++	uint32_t messages, reports, bad, shown;
++} syna_seen;
++
++static bool
++syna_pending(void)
++{
++	return !(rd(syna_irq + 4) & 1);
++}
++
++/* One transaction under chip select: n bytes of 00 out, n in. Returns how many came back. */
++static uint32_t
++syna_read(uint8_t *rx, uint32_t n)
++{
++	uint32_t sent = 0, got = 0;
++	uint64_t start = mach_absolute_time(), limit;
++
++	nanoseconds_to_absolutetime(50 * NSEC_PER_MSEC, &limit);
++	wr(syna_spi + SPI_CH_CFG, rd(syna_spi + SPI_CH_CFG) | SPI_CH_SW_RST);
++	delay(1);
++	wr(syna_spi + SPI_CH_CFG, rd(syna_spi + SPI_CH_CFG) & ~(SPI_CH_SW_RST | SPI_CH_ON));
++	wr(syna_spi + SPI_PACKET_CNT, n & 0xffff);
++	wr(syna_spi + SPI_PACKET_CNT, (n & 0xffff) | SPI_PACKET_CNT_EN);
++	wr(syna_spi + SPI_SLAVE_SEL, 0);
++	delay(10);
++	for (; sent < n && sent < 32; sent++) {
++		wr(syna_spi + SPI_TX_DATA, 0);
++	}
++	wr(syna_spi + SPI_CH_CFG, rd(syna_spi + SPI_CH_CFG) | SPI_CH_ON);
++	while (got < n && mach_absolute_time() - start < limit) {
++		uint32_t level = SPI_RX_LVL(rd(syna_spi + SPI_STATUS));
++
++		while (level-- && got < n) {
++			rx[got++] = (uint8_t)rd(syna_spi + SPI_RX_DATA);
++		}
++		while (sent < n && SPI_TX_LVL(rd(syna_spi + SPI_STATUS)) < 32) {
++			wr(syna_spi + SPI_TX_DATA, 0);
++			sent++;
++		}
++	}
++	wr(syna_spi + SPI_CH_CFG, rd(syna_spi + SPI_CH_CFG) & ~SPI_CH_ON);
++	wr(syna_spi + SPI_SLAVE_SEL, 1);
++	return got;
++}
++
++/* One message: its code, and the payload (up to max bytes). Returns the payload's length, -1 for none. */
++static int
++syna_message(uint8_t *code, uint8_t *payload, uint32_t max)
++{
++	uint8_t h[4] = { 0 }, m[256];
++	uint32_t len;
++
++	if (syna_read(h, 4) != 4 || h[0] != 0xa5) {
++		return -1;
++	}
++	*code = h[1];
++	len = h[2] | (uint32_t)h[3] << 8;
++	if (len == 0) {
++		return 0;
++	}
++	if (len > sizeof(m) - 3) {
++		len = sizeof(m) - 3;
++	}
++	delay(100);
++	if (syna_read(m, len + 3) != len + 3 || m[1] != 0x03) {
++		return -1;
++	}
++	memcpy(payload, m + 2, len < max ? len : max);
++	return (int)(len < max ? len : max);
++}
++
++static void
++syna_report(const uint8_t *r, int n)
++{
++	bool seen[SYNA_FINGERS] = { false };
++
++	for (int p = 11; p + 12 <= n; p += 12) {
++		uint32_t id = r[p] & 0xf, kind = r[p] >> 4;
++		uint32_t x = r[p + 1] | (uint32_t)r[p + 2] << 8, y = r[p + 3] | (uint32_t)r[p + 4] << 8;
++
++		if (id >= SYNA_FINGERS || kind == 0) {
++			continue;
++		}
++		if (syna_seen.shown < 40) {
++			syna_seen.shown++;
++			printf("syna: finger %u at %u, %u (of %u x %u)\n", id, x, y, SYNA_MAX_X, SYNA_MAX_Y);
++		}
++		x = x >= SYNA_MAX_X ? 65535 : x * 65535 / SYNA_MAX_X;
++		y = y >= SYNA_MAX_Y ? 65535 : y * 65535 / SYNA_MAX_Y;
++		if (flip & 1) {
++			x = 65535 - x;
++		}
++		if (flip & 2) {
++			y = 65535 - y;
++		}
++		seen[id] = true;
++		hakios_touch_post(syna_contact[id].down ? HAKIOS_TOUCH_MOVE : HAKIOS_TOUCH_DOWN, id, x, y);
++		syna_contact[id].down = true;
++		syna_contact[id].x = x;
++		syna_contact[id].y = y;
++	}
++	for (uint32_t id = 0; id < SYNA_FINGERS; id++) {
++		if (syna_contact[id].down && !seen[id]) {
++			hakios_touch_post(HAKIOS_TOUCH_UP, id, syna_contact[id].x, syna_contact[id].y);
++			syna_contact[id].down = false;
++		}
++	}
++}
++
++static void
++syna_thread(__unused void *parameter, __unused wait_result_t result)
++{
++	uint8_t payload[256], code = 0;
++	uint64_t next_summary = 0, minute;
++
++	printf("syna: caiman: map SPI at %#lx, interrupt pin at %#lx\n", SYNA_SPI_PHYS, SYNA_IRQ_PHYS);
++	syna_spi = ml_io_map(SYNA_SPI_PHYS, 0x1000);
++	syna_irq = ml_io_map(SYNA_IRQ_PHYS, 0x1000);
++	printf("syna: caiman: SPI MODE_CFG %#x CH_CFG %#x STATUS %#x; gpn0 CON %#x DAT %#x\n", rd(syna_spi + 0x08),
++	    rd(syna_spi + SPI_CH_CFG), rd(syna_spi + SPI_STATUS), rd(syna_irq), rd(syna_irq + 4));
++	if (rd(syna_spi + 0x08) != 0x3ffu << 19) {
++		printf("syna: the SPI is not as the loader leaves it (PROBE_TOUCH=9): no touch screen\n");
++		return;
++	}
++	printf("syna: watching the interrupt pin every 4 ms; touch_flip=%u\n", flip);
++	nanoseconds_to_absolutetime(60 * NSEC_PER_SEC, &minute);
++	for (;;) {
++		/* while the pin is low there is a message; a finger on the screen makes one every ~1.5 ms */
++		for (int i = 0; i < 16 && syna_pending(); i++) {
++			int n = syna_message(&code, payload, sizeof(payload));
++
++			if (n < 0) {
++				syna_seen.bad++;
++				break;
++			}
++			syna_seen.messages++;
++			if (code == 0x11 && n >= 11) {
++				syna_seen.reports++;
++				syna_report(payload, n);
++			} else if (syna_seen.messages < 20) {
++				printf("syna: message %#x, %d bytes\n", code, n);
++			}
++		}
++		if (mach_absolute_time() > next_summary) {
++			if (next_summary) {
++				printf("syna: so far %u messages, %u touch reports, %u unreadable\n", syna_seen.messages,
++				    syna_seen.reports, syna_seen.bad);
++			}
++			next_summary = mach_absolute_time() + minute;
++		}
++		sleep_ms(4);
++	}
++}
++
+ void
+ hakios_goodix_init(void)
+ {
+@@ -1558,7 +1749,7 @@ hakios_goodix_init(void)
+ 		return;
+ 	}
+ 	PE_parse_boot_argn("touch_flip", &flip, sizeof(flip));
+-	if (kernel_thread_start(goodix_thread, NULL, &thread) == KERN_SUCCESS) {
++	if (kernel_thread_start(enabled == 2 ? syna_thread : goodix_thread, NULL, &thread) == KERN_SUCCESS) {
+ 		thread_deallocate(thread);
+ 	}
+ }
 diff --git a/xnu-deps/setup.sh b/xnu-deps/setup.sh
 index c390093..de72f4d 100755
 --- a/xnu-deps/setup.sh

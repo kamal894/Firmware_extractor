@@ -1,0 +1,93 @@
+touch: ACPM initdata: 8 plugins, ipc_channels at 0x8f20, 41 channels, 16 for the AP
+touch: ACPM channel 2: id 2, queue 5 x 16 bytes, AP polls 1; to APM front 4 rear 4 (at 0x3c2ec), from APM front 4 rear 4
+touch: S2MPG14 chip id 0x10 (the bootloader read 0x10)
+touch: LDO4M  (TS_AVDD 3.3 V)  CTRL 0x3c: off
+touch: LDO25M (TSP_DVDD 1.8 V) CTRL 0x2c: off
+touch: reset pin 1: function 0, level 0, pull 1 (CON 0x00002200 DAT 0x0000000c)
+touch: interrupt pin 0: function 0, level 0, pull 1 (CON 0x00000000 DAT 0x00000000)
+touch: powering the chip: reset held low, LDO4M then LDO25M on
+touch: LDO4M  CTRL now 0xfc: ON
+touch: LDO25M CTRL now 0xec: ON
+touch: interrupt (powered, in reset) pin 0: function 0, level 1, pull 0 (CON 0x00000000 DAT 0x00000001)
+touch: interrupt line stayed high for 3 s after reset: no sign of the chip
+touch: interrupt (after) pin 0: function 0, level 1, pull 0 (CON 0x00000000 DAT 0x00000001)
+touch: reset (after) pin 1: function 1, level 1, pull 0 (CON 0x00002210 DAT 0x0000000e)
+touch: USI mode register 0x00000000 (SW_CONF 0; 2 = SPI)
+touch: CMU_HSI0 +0x30cc QCH USI2         0x00000002 (ENABLE 0 CLOCK_REQ 1)
+touch: CMU_HSI0 +0x101c MUX  USI2          0x00000000
+touch: CMU_HSI0 +0x181c DIV  USI2          0x00000000
+touch: CMU_HSI0 +0x2120 GATE USI2          0x00200000 (?)
+touch:   set to manual, on: 0x00300000
+touch: CMU_HSI0 +0x20fc GATE USI2 IPCLK    0x00200000 (?)
+touch: CMU_HSI0 +0x2100 GATE USI2 PCLK     0x00200000 (?)
+touch: CMU_HSI0 +0x20bc GATE USI2 RSTNSYNC 0x00200000 (?)
+touch: USI mode register after writing SPI: 0x00000002
+touch: SPI after set-up: USI_CON 0x00000000 USI_OPTION 0x00000003 MODE_CFG 0x1ff80000 (want 0x1ff80000) CH_CFG 0x00000000 STATUS 0x00000000
+touch: tcm: DIV USI2 now 0x00000003
+touch: tcm: after reset the interrupt line went LOW after 0 ms
+touch: tcm: startup read, 4 bytes (filler 00): 4 of 4 bytes
+touch: tcm: startup read, 4 bytes (filler 00): a5 10 18 00
+touch:   v1 continuation (A5 03 payload 5A): a5 03 01 01 53 33 39 30 38 47 41 31 42 30 2d 31 35 2e 30 00 3a a3 43 00 00 04 5a
+touch:   identify: version 1, mode 1, part S3908GA1B0-15.0, build 4432698, max write 1024
+touch: reset pin 1: function 1, level 1, pull 0 (CON 0x00002210 DAT 0x0000000e)
+touch: interrupt pin 0: function 0, level 1, pull 0 (CON 0x00000000 DAT 0x00000001)
+touch: SPI controller @ 0x111d0000: 00000000 00000000 1ff80000 00000001 00000000 02000000 00000000 00000022 0001001b 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+xnu: time: payload epoch + 107 s here = 1794941173
+syna: caiman: map SPI at 0x111d0000, interrupt pin at 0x15060000
+syna: caiman: SPI MODE_CFG 0x1ff80000 CH_CFG 0 STATUS 0x2000010; gpn0 CON 0 DAT 0
+syna: watching the interrupt pin every 4 ms; touch_flip=0
+buttons: caiman: map GPIO_ALIVE at 0x154d0000
+buttons: caiman: gpa4 CON 0 DAT 0x3, gpa6 CON 0 DAT 0x2d
+buttons: caiman: watching power volume-up volume-down, every 16 ms: power is the side button
+syna: message 0xc2, 2 bytes
+syna: finger 0 at 8175, 18164 (of 12800 x 28560)
+syna: finger 0 at 8172, 18164 (of 12800 x 28560)
+syna: finger 0 at 8169, 18164 (of 12800 x 28560)
+syna: finger 0 at 8156, 18161 (of 12800 x 28560)
+syna: finger 0 at 8150, 18158 (of 12800 x 28560)
+syna: finger 0 at 8144, 18155 (of 12800 x 28560)
+syna: finger 0 at 8141, 18152 (of 12800 x 28560)
+syna: finger 0 at 8134, 18146 (of 12800 x 28560)
+syna: finger 0 at 8128, 18139 (of 12800 x 28560)
+syna: finger 0 at 8119, 18127 (of 12800 x 28560)
+syna: finger 0 at 8109, 18114 (of 12800 x 28560)
+syna: finger 0 at 8091, 18089 (of 12800 x 28560)
+syna: finger 0 at 8084, 18083 (of 12800 x 28560)
+syna: finger 0 at 8075, 18071 (of 12800 x 28560)
+syna: finger 0 at 8069, 18064 (of 12800 x 28560)
+syna: finger 0 at 8053, 18039 (of 12800 x 28560)
+syna: finger 0 at 8041, 18021 (of 12800 x 28560)
+syna: finger 0 at 8031, 18002 (of 12800 x 28560)
+syna: finger 0 at 8022, 17983 (of 12800 x 28560)
+syna: finger 0 at 8013, 17958 (of 12800 x 28560)
+syna: finger 0 at 8006, 17939 (of 12800 x 28560)
+syna: finger 0 at 7994, 17914 (of 12800 x 28560)
+syna: finger 0 at 7975, 17871 (of 12800 x 28560)
+syna: finger 0 at 7963, 17846 (of 12800 x 28560)
+syna: finger 0 at 7944, 17827 (of 12800 x 28560)
+syna: finger 0 at 7913, 17805 (of 12800 x 28560)
+syna: finger 0 at 7856, 17789 (of 12800 x 28560)
+syna: finger 0 at 7806, 17780 (of 12800 x 28560)
+syna: finger 0 at 7775, 17777 (of 12800 x 28560)
+syna: finger 0 at 7731, 17774 (of 12800 x 28560)
+syna: finger 0 at 7644, 17749 (of 12800 x 28560)
+syna: finger 0 at 7613, 17739 (of 12800 x 28560)
+syna: finger 0 at 7563, 17705 (of 12800 x 28560)
+syna: finger 0 at 7544, 17689 (of 12800 x 28560)
+syna: finger 0 at 7519, 17646 (of 12800 x 28560)
+syna: finger 0 at 7503, 17596 (of 12800 x 28560)
+syna: finger 0 at 7500, 17539 (of 12800 x 28560)
+syna: finger 0 at 7506, 17489 (of 12800 x 28560)
+syna: finger 0 at 7522, 17427 (of 12800 x 28560)
+syna: finger 0 at 7541, 17346 (of 12800 x 28560)
+buttons: so far 0 presses of power, 0 of volume up, 0 of volume down; now none held; 625 reads of the bus, 0 us each (the longest 0), 0 failed
+syna: so far 4060 messages, 4054 touch reports, 0 unreadable
+buttons: so far 0 presses of power, 0 of volume up, 0 of volume down; now none held; 11250 reads of the bus, 0 us each (the longest 0), 0 failed
+com.apple.xpc.launchd|2026-11-17 18:50:11.649822 (user/501) <Warning>: failed locom.apple.xpc.launchd|2026-11-17 screen: DECON FRAME_COUNT 14479
+screen: 1280x2856 at 0xfac00000, 64x48 cells (' ' dark .. '#' bright):
+screen: 3072 of 3072 cells lit
+screen: pixel (320,714) = 0xfffefefe
+screen: pixel (640,714) = 0xfffefefe
+screen: pixel (320,1428) = 0xfffefefe
+screen: pixel (320,2142) = 0xfffefefe
+screen: pixel (960,2142) = 0xfffefefe
