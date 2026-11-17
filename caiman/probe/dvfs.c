@@ -166,7 +166,8 @@ static void show_rates(const char *when)
 static const struct {
 	char name[8];
 	u32 domain, want;
-} other[] = { { "MIF", 0, 2028000 }, { "INT", 1, 664000 }, { "DSU", 5, 0 }, { "BCI", 6, 0 }, { "DISP", 0xe, 533000 } };
+} other[] = { { "MIF", 0, 2028000 }, { "INT", 1, 664000 }, { "DSU", 5, 0 }, { "BCI", 6, 0 }, { "DISP", 0xe, 533000 },
+	    { "G3D", 7, 0 } };
 
 /*
  * Temperatures (drivers/thermal/samsung/exynos_acpm_tmu.c, TMU_IPC_READ_TEMP): on ACPM's TMU channel (9 in

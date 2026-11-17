@@ -14,10 +14,30 @@ S2MPU in front (`s2mpus`).
   MMU_FEATURES 0x2830 (VA 48, PA 40 bits).
 - L2, shaders and the MCU are off (READY 0, MCU_STATUS 0): nothing has started it.
 
+## Step 2: reset and power (PROBE_GPU=2, run gpu2)
+
+Soft reset (GPU_CMD 0x101) done in 45 us; L2 on in 100 us, tiler 15 us, all 7 shader cores in 390 us.
+The GPU clock (ACPM DVFS domain 7) is at 150 MHz, its lowest step (Android's table: 150-940 MHz).
+
+## Step 3: the firmware boots (PROBE_GPU=3, run gpu6, docs/probe-log-gpu6.txt)
+
+`mali_csffw-r54p3.bin` (the one Android loads, git_sha 690855d0) is packed after the probe
+(`tools/pack_aoc_payload.py ... GPUBLOB`). Its 7 non-protected sections are copied to DRAM at
+0xf0000000+ and mapped in AS0; the PROT section is left out (kbase too boots without a protected
+allocator). What it took, after runs gpu3-gpu5 faulted on the first page-table read (a GPU bus fault, not
+the S2MPU, which reads disabled, and not the address: 0xd0000000 failed the same), from Codex's reading of
+`mali_kbase.ko` (docs/mali-boot.md):
+
+- table entries `| 0x403` (AF set), leaves type 3 + AF, AP 01/11, SH 0, XN bit 54 only, MEMATTR index 0
+  (5 for the shared section);
+- TRANSCFG 0x42000006, then TRANSTAB, then MEMATTR 0x00084c8d888d8f88;
+- ASN_HASH 0x36db6d/0x5b6db6/0 at 0x2c0.. and L2_CONFIG bit 24 before the L2 is powered (reads back
+  0x01140000, as Android's), COHERENCY_ENABLE 31.
+
+Then MCU_CONTROL = 2: **JOB_IRQ bit 31 after 3.4 ms**, global interface version 0x02080000, input VA
+0x04002000, output VA 0x04006000, 8 CSGs (stride 0xa0). No faults.
+
 ## Next
 
-2. L2 and shader cores on (L2_PWRON / SHADER_PWRON, watch READY), still no firmware.
-3. GPU MMU address space 0 page tables for the MCU, load `mali_csffw` sections as kbase does, MCU on,
-   wait for "firmware booted" (GLB interface).
 4. Simple jobs (a fill, a copy), then a triangle; then a Metal back end (HackiOS's hakios-metal, for
    Adreno today) with a Valhall shader compiler.

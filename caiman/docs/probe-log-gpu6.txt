@@ -1,0 +1,48 @@
+gpu: pd-g3d (top) @ 0x15461a80: 00000001 00000001 00000010 00000000 00000000 -------- -------- --------
+gpu: pd-embedded_g3d (cores) @ 0x15461c80: 00000001 00000001 00000010 00000000 00000000 -------- -------- --------
+gpu: CMU_G3D @ 0x1ee00000: 000002ee -------- 000002ee -------- -------- -------- -------- -------- -------- -------- -------- -------- -------- -------- -------- --------
+gpu: +0x000 GPU_ID          0xb8a21030
+gpu: +0x004 L2_FEATURES     0x08140306
+gpu: +0x008 CORE_FEATURES   0x00000004
+gpu: +0x00c TILER_FEATURES  0x00000809
+gpu: +0x010 MEM_FEATURES    0x00000301
+gpu: +0x014 MMU_FEATURES    0x00002830
+gpu: +0x018 AS_PRESENT      0x000000ff
+gpu: +0x01c CSF_ID          0x04100412
+gpu: +0x020 IRQ_RAWSTAT     0x00000100
+gpu: +0x034 GPU_STATUS      0x00000000
+gpu: +0x100 SHADER_PRESENT  0x01110055
+gpu: +0x110 TILER_PRESENT   0x00000001
+gpu: +0x120 L2_PRESENT      0x00000001
+gpu: +0x140 SHADER_READY    0x00000000
+gpu: +0x160 L2_READY        0x00000000
+gpu: +0x200 SHADER_PWRTRANS 0x00000000
+gpu: +0x220 L2_PWRTRANS     0x00000000
+gpu: +0x700 MCU_CONTROL     0x00000000
+gpu: +0x704 MCU_STATUS      0x00000000
+gpu: soft reset
+gpu: reset done after 44 us; GPU_ID 0xb8a21030
+gpu: L2_CONFIG now 0x01140000 (Android reads 0x01140000)
+gpu: L2 on after 104 us: READY 0x00000001
+gpu: tiler on after 18 us: READY 0x00000001
+gpu: shader cores on after 394 us: READY 0x01110055
+gpu: all on; IRQ_RAWSTAT 0x00000600 GPU_STATUS 0x00000000
+gpu: firmware 299008 bytes, version 0x02080000, entries to 0x318
+gpu: s2mpu_g3d CTRL0.. @ 0x1ee70000: 00000000 -------- -------- -------- 00000000 00000000 00000000 --------
+gpu: s2mpu_g3d VERSION/STATUS @ 0x1ee70060: 90000000 00000008
+gpu: s2mpu_g3d NUM_CONTEXT.. @ 0x1ee70100: 00000008 fedcba98 -------- --------
+gpu: s2mpu_g3d FAULT @ 0x1ee72000: 00000000 00000000 00000000 -------- 00000000 00000000 00000000 --------
+gpu: s2mpu_g3d L1 ctx0 @ 0x1ee74000: 90a06fa3 00000000 febd9d7a 00000000 29c08efa 00000000 8ae19b6f 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+gpu:   va 0x00400000-0x00410000 flags 0x00000009 data 0x80 bytes -> pa 0xf0001000
+gpu:   va 0x00410000-0x00420000 flags 0x00000009 data 0x1514 bytes -> pa 0xf0014000
+gpu:   va 0x00000000-0x00010000 flags 0x00000009 data 0x80 bytes -> pa 0xf0024000
+gpu:   va 0x00800000-0x00820000 flags 0x0000000d data 0x167b8 bytes -> pa 0xf0035000
+gpu:   va 0x02000000-0x02040000 flags 0x8000000b data 0x2d180 bytes -> pa 0xf0056000
+gpu:   va 0x01000000-0x01040000 flags 0x80000009 data 0x2d180 bytes -> pa 0xf0097000
+gpu:   va 0x03000000-0x03040000 flags 0x0000002b: protected mode, left out
+gpu:   va 0x04000000-0x04010000 flags 0xc000001b data 0x2000 bytes -> pa 0xf00d8000
+gpu: 7 sections, tables at 0xf0000000, 932 KiB of the pool used
+gpu: AS0 TRANSCFG 0x42000006 TRANSTAB 0x00000000f0000000 MEMATTR 0x00084c8d888d8f88; VA 0 pte 0x400000f00244c3
+gpu: before the MCU: MCU_STATUS 0, JOB_IRQ 0x00000000, GPU_IRQ 0x00000600, GPU_FAULT 0x00000000 @0x00000000, MMU_IRQ 0x00000000, AS0 fault 0x00000000 @0x0000000000000000 status 0x0
+gpu: after MCU_CONTROL = AUTO: MCU_STATUS 1, JOB_IRQ 0x80000000, GPU_IRQ 0x00000600, GPU_FAULT 0x00000000 @0x00000000, MMU_IRQ 0x00000000, AS0 fault 0x00000000 @0x0000000000000000 status 0x0
+gpu: FIRMWARE BOOTED after 3407 us: global interface version 0x02080000 features 0x00000000 input va 0x04002000 output va 0x04006000, 8 CSGs (stride 0xa0)
