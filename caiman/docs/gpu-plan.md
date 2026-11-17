@@ -50,7 +50,14 @@ The ring: MOVE48 r0 = 0x200000, MOVE32 r2 = 0x89abcdef, SET_STATE SB_SEL_OTHER 0
 no CS fault. Open: MMU_IRQ_RAWSTAT shows 0x20000 (bit 17, AS1 bus-fault bit) from the AS1 set-up; it
 did not stop the job.
 
-## Step 5: the first shader (PROBE_GPU=5, runs gpu8-gpu12): not yet
+## Step 5: the first shader (PROBE_GPU=5): WORKS since run gpu20
+
+**Run gpu20: 64 of 64 invocations wrote their global id (buf 0, 1, 2 .. 0x3f) 64 us after the stream
+started; EP_CURRENT 7, no faults.** The missing piece, found from Codex's note that CS0 posted no
+resource request: the stream must ask for compute endpoints with REQ_RESOURCE (opcode 34, bit 0 compute;
+Mesa v11.xml, panvk's `cs_req_res` at queue init) before RUN_COMPUTE. The history below is how it went.
+
+### Runs gpu8-gpu19
 
 `probe/gpu_id.asm` (4 instructions: id = r60, store at 0x200000 + id*4) assembled with Mesa's Valhall
 assembler (`src/panfrost/compiler/bifrost/valhall/asm.py`, Mesa main 2026-11): words in gpu.c. SPD (type 8,
@@ -88,7 +95,12 @@ before START; JOB IRQs cleared and CSG IRQ requests acknowledged while polling. 
 again stops at RUN_COMPUTE (0x1000a0) with EP_CURRENT 0, and the firmware never powers a shader core
 (SHADER_READY 0 throughout).
 
+Run gpu20: the same with `REQ_RESOURCE compute` first in the compute block: done in 64 us.
+
 ## Next
 
-6. Simple jobs (a fill, a copy), then a triangle; then a Metal back end (HackiOS's hakios-metal, for
+6. A triangle (fragment + tiler: REQ_RESOURCE fragment|tiler, RUN_IDVS / RUN_FRAGMENT, framebuffer
+   descriptors), the GPU clock up from 150 MHz (ACPM DVFS domain 7), then this path inside XNU and a
+   Metal back end.
+7. Simple jobs (a fill, a copy), then a triangle; then a Metal back end (HackiOS's hakios-metal, for
    Adreno today) with a Valhall shader compiler.

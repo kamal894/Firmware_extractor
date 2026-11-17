@@ -401,6 +401,11 @@ static u32 compute_prepare(u64 *ring)
 	tsd[1] = 31;
 	for (i = 0; i < 64; i++)
 		buf[i] = 0xdeadbeef;
+	/*
+	 * REQ_RESOURCE compute (opcode 34, Mesa v11.xml; panvk's queue init emits cs_req_res for its compute
+	 * subqueue): without it the stream never asks for compute endpoints (runs gpu9-19: EP_CURRENT 0).
+	 */
+	ring[n++] = (0x22ULL << 56) | 1;
 	ring[n++] = cs_move48(0, 0);				/* SRT */
 	ring[n++] = cs_move48(8, 0);				/* FAU */
 	ring[n++] = cs_move48(16, DESC_VA);			/* SPD */
