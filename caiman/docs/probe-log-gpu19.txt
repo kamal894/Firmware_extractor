@@ -1,0 +1,5 @@
+gpu: GLB global_init done (ALLOC_EN 0x1110055, power-off 0x4ccc, progress 0x271000, eviction 4 s); SHADER_READY 0x00000000
+gpu: CSG0 ack 0x00000001 (state 1), CS0 ack 0x00000001 (state 1)
+gpu: target now 0x89abcdef after 4 us: THE GPU RAN OUR FIRST JOB; queue extract 0 active 1; CS0 cmd ptr 0x0000000000000000 status 0x00000000 blocked 0x00000000 fault 0x00000000 fatal 0x00000000
+gpu: compute: 0 of 64 invocations wrote their id after 1000134 us; buf deadbeef deadbeef deadbeef .. deadbeef; extract 0, CS0 status 0x00000000 blocked 0x00000000 fault 0x00000000 fatal 0x00000000 (info 0x0000000000000000)
+gpu: compute state: SHADER_READY 0x00000000 SHADER_PWRTRANS 0x00000000 GPU_STATUS 0x00000001; CSG0 out 00000021 00000000 00000001 00000001 00000000 00070707 00000000 00000000; CS0 out +0x40..: 001000a0 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000; GLB out 0001000e 00000000 00000000

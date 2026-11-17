@@ -80,6 +80,14 @@ android-gs-caimito-6.1-android16, copied to ~/caiman-work/kbase-src/tree): gpu17
 Both: all requests acked, the same stall at RUN_COMPUTE with no endpoints; in gpu18 nobody powers the
 cores. Our CSG programming matches program_csg_slot() field for field (EP_REQ at +0x34 for arch < 14.8.4).
 
+Run gpu19, everything in docs/mali-endpoints-3.md (Codex, from the GPL source) applied: global_init with
+the unshifted power-off timer 0x4ccc (+0x88 = 1), progress 0x271000, CSG eviction timer 4 s (+0x90/+0x94,
+request bit 16), kbase's ACK IRQ mask 0x4c810f1e (GLB_ACK 0x0001000e: all acked); CS START with the idle
+options (CS_REQ 0x1501) and IRQ mask; CSG priority 15 and IRQ mask; STORE and compute queued in one batch
+before START; JOB IRQs cleared and CSG IRQ requests acknowledged while polling. The STORE runs; the stream
+again stops at RUN_COMPUTE (0x1000a0) with EP_CURRENT 0, and the firmware never powers a shader core
+(SHADER_READY 0 throughout).
+
 ## Next
 
 6. Simple jobs (a fill, a copy), then a triangle; then a Metal back end (HackiOS's hakios-metal, for

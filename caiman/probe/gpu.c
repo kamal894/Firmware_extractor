@@ -387,22 +387,20 @@ static u64 cs_move32(u32 reg, u32 v)
 	return (0x02ULL << 56) | ((u64)reg << 48) | v;
 }
 
-static void gpu_first_compute(u64 *ring, volatile u64 *q_in, volatile u64 *q_out, volatile u32 *cs_out)
+/* step 5's shader, descriptors and buffer, and its commands after step 4's in the ring; the ring's length in words */
+static u32 compute_prepare(u64 *ring)
 {
 	volatile u32 *buf = (volatile u32 *)(uptr)target_page;
-	u64 code_pa = code_page, desc_pa = desc_page, start;
-	u32 *spd, *tsd, i, n = 8, good = 0;
-	memcpy((void *)(uptr)code_pa, shader_id, sizeof(shader_id));
-	spd = (u32 *)(uptr)desc_pa;
+	u32 *spd = (u32 *)(uptr)desc_page, *tsd = (u32 *)(uptr)(desc_page + 0x40), i, n = 8;
+
+	memcpy((void *)(uptr)code_page, shader_id, sizeof(shader_id));
 	spd[0] = 8 | (1u << 4);
 	spd[1] = 1u << 12;
 	spd[2] = SHADER_VA;
 	spd[3] = 0;
-	tsd = (u32 *)(uptr)(desc_pa + 0x40);
 	tsd[1] = 31;
 	for (i = 0; i < 64; i++)
 		buf[i] = 0xdeadbeef;
-
 	ring[n++] = cs_move48(0, 0);				/* SRT */
 	ring[n++] = cs_move48(8, 0);				/* FAU */
 	ring[n++] = cs_move48(16, DESC_VA);			/* SPD */
@@ -420,17 +418,31 @@ static void gpu_first_compute(u64 *ring, volatile u64 *q_in, volatile u64 *q_out
 	while (n % 8)
 		ring[n++] = 0;
 	dsb_sy();
-	q_in[0] = n * 8;
+	return n;
+}
+
+/* the firmware's events while polling: JOB_IRQ cleared, the group's IRQ requests acknowledged (process_csg_interrupts) */
+static void gpu_service(void)
+{
+	u32 raw = gpu_rd(JOB_IRQ_RAWSTAT);
+
+	if (raw)
+		gpu_wr(JOB_IRQ_CLEAR, raw);
 	dsb_sy();
-	/* as for the first job: the stream's bell, then group 0's stream bit and the global bell */
-	gpu_wr(DOORBELL(1), 1);
-	toggle(&kick_csg_in[2], kick_csg_out[2], 1);
-	toggle(&kick_glb_in[2], kick_glb_out[2], 1);
-	dsb_sy();
-	gpu_wr(DOORBELL(0), 1);
-	start = timer_ticks();
+	if (kick_csg_in)
+		kick_csg_in[3] = kick_csg_out[3];
+}
+
+static void gpu_first_compute(u64 *ring, volatile u64 *q_in, volatile u64 *q_out, volatile u32 *cs_out)
+{
+	volatile u32 *buf = (volatile u32 *)(uptr)target_page;
+	u64 start = timer_ticks();
+	u32 i, good = 0;
+
+	(void)ring;
+	(void)q_in;
 	while (buf[63] != 63 && timer_ticks() - start < timer_freq())
-		;
+		gpu_service();
 	for (i = 0; i < 64; i++)
 		good += buf[i] == i;
 	pr("gpu: compute: %u of 64 invocations wrote their id after %llu us%s; buf %08x %08x %08x .. %08x; extract %llu, "
@@ -484,20 +496,28 @@ static void gpu_first_job(u64 shared_pa)
 	 * >>10, i.e. 19; GLB_PWROFF_TIMER_CONFIG +0x88 no-modifier 0) and the progress timer (+0x10), all
 	 * requested together (bits 1, 2, 3) with one bell.
 	 */
-	glb_in[1] = ~0u;
+	/*
+	 * Values per docs/mali-endpoints-3.md (Codex, from kbase's GPL source): power-off timer 800 us of the
+	 * 24.576 MHz system timestamp unshifted (0x4ccc, config +0x88 bit 0 = no modifier), progress timer the
+	 * compiled default 0x271000, the CSG eviction timer (+0x90, 4 s = 0x05dc0000, config +0x94 = 1, request
+	 * bit 16), kbase's own ACK IRQ mask; requests 1, 2, 3 and 16 with one bell.
+	 */
 	glb_in[6] = (u32)shaders;
 	glb_in[7] = (u32)(shaders >> 32);
-	glb_in[5] = 19;
-	glb_in[0x88 / 4] = 0;
-	glb_in[4] = 0x100000;
+	glb_in[5] = 0x4ccc;
+	glb_in[0x88 / 4] = 1;
+	glb_in[4] = 0x271000;
+	glb_in[0x90 / 4] = 0x05dc0000;
+	glb_in[0x94 / 4] = 1;
+	glb_in[1] = 0x4c810f1e;
 	dsb_sy();
-	toggle(&glb_in[0], glb_out[0], (1u << 1) | (1u << 2) | (1u << 3));
+	toggle(&glb_in[0], glb_out[0], 0x1000e);
 	dsb_sy();
 	gpu_wr(DOORBELL(0), 1);
-	if (wait_bits(&glb_in[0], &glb_out[0], (1u << 1) | (1u << 2) | (1u << 3), "GLB global_init requests"))
+	if (wait_bits(&glb_in[0], &glb_out[0], 0x1000e, "GLB global_init requests"))
 		return;
-	pr("gpu: GLB global_init done (ALLOC_EN 0x%llx, power-off timer 19, progress timer); SHADER_READY 0x%08x\n",
-	   shaders, gpu_rd(SHADER_READY));
+	pr("gpu: GLB global_init done (ALLOC_EN 0x%llx, power-off 0x4ccc, progress 0x271000, eviction 4 s); "
+	   "SHADER_READY 0x%08x\n", shaders, gpu_rd(SHADER_READY));
 #else
 	/* global: the shader cores the firmware may use (GLB_ALLOC_EN, request bit 2) */
 	glb_in[6] = (u32)shaders;
@@ -534,10 +554,10 @@ static void gpu_first_job(u64 shared_pa)
 	root = saved_root;
 	job_root = as1_root;
 	target_page = target_pa;
-	target = (volatile u32 *)(uptr)target_pa;
+	target = (volatile u32 *)(uptr)(target_pa + 0x800);	/* (step 5's buffer is the first 256 bytes) */
 	*target = 0x11111111;
 	ring = (u64 *)(uptr)ring_pa;
-	ring[0] = (0x01ULL << 56) | (0ULL << 48) | TARGET_VA;		/* MOVE48 r0:r1, target */
+	ring[0] = (0x01ULL << 56) | (0ULL << 48) | (TARGET_VA + 0x800);	/* MOVE48 r0:r1, target + 0x800 */
 	ring[1] = (0x02ULL << 56) | (2ULL << 48) | 0x89abcdefULL;		/* MOVE32 r2 */
 	ring[2] = (0x1cULL << 56) | (1ULL << 32) | 0;			/* SET_STATE_IMM32 SB_SEL_OTHER = 0 */
 	ring[3] = (0x15ULL << 56) | (2ULL << 48) | (0ULL << 40) | (1ULL << 16);	/* STORE_MULTIPLE r2 -> [r0] */
@@ -565,8 +585,21 @@ static void gpu_first_job(u64 shared_pa)
 	cs_in[15] = 0;
 	cs_in[16] = cs_in[17] = 0;
 	cs_in[1] = 1 | (1u << 8);
+#if PROBE_GPU >= 5
+	/* program_cs(): ack IRQ mask, START with the idle options (bits 8, 10, 12), and step 5's work queued already */
+	q_in[0] = (u64)compute_prepare(ring) * 8;
+	cs_in[3] = ~0u;
+	cs_in[0] = (cs_in[0] & ~0x1507u) | 0x1501;
+#else
 	cs_in[0] = (cs_in[0] & ~7u) | 1;
+#endif
 
+#if PROBE_GPU >= 5
+	kick_csg_in = csg_in;
+	kick_csg_out = csg_out;
+	kick_glb_in = glb_in;
+	kick_glb_out = glb_out;
+#endif
 	/* group 0: all cores for compute/fragment, the tiler, priority 1, AS1, suspend buffer; then START */
 	csg_in[6] = csg_in[7] = 0;
 	csg_in[8] = (u32)shaders;
@@ -574,7 +607,12 @@ static void gpu_first_job(u64 shared_pa)
 	csg_in[10] = (u32)shaders;
 	csg_in[11] = (u32)(shaders >> 32);
 	csg_in[12] = 1;
+#if PROBE_GPU >= 5
+	csg_in[13] = 7 | (7u << 8) | (1u << 16) | (15u << 28);	/* the only group: top priority */
+	csg_in[1] = ~0u;					/* CSG_ACK_IRQ_MASK */
+#else
 	csg_in[13] = 7 | (7u << 8) | (1u << 16) | (1u << 28);
+#endif
 	csg_in[14] = 0;
 	csg_in[16] = SUSP_VA;
 	csg_in[17] = 0;
@@ -596,6 +634,7 @@ static void gpu_first_job(u64 shared_pa)
 	log_flush();
 
 	/* the work: INSERT past the eight words, the stream's doorbell, and the kernel's way too */
+#if PROBE_GPU < 5
 	q_in[0] = 64;
 	dsb_sy();
 	gpu_wr(DOORBELL(1), 1);
@@ -603,6 +642,7 @@ static void gpu_first_job(u64 shared_pa)
 	toggle(&glb_in[2], glb_out[2], 1);
 	dsb_sy();
 	gpu_wr(DOORBELL(0), 1);
+#endif
 	start = timer_ticks();
 	while (*target != 0x89abcdef && timer_ticks() - start < timer_freq())
 		;
