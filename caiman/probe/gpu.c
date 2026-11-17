@@ -188,7 +188,8 @@ static u64 pool = POOL_BASE, root;
 #define Q_VA		0x05000000u	/* a stream's queue input and output pages, in AS0 */
 #define SUSP_VA		0x05100000u	/* group 0's suspend buffer, in AS0 */
 #define SUSP_PAGES	64
-static u64 q_pa, susp_pa;
+static u64 q_pa, susp_pa, job_root, target_page;
+static volatile u32 *kick_csg_in, *kick_csg_out, *kick_glb_in, *kick_glb_out;
 static void gpu_first_job(u64 shared_pa);
 #endif
 
@@ -347,6 +348,120 @@ static int wait_bits(volatile u32 *req, volatile u32 *ack, u32 mask, const char 
 	return 0;
 }
 
+#if PROBE_GPU >= 5
+/*
+ * Step 5 (PROBE_GPU=5): the first shader. probe/gpu_id.asm, assembled by Mesa's Valhall assembler
+ * (src/panfrost/compiler/bifrost/valhall/asm.py): each invocation stores its global id (preloaded in r60)
+ * at 0x200000 + id * 4. Dispatched on the same stream as step 4 with RUN_COMPUTE (Mesa genxml v11.xml,
+ * as panvk's csf cmd_dispatch does): the compute staging registers SRT r0, FAU r8, SPD r16, TSD r24 (all
+ * pairs), GLOBAL_ATTRIBUTE_OFFSET r32, WG_SIZE r33, JOB_OFFSET r34-36, JOB_SIZE r37-39. One workgroup of
+ * 64. SPD: type 8 (shader), stage 1 (compute), 64 registers a thread, preload r60 (bit 12), binary at
+ * 0x300000 (an executable page). TSD: no thread or workgroup storage (WLS instances log2 = 31).
+ */
+#define SHADER_VA	0x00300000u
+#define DESC_VA		0x00400000u
+
+static const u64 shader_id[4] = {
+	0x00b4c00119c0c83cULL,	/* LSHIFT_OR.i32 r0, r60, 0x3020100.b2222, 0x0 */
+	0x0110c20020000040ULL,	/* IADD_IMM.i32 r2, r0^, #0x200000 */
+	0x0110c300000000c0ULL,	/* IADD_IMM.i32 r3, 0x0, #0x0 */
+	0x78617c0218000042ULL,	/* STORE.i32.slot0.end @r60, [r2^:r3^], offset:0 */
+};
+
+static u64 cs_move48(u32 reg, u64 v)
+{
+	return (0x01ULL << 56) | ((u64)reg << 48) | (v & 0xffffffffffffULL);
+}
+
+static u64 cs_move32(u32 reg, u32 v)
+{
+	return (0x02ULL << 56) | ((u64)reg << 48) | v;
+}
+
+static void gpu_first_compute(u64 *ring, volatile u64 *q_in, volatile u64 *q_out, volatile u32 *cs_out)
+{
+	volatile u32 *buf = (volatile u32 *)(uptr)target_page;
+	u64 code_pa = page_alloc(1), desc_pa = page_alloc(1), saved_root = root, start;
+	u32 *spd, *tsd, i, n = 8, good = 0;
+
+	root = job_root;
+	if (!code_pa || !desc_pa || map_pages(SHADER_VA, code_pa, 0x1000, 0x40000005) ||
+	    map_pages(DESC_VA, desc_pa, 0x1000, 0x40000003)) {
+		root = saved_root;
+		return;
+	}
+	root = saved_root;
+	memcpy((void *)(uptr)code_pa, shader_id, sizeof(shader_id));
+	spd = (u32 *)(uptr)desc_pa;
+	spd[0] = 8 | (1u << 4);
+	spd[1] = 1u << 12;
+	spd[2] = SHADER_VA;
+	spd[3] = 0;
+	tsd = (u32 *)(uptr)(desc_pa + 0x40);
+	tsd[1] = 31;
+	for (i = 0; i < 64; i++)
+		buf[i] = 0xdeadbeef;
+
+	/*
+	 * Run gpu10: RUN_COMPUTE fetched (extract at it), GPU_STATUS busy, but CSG0's current endpoints (output
+	 * +0x10) 0: the group got no shader cores. Panthor toggles CSG_REQ bit 4 (endpoint config) with START;
+	 * do that now, with the group's bell, and wait for the ack.
+	 */
+	/* the extended endpoint word (+0x38) too, in case this firmware reads that one (docs/mali-csf-submit.md) */
+	kick_csg_in[14] = kick_csg_in[13];
+	toggle(&kick_csg_in[0], kick_csg_out[0], 1u << 4);
+	toggle(&kick_glb_in[2], kick_glb_out[2], 1);
+	dsb_sy();
+	gpu_wr(DOORBELL(0), 1);
+	wait_bits(&kick_csg_in[0], &kick_csg_out[0], 1u << 4, "CSG0 endpoint config");
+	pr("gpu: CSG0 endpoints now: current 0x%08x requested 0x%08x (asked 0x%08x)\n", kick_csg_out[4], kick_csg_out[5],
+	   kick_csg_in[13]);
+
+	ring[n++] = cs_move48(0, 0);				/* SRT */
+	ring[n++] = cs_move48(8, 0);				/* FAU */
+	ring[n++] = cs_move48(16, DESC_VA);			/* SPD */
+	ring[n++] = cs_move48(24, DESC_VA + 0x40);		/* TSD */
+	ring[n++] = cs_move32(32, 0);
+	ring[n++] = cs_move32(33, 63);				/* 64 x 1 x 1 */
+	ring[n++] = cs_move32(34, 0);
+	ring[n++] = cs_move32(35, 0);
+	ring[n++] = cs_move32(36, 0);
+	ring[n++] = cs_move32(37, 1);				/* one workgroup */
+	ring[n++] = cs_move32(38, 1);
+	ring[n++] = cs_move32(39, 1);
+	ring[n++] = (0x04ULL << 56) | 1;			/* RUN_COMPUTE, task increment 1, axis X */
+	ring[n++] = (0x03ULL << 56) | (0xffffULL << 16);	/* WAIT all scoreboards */
+	while (n % 8)
+		ring[n++] = 0;
+	dsb_sy();
+	q_in[0] = n * 8;
+	dsb_sy();
+	/* as for the first job: the stream's bell, then group 0's stream bit and the global bell */
+	gpu_wr(DOORBELL(1), 1);
+	toggle(&kick_csg_in[2], kick_csg_out[2], 1);
+	toggle(&kick_glb_in[2], kick_glb_out[2], 1);
+	dsb_sy();
+	gpu_wr(DOORBELL(0), 1);
+	start = timer_ticks();
+	while (buf[63] != 63 && timer_ticks() - start < timer_freq())
+		;
+	for (i = 0; i < 64; i++)
+		good += buf[i] == i;
+	pr("gpu: compute: %u of 64 invocations wrote their id after %llu us%s; buf %08x %08x %08x .. %08x; extract %llu, "
+	   "CS0 status 0x%08x blocked 0x%08x fault 0x%08x fatal 0x%08x (info 0x%08x%08x)\n", good,
+	   (timer_ticks() - start) * 1000000 / timer_freq(), good == 64 ? ": THE SHADER CORES RAN OUR SHADER" : "",
+	   buf[0], buf[1], buf[2], buf[63], q_out[0], cs_out[18], cs_out[24], cs_out[32], cs_out[33], cs_out[35], cs_out[34]);
+	pr("gpu: compute state: SHADER_READY 0x%08x SHADER_PWRTRANS 0x%08x GPU_STATUS 0x%08x; CSG0 out %08x %08x %08x %08x "
+	   "%08x %08x %08x %08x; CS0 out +0x40..: %08x %08x %08x %08x %08x %08x %08x %08x %08x %08x; GLB out %08x %08x %08x\n",
+	   gpu_rd(SHADER_READY), gpu_rd(SHADER_PWRTRANS), gpu_rd(0x34), kick_csg_out[0], kick_csg_out[1], kick_csg_out[2],
+	   kick_csg_out[3], kick_csg_out[4], kick_csg_out[5], kick_csg_out[6], kick_csg_out[7], cs_out[16], cs_out[17],
+	   cs_out[18], cs_out[19], cs_out[20], cs_out[21], cs_out[22], cs_out[23], cs_out[24], cs_out[25],
+	   kick_glb_out[0], kick_glb_out[1], kick_glb_out[2]);
+	gpu_faults("after the compute job");
+	log_flush();
+}
+#endif
+
 static void gpu_first_job(u64 shared_pa)
 {
 	volatile u32 *glb_in = sh(shared_pa, 0x04002000), *glb_out = sh(shared_pa, 0x04006000);
@@ -390,6 +505,8 @@ static void gpu_first_job(u64 shared_pa)
 		return;
 	}
 	root = saved_root;
+	job_root = as1_root;
+	target_page = target_pa;
 	target = (volatile u32 *)(uptr)target_pa;
 	*target = 0x11111111;
 	ring = (u64 *)(uptr)ring_pa;
@@ -468,6 +585,14 @@ static void gpu_first_job(u64 shared_pa)
 	   cs_out[18], cs_out[24], cs_out[32], cs_out[33]);
 	gpu_faults("after the job");
 	log_flush();
+#if PROBE_GPU >= 5
+	kick_csg_in = csg_in;
+	kick_csg_out = csg_out;
+	kick_glb_in = glb_in;
+	kick_glb_out = glb_out;
+	if (*target == 0x89abcdef)
+		gpu_first_compute(ring, q_in, q_out, cs_out);
+#endif
 }
 #endif
 

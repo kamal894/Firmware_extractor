@@ -50,7 +50,22 @@ The ring: MOVE48 r0 = 0x200000, MOVE32 r2 = 0x89abcdef, SET_STATE SB_SEL_OTHER 0
 no CS fault. Open: MMU_IRQ_RAWSTAT shows 0x20000 (bit 17, AS1 bus-fault bit) from the AS1 set-up; it
 did not stop the job.
 
+## Step 5: the first shader (PROBE_GPU=5, runs gpu8-gpu12): not yet
+
+`probe/gpu_id.asm` (4 instructions: id = r60, store at 0x200000 + id*4) assembled with Mesa's Valhall
+assembler (`src/panfrost/compiler/bifrost/valhall/asm.py`, Mesa main 2026-11): words in gpu.c. SPD (type 8,
+compute, preload r60 = bit 12, binary at 0x300000, executable), TSD (no TLS/WLS), CS registers per Mesa
+v11.xml COMPUTE SR (SRT r0, FAU r8, SPD r16, TSD r24, WG_SIZE r33 = 63, JOB_SIZE r37-39 = 1), RUN_COMPUTE
+(opcode 4, task increment 1), WAIT all.
+
+- gpu8: only the stream's bell rung: the stream did not fetch (extract stayed 64).
+- gpu9-12: with the group and global bells it fetches up to RUN_COMPUTE (extract 160) and stops there:
+  GPU_STATUS busy, no CS fault or fatal, no MMU fault, shader cores ready, buffer untouched. CSG0 output
+  +0x10/+0x14 (endpoints) read 0, also after toggling CSG_REQ bit 4 (acked) with the endpoint word in
+  +0x34 and +0x38. Next: find in mali_kbase.ko what r54p3 does for a group to get shader endpoints
+  (CSG status update, GLB shader power requests, the iterator/endpoint config layout for interface 2.8).
+
 ## Next
 
-5. Simple jobs (a fill, a copy), then a triangle; then a Metal back end (HackiOS's hakios-metal, for
+6. Simple jobs (a fill, a copy), then a triangle; then a Metal back end (HackiOS's hakios-metal, for
    Adreno today) with a Valhall shader compiler.
