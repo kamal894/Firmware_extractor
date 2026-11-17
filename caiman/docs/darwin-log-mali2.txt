@@ -1,0 +1,2 @@
+mali: GPU_ID 0xb8a21030, MCU_STATUS 1; firmware interface 0x2080000; ring insert 512, extract 512; AS1 tables at 0xf012c000, 30404 KiB of DRAM for more
+mali: self test: a command buffer in kernel memory (phys 0x8fc4c8000) at GPU address 0x100000000, fence 1 done; it wrote 0xc0ffee11: SUBMISSION THROUGH THE HAKIOSGPU API WORKS

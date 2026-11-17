@@ -150,10 +150,27 @@ mali: from XNU: target 0x105c0de5: THE KERNEL DROVE THE GPU; ...
 
 iOS came up as usual afterwards.
 
+## Step 8: a Mali back end for HakiosGPU (run darwin-mali2)
+
+HakiosGPU (drivers/gpu/hakios.gpu.cpp, the user client Metal and Mesa talk to) does not touch the GPU; it calls
+hakios_gpu_address/map/mapped/unmap/submit/done/last. With `mali=1` those now go to Mali code in
+drivers/gpu/hakios.adreno.c: AS1 addresses from 4 GiB up; AS1 page tables (the loader's level 0, more tables
+from the free DRAM after the loader's allocations, handed over in /chosen/mali-handoff) with kbase's 4 KiB
+entries, then FLUSH_MEM; submission = per command buffer MOVE48/MOVE32/CALL (opcode 32) into the stream's
+ring, then a fence STORE at AS1 0x200c00, INSERT and the doorbells; done = the fence word. The kernel then
+starts the HakiosGPU service. A self-test does what a client does (a kernel page with a command buffer,
+mapped, submitted, waited for):
+
+```
+mali: self test: a command buffer in kernel memory (phys 0x8fc4c8000) at GPU address 0x100000000, fence 1 done;
+      it wrote 0xc0ffee11: SUBMISSION THROUGH THE HAKIOSGPU API WORKS
+```
+
 ## Next
 
-8. A real kernel driver: own the GPU's memory (allocations, AS1 page tables) and a submission interface
-   for user space (HakiosGPU's user client), then a Metal back end for Mali.
+8. User space: a Mali back end for hakios-metal (today Adreno PM4 + ir3) emitting CSF command buffers and
+   Valhall shaders (Mesa's Valhall compiler in place of ir3), GET_PARAM answers for Mali, interrupts
+   instead of polling, address reuse.
 9. A triangle (fragment + tiler: REQ_RESOURCE fragment|tiler, RUN_IDVS / RUN_FRAGMENT, framebuffer
    descriptors), the GPU clock up from 150 MHz (ACPM DVFS domain 7), then this path inside XNU and a
    Metal back end.

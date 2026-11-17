@@ -879,6 +879,9 @@ static void gpu_first_job(u64 shared_pa)
 	gpu_handoff.queue = q_pa;
 	gpu_handoff.target = target_pa;
 	gpu_handoff.insert = q_in[0];
+	gpu_handoff.as1_root = job_root;
+	gpu_handoff.pool_next = pool;
+	gpu_handoff.pool_end = POOL_END;
 #endif
 }
 #endif

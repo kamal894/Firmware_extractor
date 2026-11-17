@@ -484,7 +484,8 @@ static u32 build_adt(u64 dt_pa, u64 rd_pa, u64 rd_size, u64 res_pa, u64 res_size
 	}
 #if PROBE_GPU >= 4
 	if (gpu_handoff.shared) {
-		u64 h[5] = { gpu_handoff.shared, gpu_handoff.ring, gpu_handoff.queue, gpu_handoff.target, gpu_handoff.insert };
+		u64 h[8] = { gpu_handoff.shared, gpu_handoff.ring, gpu_handoff.queue, gpu_handoff.target, gpu_handoff.insert,
+			     gpu_handoff.as1_root, gpu_handoff.pool_next, gpu_handoff.pool_end };
 
 		dt_prop(&w, "mali-handoff", h, sizeof(h));
 	}

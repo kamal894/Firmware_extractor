@@ -1,5 +1,5 @@
 diff --git a/drivers/gpu/hakios.adreno.c b/drivers/gpu/hakios.adreno.c
-index 3f1f97a..bb03830 100644
+index 3f1f97a..bccf2ef 100644
 --- a/drivers/gpu/hakios.adreno.c
 +++ b/drivers/gpu/hakios.adreno.c
 @@ -100,6 +100,7 @@
@@ -10,22 +10,369 @@ index 3f1f97a..bb03830 100644
  
  extern vm_offset_t ml_io_map(vm_offset_t phys_addr, vm_size_t size);
  extern vm_offset_t ml_io_map_wcomb(vm_offset_t phys_addr, vm_size_t size);
-@@ -3753,6 +3754,92 @@ start_by_itself(void)
+@@ -3246,9 +3247,23 @@ hakios_adreno_stop(void)
+ 	}
+ }
+ 
++/* boot-arg mali=1, the Pixel 9 Pro's Mali (near the end of this file): the API below goes there instead */
++static bool mali_kept;
++static uint32_t mali_fence;
++static uint64_t mali_address(uint64_t size);
++static bool mali_map(uint64_t address, uint64_t phys, bool read_only);
++static void mali_as1_flush(void);
++static bool mali_space_map(uint64_t va, uint64_t pa, uint64_t attr);
++static bool mali_done(uint32_t fence);
++static uint32_t mali_submit(const uint64_t *addresses, const uint32_t *words, uint32_t count);
++
+ bool
+ hakios_gpu_ready(void)
+ {
++	if (mali_kept) {
++		return true;
++	}
++
+ 	return gpu_kept;
+ }
+ 
+@@ -3298,6 +3313,9 @@ hakios_gpu_parameter(uint32_t which, uint64_t *value)
+ uint64_t
+ hakios_gpu_address(uint64_t size)
+ {
++	if (mali_kept) {
++		return mali_address(size);
++	}
+ 	size = (size + 0xffff) & ~0xffffull;
+ 	for (unsigned i = 0; i < gpu_free_count; i++) {
+ 		if (gpu_free[i].size >= size) {
+@@ -3319,6 +3337,10 @@ hakios_gpu_address_free(uint64_t address, uint64_t size)
+ {
+ 	unsigned at;
+ 
++	if (mali_kept) {
++		return;                 /* (addresses are not reused yet) */
++	}
++
+ 	size = (size + 0xffff) & ~0xffffull;
+ 	for (at = 0; at < gpu_free_count && gpu_free[at].start < address; at++) {
+ 	}
+@@ -3348,19 +3370,37 @@ hakios_gpu_address_free(uint64_t address, uint64_t size)
+ bool
+ hakios_gpu_map(uint64_t address, uint64_t phys, bool read_only)
+ {
++	if (mali_kept) {
++		return mali_map(address, phys, read_only);
++	}
++
+ 	return space_map(&core_space, address, phys, PTE_CORE | (read_only ? PTE_READ_ONLY : 0));
+ }
+ 
+ void
+ hakios_gpu_mapped(void)
+ {
++	if (mali_kept) {
++		mali_as1_flush();
++		return;
++	}
++
+ 	space_commit(&core_space);
+ }
+ 
+ void
+ hakios_gpu_unmap(uint64_t address, uint64_t size)
+ {
+-	uint32_t context = smmu_context(&core_space);
++	uint32_t context;
++
++	if (mali_kept) {
++		for (uint64_t offset = 0; offset < size; offset += 4096) {
++			mali_space_map(address + offset, 0, 0);
++		}
++		mali_as1_flush();
++		return;
++	}
++	context = smmu_context(&core_space);
+ 
+ 	for (uint64_t offset = 0; offset < size; offset += 4096) {
+ 		space_map(&core_space, address + offset, 0, 0);
+@@ -3385,6 +3425,10 @@ hakios_gpu_done(uint32_t fence)
+ {
+ 	volatile uint32_t *word = (volatile uint32_t *)(core_scratch.memory + GPU_FENCE_AT);
+ 
++	if (mali_kept) {
++		return mali_done(fence);
++	}
++
+ 	to_memory((vm_offset_t)word, 4);
+ 	return (int32_t)(*word - fence) >= 0;
+ }
+@@ -3392,6 +3436,10 @@ hakios_gpu_done(uint32_t fence)
+ uint32_t
+ hakios_gpu_last(void)
+ {
++	if (mali_kept) {
++		return mali_fence;
++	}
++
+ 	return gpu_fence;
+ }
+ 
+@@ -3466,6 +3514,10 @@ hakios_gpu_submit(const uint64_t *addresses, const uint32_t *words, uint32_t cou
+ {
+ 	uint32_t wanted = 26 + 4 * count, room = 0;
+ 
++	if (mali_kept) {
++		return mali_submit(addresses, words, count);
++	}
++
+ 	for (int i = 0; i < 20000; i++) {
+ 		room = (rd(gpu.base + CP_RB_RPTR) + RING_WORDS - ring_at - 1) % RING_WORDS;
+ 		if (room >= wanted) {
+@@ -3753,6 +3805,291 @@ start_by_itself(void)
   * as long as the steps and the watch after them last, nothing else writes to the log, so that
   * its end -- all that the loader's notes keep -- is about what is being done here.
   */
 +/*
-+ * boot-arg mali=1: the Pixel 9 Pro's Mali-G715, step 1 inside the kernel. The caiman loader (probe/gpu.c,
-+ * PROBE_GPU=6, MALI_FW=) has powered the GPU, booted its CSF firmware, set up address spaces 0 and 1 in
-+ * memory outside the kernel's (0xf0000000 up), started command stream group 0 / stream 0 and run a
-+ * compute shader and a triangle on it; /chosen/mali-handoff says where: the firmware's shared interface,
-+ * the stream's ring, its queue pages, and the page at AS1 VA 0x200000, with the ring's INSERT so far.
-+ * Here the kernel takes that over: reads the GPU's ID and the firmware's interface version, appends a
-+ * STORE of 0x105c0de5 to AS1 VA 0x200900 to the ring, rings the doorbells as the loader does, and looks
-+ * for the value. Nothing else of the GPU is touched.
++ * boot-arg mali=1: the Pixel 9 Pro's Mali-G715 for HakiosGPU (drivers/gpu/hakios.gpu.cpp), whose requests come
++ * here as the hakios_gpu_*() calls below when mali_kept. The caiman loader (probe/gpu.c, PROBE_GPU=6, MALI_FW=)
++ * has powered the GPU, booted its CSF firmware in address space 0, started command stream group 0 / stream 0
++ * in address space 1 and run a compute shader and a triangle on it, all in memory outside the kernel's
++ * (0xf0000000 up); /chosen/mali-handoff says where: the firmware's shared interface, the stream's ring and
++ * queue pages, the AS1 page at VA 0x200000 (fences live at +0xc00 of it), the ring's INSERT, AS1's level-0
++ * table, and the free DRAM after the loader's allocations, which becomes AS1's further page tables here.
++ *
++ * - addresses: AS1 VAs from 4 GiB up, in 64 KiB steps (hakios_gpu_address);
++ * - mapping: 4 KiB AArch64 entries as kbase writes them (entry_set_ate: type 3, AF, AP read/write or read only,
++ *   MEMATTR slot 5 = 0x4c non-cacheable, executable), then a FLUSH_MEM of AS1;
++ * - submission: for each command buffer, MOVE48 r68:r69 = its address, MOVE32 r70 = its length in bytes, CALL;
++ *   then the fence: MOVE48 r68:r69 = the fence's VA, MOVE32 r70 = the number, STORE_MULTIPLE, WAIT; INSERT up
++ *   and the doorbells as the loader rings them (the stream's bell 1, group 0's bit, bell 0);
++ * - done: the fence word.
++ * The CS registers above r63 are not the IDVS/compute staging registers a command buffer sets.
 + */
 +#define MALI_PHYS               0x1f000000UL
 +#define MALI_DOORBELL(n)        (0x80000u + (n) * 0x10000u)
++#define MALI_AS1                0x2440u
++#define MALI_RING_SIZE          0x1000u
++#define MALI_FENCE_VA           0x200c00u
++#define MALI_VA_START           0x100000000ull
++#define MALI_VA_SIZE            0x700000000ull
++#define MALI_TABLES             512
++
++static vm_offset_t mali_regs, mali_bell0, mali_bell1;
++static volatile uint32_t *mali_glb_in, *mali_glb_out, *mali_csg_in, *mali_csg_out, *mali_fence_word;
++static volatile uint64_t *mali_ring, *mali_q_in, *mali_q_out;
++static uint64_t mali_insert, mali_pool_next, mali_pool_end, mali_va_next = MALI_VA_START;
++static struct {
++	uint64_t pa;
++	vm_offset_t va;
++} mali_table[MALI_TABLES];
++static unsigned mali_tables;
++
++static inline uint32_t
++mali_rd(uint32_t off)
++{
++	return *(volatile uint32_t *)(mali_regs + off);
++}
++
++static inline void
++mali_wr(uint32_t off, uint32_t v)
++{
++	*(volatile uint32_t *)(mali_regs + off) = v;
++}
++
++/* a table page of AS1 by its physical address: the loader's, or one taken from the free pool */
++static volatile uint64_t *
++mali_table_va(uint64_t pa)
++{
++	for (unsigned i = 0; i < mali_tables; i++) {
++		if (mali_table[i].pa == pa) {
++			return (volatile uint64_t *)mali_table[i].va;
++		}
++	}
++	if (mali_tables == MALI_TABLES) {
++		return NULL;
++	}
++	mali_table[mali_tables].pa = pa;
++	mali_table[mali_tables].va = ml_io_map((vm_offset_t)(pa & ~0x3fffull), 0x4000) + (pa & 0x3fff);
++	return (volatile uint64_t *)mali_table[mali_tables++].va;
++}
++
++static uint64_t
++mali_table_new(void)
++{
++	uint64_t pa = mali_pool_next;
++	volatile uint64_t *t;
++
++	if (pa + 0x1000 > mali_pool_end) {
++		return 0;
++	}
++	mali_pool_next += 0x1000;
++	t = mali_table_va(pa);
++	if (t == NULL) {
++		return 0;
++	}
++	for (int i = 0; i < 512; i++) {
++		t[i] = 0;
++	}
++	return pa;
++}
++
++static uint64_t mali_as1_root;
++
++static bool
++mali_space_map(uint64_t va, uint64_t pa, uint64_t attr)
++{
++	uint64_t t = mali_as1_root;
++
++	for (int level = 0; level < 3; level++) {
++		volatile uint64_t *table = mali_table_va(t);
++		unsigned idx = (unsigned)((va >> (39 - 9 * level)) & 0x1ff);
++
++		if (table == NULL) {
++			return false;
++		}
++		if (!(table[idx] & 1)) {
++			uint64_t next = mali_table_new();
++
++			if (next == 0) {
++				return false;
++			}
++			table[idx] = next | 0x403;
++		}
++		t = table[idx] & 0xfffffffff000ull;
++	}
++	mali_table_va(t)[(va >> 12) & 0x1ff] = pa ? (pa | attr) : 0;
++	return true;
++}
++
++static void
++mali_as1_flush(void)
++{
++	__builtin_arm_dsb(0xf);
++	for (int i = 0; i < 100000 && (mali_rd(MALI_AS1 + 0x28) & 1); i++) {
++	}
++	mali_wr(MALI_AS1 + 0x18, 5);                    /* FLUSH_MEM */
++	for (int i = 0; i < 100000 && (mali_rd(MALI_AS1 + 0x28) & 1); i++) {
++	}
++}
++
++static uint64_t
++mali_address(uint64_t size)
++{
++	uint64_t address = mali_va_next;
++
++	size = (size + 0xffff) & ~0xffffull;
++	if (address + size > MALI_VA_START + MALI_VA_SIZE) {
++		return 0;
++	}
++	mali_va_next += size;
++	return address;
++}
++
++static bool
++mali_map(uint64_t address, uint64_t phys, bool read_only)
++{
++	return mali_space_map(address, phys, 3 | (1u << 10) | (read_only ? 3u << 6 : 1u << 6) | (5u << 2));
++}
++
++static uint32_t
++mali_submit(const uint64_t *addresses, const uint32_t *words, uint32_t count)
++{
++	uint32_t n = 4 * count + 8, i;
++	uint64_t deadline;
++
++	clock_interval_to_deadline(1, NSEC_PER_SEC, &deadline);
++	while (mali_insert + n * 8 + 64 - mali_q_out[0] > MALI_RING_SIZE) {
++		if (mach_absolute_time() > deadline) {
++			return 0;
++		}
++		delay(100);
++	}
++	if (++mali_fence == 0) {
++		mali_fence = 1;
++	}
++#define MALI_RING(w) do { mali_ring[(mali_insert / 8) % (MALI_RING_SIZE / 8)] = (w); mali_insert += 8; } while (0)
++	for (i = 0; i < count; i++) {
++		MALI_RING((0x01ULL << 56) | (68ULL << 48) | (addresses[i] & 0xffffffffffffULL));
++		MALI_RING((0x02ULL << 56) | (70ULL << 48) | (uint64_t)words[i] * 4);
++		MALI_RING((0x20ULL << 56) | (68ULL << 40) | (70ULL << 32));            /* CALL */
++	}
++	MALI_RING((0x01ULL << 56) | (68ULL << 48) | MALI_FENCE_VA);
++	MALI_RING((0x02ULL << 56) | (70ULL << 48) | mali_fence);
++	MALI_RING((0x1cULL << 56) | (1ULL << 32));                                  /* SB_SEL_OTHER 0 */
++	MALI_RING((0x15ULL << 56) | (70ULL << 48) | (68ULL << 40) | (1ULL << 16));  /* STORE_MULTIPLE r70 -> [r68] */
++	MALI_RING((0x03ULL << 56) | (0xffffULL << 16));                             /* WAIT all */
++	while (mali_insert % 64) {
++		MALI_RING(0);
++	}
++#undef MALI_RING
++	__builtin_arm_dsb(0xf);
++	mali_q_in[0] = mali_insert;
++	__builtin_arm_dsb(0xf);
++	*(volatile uint32_t *)mali_bell1 = 1;
++	mali_csg_in[2] = (mali_csg_in[2] & ~1u) | ((mali_csg_out[2] ^ 1u) & 1u);
++	mali_glb_in[2] = (mali_glb_in[2] & ~1u) | ((mali_glb_out[2] ^ 1u) & 1u);
++	__builtin_arm_dsb(0xf);
++	*(volatile uint32_t *)mali_bell0 = 1;
++	return mali_fence;
++}
++
++static bool
++mali_done(uint32_t fence)
++{
++	/* the firmware's job interrupts, cleared, and group 0's requests acknowledged (as the loader's gpu_service) */
++	uint32_t raw = mali_rd(0x1000);
++
++	if (raw) {
++		mali_wr(0x1004, raw);
++	}
++	mali_csg_in[3] = mali_csg_out[3];
++	return (int32_t)(*mali_fence_word - fence) >= 0;
++}
++
++/* The API, used the way HakiosGPU's client uses it: a command buffer in a kernel page, mapped, submitted, waited for. */
++static void
++mali_self_test(void)
++{
++	vm_offset_t page = 0;
++	uint64_t phys, address, deadline;
++	volatile uint64_t *cmd;
++	volatile uint32_t *data;
++	uint32_t fence, words;
++
++	if (kmem_alloc(kernel_map, &page, PAGE_SIZE, KMA_KOBJECT | KMA_ZERO, VM_KERN_MEMORY_IOKIT) != KERN_SUCCESS) {
++		printf("mali: self test: no page\n");
++		return;
++	}
++	phys = kvtophys(page);
++	address = mali_address(PAGE_SIZE);
++	for (uint64_t off = 0; off < PAGE_SIZE; off += 4096) {
++		if (!mali_map(address + off, phys + off, false)) {
++			printf("mali: self test: no page tables left\n");
++			return;
++		}
++	}
++	mali_as1_flush();
++	cmd = (volatile uint64_t *)page;
++	data = (volatile uint32_t *)(page + 0x800);
++	*data = 0;
++	cmd[0] = (0x01ULL << 56) | (0ULL << 48) | (address + 0x800);                   /* MOVE48 r0:r1 */
++	cmd[1] = (0x02ULL << 56) | (2ULL << 48) | 0xc0ffee11;                          /* MOVE32 r2 */
++	cmd[2] = (0x1cULL << 56) | (1ULL << 32);
++	cmd[3] = (0x15ULL << 56) | (2ULL << 48) | (0ULL << 40) | (1ULL << 16);         /* STORE_MULTIPLE */
++	cmd[4] = (0x03ULL << 56) | (1ULL << 16);                                       /* WAIT */
++	words = 5 * 2;
++	hakios_gpu_to_memory((void *)page, PAGE_SIZE);
++	fence = mali_submit(&address, &words, 1);
++	clock_interval_to_deadline(1, NSEC_PER_SEC, &deadline);
++	while (fence && !mali_done(fence) && mach_absolute_time() < deadline) {
++		delay(10);
++	}
++	hakios_gpu_to_memory((void *)(page + 0x800), 64);
++	printf("mali: self test: a command buffer in kernel memory (phys %#llx) at GPU address %#llx, fence %u %s; it "
++	    "wrote %#x%s\n", phys, address, fence, fence && mali_done(fence) ? "done" : "NOT done", *data,
++	    *data == 0xc0ffee11 ? ": SUBMISSION THROUGH THE HAKIOSGPU API WORKS" : "");
++}
 +
 +static void
 +mali_handoff(void)
@@ -34,76 +381,45 @@ index 3f1f97a..bb03830 100644
 +	void const *prop;
 +	unsigned int size;
 +	const uint64_t *h;
-+	vm_offset_t regs, bell0, bell1, shared, ring_va, queue_va, target_va;
-+	volatile uint32_t *glb_in, *glb_out, *csg_in, *csg_out;
-+	volatile uint64_t *ring, *q_in, *q_out;
-+	volatile uint32_t *target;
-+	uint64_t insert, deadline;
-+	uint32_t n;
++	vm_offset_t shared, queue, target;
 +
 +	if (SecureDTLookupEntry(NULL, "/chosen", &chosen) != kSuccess ||
-+	    SecureDTGetProperty(chosen, "mali-handoff", &prop, &size) != kSuccess || size != 5 * sizeof(uint64_t)) {
++	    SecureDTGetProperty(chosen, "mali-handoff", &prop, &size) != kSuccess || size != 8 * sizeof(uint64_t)) {
 +		printf("mali: no /chosen/mali-handoff from the loader\n");
 +		return;
 +	}
 +	h = prop;
-+	regs = ml_io_map(MALI_PHYS, 0x4000);
-+	bell0 = ml_io_map(MALI_PHYS + MALI_DOORBELL(0), PAGE_SIZE);
-+	bell1 = ml_io_map(MALI_PHYS + MALI_DOORBELL(1), PAGE_SIZE);
++	mali_regs = ml_io_map(MALI_PHYS, 0x4000);
++	mali_bell0 = ml_io_map(MALI_PHYS + MALI_DOORBELL(0), 0x4000);
++	mali_bell1 = ml_io_map(MALI_PHYS + MALI_DOORBELL(1), 0x4000);
 +	shared = ml_io_map(h[0], 0x10000);
-+	ring_va = ml_io_map(h[1], PAGE_SIZE);
-+	queue_va = ml_io_map(h[2], 2 * PAGE_SIZE);
-+	target_va = ml_io_map(h[3], PAGE_SIZE);
-+	printf("mali: GPU_ID %#x, MCU_STATUS %u, SHADER_PRESENT %#x; firmware interface %#x; ring insert %llu\n",
-+	    *(volatile uint32_t *)regs, *(volatile uint32_t *)(regs + 0x704), *(volatile uint32_t *)(regs + 0x100),
-+	    *(volatile uint32_t *)shared, h[4]);
-+
-+	/* the interface pages, by the control blocks' own pointers (global +8/+0xc, CSG 0 at 0x1000 +4/+8) */
-+	glb_in = (volatile uint32_t *)(shared + (*(volatile uint32_t *)(shared + 8) - 0x04000000));
-+	glb_out = (volatile uint32_t *)(shared + (*(volatile uint32_t *)(shared + 0xc) - 0x04000000));
-+	csg_in = (volatile uint32_t *)(shared + (*(volatile uint32_t *)(shared + 0x1004) - 0x04000000));
-+	csg_out = (volatile uint32_t *)(shared + (*(volatile uint32_t *)(shared + 0x1008) - 0x04000000));
-+	ring = (volatile uint64_t *)ring_va;
-+	q_in = (volatile uint64_t *)queue_va;
-+	q_out = (volatile uint64_t *)(queue_va + PAGE_SIZE);
-+	target = (volatile uint32_t *)(target_va + 0x900);
-+	*target = 0;
-+
-+	insert = h[4];
-+	n = (uint32_t)(insert / 8);
-+	if (n + 8 > PAGE_SIZE / 8) {
-+		printf("mali: the ring is full\n");
-+		return;
-+	}
-+	ring[n++] = (0x01ULL << 56) | (0ULL << 48) | 0x200900;			/* MOVE48 r0:r1 */
-+	ring[n++] = (0x02ULL << 56) | (2ULL << 48) | 0x105c0de5ULL;		/* MOVE32 r2 */
-+	ring[n++] = (0x1cULL << 56) | (1ULL << 32);				/* SB_SEL_OTHER 0 */
-+	ring[n++] = (0x15ULL << 56) | (2ULL << 48) | (0ULL << 40) | (1ULL << 16);	/* STORE_MULTIPLE r2 -> [r0] */
-+	ring[n++] = (0x03ULL << 56) | (1ULL << 16);				/* WAIT slot 0 */
-+	while (n % 8) {
-+		ring[n++] = 0;
-+	}
-+	__builtin_arm_dsb(0xf);
-+	q_in[0] = (uint64_t)n * 8;
-+	__builtin_arm_dsb(0xf);
-+	*(volatile uint32_t *)bell1 = 1;
-+	csg_in[2] = (csg_in[2] & ~1u) | ((csg_out[2] ^ 1u) & 1u);
-+	glb_in[2] = (glb_in[2] & ~1u) | ((glb_out[2] ^ 1u) & 1u);
-+	__builtin_arm_dsb(0xf);
-+	*(volatile uint32_t *)bell0 = 1;
-+	clock_interval_to_deadline(1, NSEC_PER_SEC, &deadline);
-+	while (*target != 0x105c0de5 && mach_absolute_time() < deadline) {
-+		delay(10);
-+	}
-+	printf("mali: from XNU: target %#x%s; queue extract %llu (insert %llu); GPU_IRQ %#x JOB_IRQ %#x MMU_IRQ %#x\n",
-+	    *target, *target == 0x105c0de5 ? ": THE KERNEL DROVE THE GPU" : "", q_out[0], q_in[0],
-+	    *(volatile uint32_t *)(regs + 0x20), *(volatile uint32_t *)(regs + 0x1000), *(volatile uint32_t *)(regs + 0x2000));
++	mali_ring = (volatile uint64_t *)ml_io_map(h[1], 0x4000);
++	queue = ml_io_map(h[2], 0x4000);
++	target = ml_io_map(h[3], 0x4000);
++	mali_q_in = (volatile uint64_t *)queue;
++	mali_q_out = (volatile uint64_t *)(queue + 0x1000);     /* (4 KiB pages: the loader's, not the kernel's 16 KiB) */
++	mali_fence_word = (volatile uint32_t *)(target + 0xc00);
++	*mali_fence_word = 0;
++	mali_insert = h[4];
++	mali_as1_root = h[5];
++	mali_pool_next = h[6];
++	mali_pool_end = h[7];
++	mali_glb_in = (volatile uint32_t *)(shared + (*(volatile uint32_t *)(shared + 8) - 0x04000000));
++	mali_glb_out = (volatile uint32_t *)(shared + (*(volatile uint32_t *)(shared + 0xc) - 0x04000000));
++	mali_csg_in = (volatile uint32_t *)(shared + (*(volatile uint32_t *)(shared + 0x1004) - 0x04000000));
++	mali_csg_out = (volatile uint32_t *)(shared + (*(volatile uint32_t *)(shared + 0x1008) - 0x04000000));
++	printf("mali: GPU_ID %#x, MCU_STATUS %u; firmware interface %#x; ring insert %llu, extract %llu; AS1 tables at "
++	    "%#llx, %llu KiB of DRAM for more\n", mali_rd(0), mali_rd(0x704), *(volatile uint32_t *)shared, mali_insert,
++	    mali_q_out[0], mali_as1_root, (mali_pool_end - mali_pool_next) / 1024);
++	mali_kept = true;
++	mali_self_test();
++	HakiosGPUStart();
 +}
 +
  void
  hakios_adreno_init(void)
  {
-@@ -3765,6 +3852,11 @@ hakios_adreno_init(void)
+@@ -3765,6 +4102,11 @@ hakios_adreno_init(void)
  	uint32_t only = 0, done = 0, failed = 0, keep = 0;
  	bool by_itself = false;
  

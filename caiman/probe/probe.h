@@ -153,6 +153,9 @@ struct gpu_handoff {
 	u64 queue;	/* PA of its queue input page (output page + 0x1000) */
 	u64 target;	/* PA of the AS1 page at VA 0x200000 */
 	u64 insert;	/* the ring's INSERT so far, bytes */
+	u64 as1_root;	/* PA of AS1's level-0 table */
+	u64 pool_next;	/* the free DRAM after the probe's GPU allocations, to pool_end: for XNU's page tables */
+	u64 pool_end;
 };
 extern struct gpu_handoff gpu_handoff;		/* dvfs.c, PROBE_DVFS */
 void trusty_aoc_probe(void);
