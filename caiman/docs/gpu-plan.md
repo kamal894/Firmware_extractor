@@ -166,6 +166,22 @@ mali: self test: a command buffer in kernel memory (phys 0x8fc4c8000) at GPU add
       it wrote 0xc0ffee11: SUBMISSION THROUGH THE HAKIOSGPU API WORKS
 ```
 
+## Step 9: three streams per group (PROBE_GPU=7, run gpu25)
+
+PanVK's groups have three command streams (docs/panvk-uapi.md). Group 0 now starts with streams 0-2: stream 0
+keeps its 4 KiB ring at AS1 0x100000; streams 1 and 2 get 64 KiB rings at 0x110000 / 0x120000, queue pages at
+Q_VA + 0x2000 s, doorbells 2 and 3, CS_CONFIG priority 1, CS_REQ START with the idle bits; all three set up
+before CSG START, the CSG's stream doorbell bits 0-2 toggled together. After steps 4-6 a STORE through each
+of streams 1 and 2 (using r92-r95, the kernel's registers under PanVK's convention):
+
+```
+gpu: stream 1: CS ack 0x00000001 (state 1), extract 0, wrote 0x11110001: OK
+gpu: stream 2: CS ack 0x00000001 (state 1), extract 0, wrote 0x22220002: OK
+```
+
+/chosen/mali-handoff grows to 20 words: the 8 before, then for each stream its ring PA, ring size, queue PA
+and INSERT.
+
 ## Next
 
 8. User space: a Mali back end for hakios-metal (today Adreno PM4 + ir3) emitting CSF command buffers and

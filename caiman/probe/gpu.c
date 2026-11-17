@@ -195,9 +195,21 @@ static u64 pool = POOL_BASE, root;
 #define Q_VA		0x05000000u	/* a stream's queue input and output pages, in AS0 */
 #define SUSP_VA		0x05100000u	/* group 0's suspend buffer, in AS0 */
 #define SUSP_PAGES	64
+/*
+ * Step 9 (PROBE_GPU=7): three streams in group 0, as PanVK's groups have (vertex-tiler, fragment, compute:
+ * docs/panvk-uapi.md): stream s has its queue pages at Q_VA + 0x2000 s in AS0, doorbell s + 1, and for s > 0
+ * a 64 KiB ring at AS1 0x110000 / 0x120000 (stream 0 keeps steps 4-6's 4 KiB one at 0x100000).
+ */
+#if PROBE_GPU >= 7
+#define GPU_STREAMS	3
+#else
+#define GPU_STREAMS	1
+#endif
+#define XRING_VA(s)	(0x00100000u + 0x10000u * (s))
+#define XRING_SIZE	0x10000u
 #define SHADER_VA	0x00300000u	/* step 5: the shader, in AS1 */
 #define DESC_VA		0x00400000u	/* step 5: its SPD (+0) and TSD (+0x40), in AS1 */
-static u64 q_pa, susp_pa, job_root, target_page, code_page, desc_page;
+static u64 q_pa, susp_pa, job_root, target_page, code_page, desc_page, xring_pa[3];
 struct gpu_handoff gpu_handoff;
 static volatile u32 *kick_csg_in, *kick_csg_out, *kick_glb_in, *kick_glb_out;
 static void gpu_first_job(u64 shared_pa);
@@ -667,6 +679,46 @@ static void gpu_first_compute(u64 *ring, volatile u64 *q_in, volatile u64 *q_out
 }
 #endif
 
+#if PROBE_GPU >= 7
+/* a STORE on streams 1 and 2, each through its own ring, queue pages and doorbell */
+static void gpu_streams_test(u64 shared_pa, u64 target_pa)
+{
+	u32 *csg_ctl = sh(shared_pa, 0x04001000);
+
+	for (u32 st = 1; st < GPU_STREAMS; st++) {
+		u32 *ctl = sh(shared_pa, 0x04001040 + st * csg_ctl[6]);
+		volatile u32 *out = sh(shared_pa, ctl[2]);
+		volatile u64 *ring = (volatile u64 *)(uptr)xring_pa[st];
+		volatile u64 *q_in = (volatile u64 *)(uptr)(q_pa + 0x2000 * st), *q_out = q_in + 0x1000 / 8;
+		volatile u32 *t = (volatile u32 *)(uptr)(target_pa + 0x980 + 0x40 * st);
+		u32 want = 0x11110000 * st + st;
+		u64 start;
+
+		*t = 0;
+		ring[0] = (0x01ULL << 56) | (92ULL << 48) | (TARGET_VA + 0x980 + 0x40 * st);	/* MOVE48 r92:r93 */
+		ring[1] = (0x02ULL << 56) | (94ULL << 48) | want;				/* MOVE32 r94 */
+		ring[2] = (0x1cULL << 56) | (1ULL << 32);
+		ring[3] = (0x15ULL << 56) | (94ULL << 48) | (92ULL << 40) | (1ULL << 16);	/* STORE r94 -> [r92] */
+		ring[4] = (0x03ULL << 56) | (1ULL << 16);
+		ring[5] = ring[6] = ring[7] = 0;
+		dsb_sy();
+		q_in[0] = 64;
+		dsb_sy();
+		gpu_wr(DOORBELL(st + 1), 1);
+		toggle(&kick_csg_in[2], kick_csg_out[2], 1u << st);
+		toggle(&kick_glb_in[2], kick_glb_out[2], 1);
+		dsb_sy();
+		gpu_wr(DOORBELL(0), 1);
+		start = timer_ticks();
+		while (*t != want && timer_ticks() - start < timer_freq() / 2)
+			gpu_service();
+		pr("gpu: stream %u: CS ack 0x%08x (state %u), extract %llu, wrote 0x%08x%s\n", st, out[0], out[0] & 7, q_out[0],
+		   *t, *t == want ? ": OK" : ": NOTHING");
+	}
+	log_flush();
+}
+#endif
+
 static void gpu_first_job(u64 shared_pa)
 {
 	volatile u32 *glb_in = sh(shared_pa, 0x04002000), *glb_out = sh(shared_pa, 0x04006000);
@@ -758,6 +810,15 @@ static void gpu_first_job(u64 shared_pa)
 		return;
 	}
 #endif
+#if PROBE_GPU >= 7
+	for (u32 st = 1; st < GPU_STREAMS; st++) {
+		xring_pa[st] = page_alloc(XRING_SIZE / 0x1000);
+		if (!xring_pa[st] || map_pages(XRING_VA(st), xring_pa[st], XRING_SIZE, 0x40000003)) {
+			root = saved_root;
+			return;
+		}
+	}
+#endif
 	root = saved_root;
 	job_root = as1_root;
 	target_page = target_pa;
@@ -811,6 +872,24 @@ static void gpu_first_job(u64 shared_pa)
 	kick_glb_in = glb_in;
 	kick_glb_out = glb_out;
 #endif
+#if PROBE_GPU >= 7
+	for (u32 st = 1; st < GPU_STREAMS; st++) {
+		u32 *ctl = sh(shared_pa, 0x04001040 + st * csg_ctl[6]);
+		volatile u32 *in = sh(shared_pa, ctl[1]);
+
+		in[4] = XRING_VA(st);
+		in[5] = 0;
+		in[6] = XRING_SIZE;
+		in[12] = Q_VA + 0x2000 * st;
+		in[13] = 0;
+		in[14] = Q_VA + 0x2000 * st + 0x1000;
+		in[15] = 0;
+		in[16] = in[17] = 0;
+		in[1] = 1 | ((st + 1) << 8);			/* priority 1, doorbell st + 1 */
+		in[3] = ~0u;
+		in[0] = (in[0] & ~0x1507u) | 0x1501;
+	}
+#endif
 	/* group 0: all cores for compute/fragment, the tiler, priority 1, AS1, suspend buffer; then START */
 	csg_in[6] = csg_in[7] = 0;
 	csg_in[8] = (u32)shaders;
@@ -832,7 +911,7 @@ static void gpu_first_job(u64 shared_pa)
 	csg_in[21] = 0;
 	dsb_sy();
 	csg_in[0] = (csg_in[0] & ~7u) | 1;
-	toggle(&csg_in[2], csg_out[2], 1);			/* stream 0 changed */
+	toggle(&csg_in[2], csg_out[2], (1u << GPU_STREAMS) - 1);	/* streams changed */
 	dsb_sy();
 	toggle(&glb_in[2], glb_out[2], 1);			/* group 0 */
 	dsb_sy();
@@ -873,6 +952,9 @@ static void gpu_first_job(u64 shared_pa)
 #if PROBE_GPU >= 6
 	gpu_first_triangle(q_out, cs_out);
 #endif
+#if PROBE_GPU >= 7
+	gpu_streams_test(shared_pa, target_pa);
+#endif
 	/* for XNU (mali=1, drivers/gpu/hakios.adreno.c): where the running firmware's interface and our stream are */
 	gpu_handoff.shared = shared_pa;
 	gpu_handoff.ring = ring_pa;
@@ -882,6 +964,12 @@ static void gpu_first_job(u64 shared_pa)
 	gpu_handoff.as1_root = job_root;
 	gpu_handoff.pool_next = pool;
 	gpu_handoff.pool_end = POOL_END;
+	for (u32 st = 0; st < GPU_STREAMS; st++) {
+		gpu_handoff.stream[st].ring = st ? xring_pa[st] : ring_pa;
+		gpu_handoff.stream[st].ring_size = st ? XRING_SIZE : 0x1000;
+		gpu_handoff.stream[st].queue = q_pa + 0x2000 * st;
+		gpu_handoff.stream[st].insert = ((volatile u64 *)(uptr)(q_pa + 0x2000 * st))[0];
+	}
 #endif
 }
 #endif
@@ -947,9 +1035,9 @@ static void gpu_firmware(void)
 	}
 #if PROBE_GPU >= 4
 	/* for step 4: a stream's queue input/output pages and a group suspend buffer, in the firmware's AS0 */
-	q_pa = page_alloc(2);
+	q_pa = page_alloc(2 * GPU_STREAMS);
 	susp_pa = page_alloc(SUSP_PAGES);
-	if (!q_pa || !susp_pa || map_pages(Q_VA, q_pa, 0x2000, 0x40000003) ||
+	if (!q_pa || !susp_pa || map_pages(Q_VA, q_pa, 0x2000 * GPU_STREAMS, 0x40000003) ||
 	    map_pages(SUSP_VA, susp_pa, SUSP_PAGES * 0x1000, 0x40000003))
 		return;
 #endif
