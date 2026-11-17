@@ -304,3 +304,16 @@ on function 2 itself.
 - **The panel** was dark at the end (0 of 3072 cells lit): the last power press locked the screen.
 
 All three keys work in iOS.
+
+### Runs 13 and 14: every pad function and every feedback delay (2026-11-16)
+
+- **What was tried:** pads 72-75 on functions 0, 1, 2 and 3 (0x88..0x8b), each with the SPI's
+  feedback clock delay (`FB_CLK`, +0x2c) set to 0, 1, 2 and 3.
+- **Result:** every combination receives 0 bytes. STATUS is 0x3c0 each time: 15 of the 16 bytes are
+  still in the TX FIFO, so one byte went into the shifter and the transfer stalled waiting for the
+  receive side.
+- **What it means:** none of the AOC pad functions on 72-75 brings the clock back.
+- **What is left:**
+  - the AOC-side master select (AP USI2 or the AOC's own SPI);
+  - or the touch SPI is not on 72-75 at all. To check this, while Android runs touch, park
+    72-75 with `dbg gpio -n N -f 0` (a write) and see whether touch stops.

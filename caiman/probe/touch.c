@@ -525,8 +525,28 @@ static void spi_identify(void)
 		}
 		delay_us(20000);
 	}
-	if (t == 3)
-		spi_pad_scan();
+	if (t == 3) {
+		/* the AOC's boot table has 72-75 on function 1 (0x89): try each function on them */
+		u32 f, k;
+
+		for (f = 0; f < 16; f++) {
+			/* functions 0-3 on the pads, and the four feedback-clock delays (FB_CLK, +0x2c) */
+			for (k = 72; k <= 75; k++)
+				wr32(AOC_PAD_CSR + 4 * k, 0x88 | (f & 3));
+			wr32(TOUCH_SPI + 0x2c, f >> 2);
+			delay_us(1000);
+			memset(buf, 0, sizeof(buf));
+			got = spi_read(buf, 16);
+			pr("touch: AOC pads 72-75 = 0x%02x, FB_CLK %u: %u of 16 bytes, STATUS 0x%08x:", 0x88 | (f & 3), f >> 2,
+			   got, rd32(TOUCH_SPI + SPI_STATUS));
+			for (i = 0; i < got; i++)
+				pr(" %02x", buf[i]);
+			pr("%s\n", got && buf[0] == 0xa5 ? "  <- the touch chip" : "");
+			log_flush();
+			if (got && buf[0] == 0xa5)
+				break;
+		}
+	}
 	pin("interrupt (after SPI)", PIN_IRQ_BANK, PIN_IRQ);
 }
 #endif
