@@ -204,4 +204,19 @@ hakios: input: touch screen service 0x10075cd90, buttons 0x100760f90
 buttons: so far 0 presses of power, 0 of volume up, 0 of volume down; now none held; 3750 reads ...
 ```
 
-No key was pressed in that run; a run with presses is next.
+No key was pressed in that run.
+
+With `BOOT_ARGS="buttons=2 press_power=100"` the kernel itself posts two short power presses, ten
+seconds apart (HackiOS's test, through the same `hakios_touch_post` as the driver):
+
+```
+buttons: press_power: power PRESSED (by the test) at 280.643 s (00:15:11.122 UTC)
+buttons: press_power: power released (by the test) at 280.794 s (00:15:11.273 UTC)
+buttons: press_power: power PRESSED (by the test) at 290.795 s (00:15:21.274 UTC)
+buttons: press_power: power released (by the test) at 290.946 s (00:15:21.425 UTC)
+screen: 241 of 3072 cells lit
+```
+
+The first press locked the phone, the second woke it: the panel shows the lock screen (clock and
+date), not the home screen (1320 cells before). So a key record reaches backboardd and SpringBoard
+acts on it. What is left is a run with a hand on the real keys.
