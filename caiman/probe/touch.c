@@ -413,6 +413,39 @@ static int spi_pad_scan(void)
 	return -1;
 }
 
+/*
+ * The touch SPI's pads belong to the AOC: its firmware (aoc.bin, the A32 core) keeps one CSR word per
+ * pad at AOC address 0x81408000 + 4 * pad (the PCU, blk_aoc + pcu-base 0x1400000, + 0x8000; the AOC's
+ * 0x80000000 is the AP's blk_aoc 0x17000000). The byte: bits 0-2 function, bit 3 input, bits 4-5
+ * pull, bits 6-7 strength. Its touch bus switch writes these six pads; "on" is what Android's awake
+ * screen shows (dbg gpio): 106 0x00, 62 0x08, 72-75 0x2a (function 2); "off" is 0x28 for all six.
+ */
+#define AOC_PAD_CSR	0x18408000ULL
+static const u8 aoc_touch_on[][2] = {
+	{ 106, 0x00 }, { 62, 0x08 }, { 72, 0x2a }, { 73, 0x2a }, { 74, 0x2a }, { 75, 0x2a },
+};
+
+static int aoc_touch_pads(void)
+{
+	u32 i, v;
+	int ok;
+
+	for (i = 0; i < sizeof(aoc_touch_on) / sizeof(aoc_touch_on[0]); i++) {
+		u64 a = AOC_PAD_CSR + 4 * aoc_touch_on[i][0];
+
+		v = safe_rd32(a, &ok);
+		if (!ok) {
+			pr("touch: AOC pad %u (0x%llx): read aborted (the AOC block is off?)\n", aoc_touch_on[i][0], a);
+			return -1;
+		}
+		wr32(a, aoc_touch_on[i][1]);
+		pr("touch: AOC pad %3u: 0x%08x -> 0x%02x, reads 0x%08x\n", aoc_touch_on[i][0], v, aoc_touch_on[i][1],
+		   rd32(a));
+	}
+	log_flush();
+	return 0;
+}
+
 static void spi_identify(void)
 {
 	u8 buf[48];
@@ -420,6 +453,7 @@ static void spi_identify(void)
 
 	if (spi_init())
 		return;
+	aoc_touch_pads();
 	/* the controller's own loopback (MODE_CFG bit 3): needs its clock, not the pins */
 	wr32(TOUCH_SPI + SPI_MODE_CFG, rd32(TOUCH_SPI + SPI_MODE_CFG) | (1u << 3));
 	got = spi_read(buf, 16);

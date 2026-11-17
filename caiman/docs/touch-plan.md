@@ -245,3 +245,33 @@ command; Android restarted it in 0.2 s, `restart_count` 1, touch and Bluetooth c
 Next: the pad CSR's address (the `dbg gpio` handler on the A32 core of `aoc.bin`: the image is a
 container, the A32 part's load address is not found yet), so that the loader can put the touch pads
 on function 2 itself.
+
+## Step 2e: the pad CSR, from aoc.bin's A32 code, 2026-11-16
+
+- **Where the A32 image sits in the file.** The A32 code is Thumb-2 and builds addresses with
+  `movw`/`movt` pairs, so it has no literal pointers to vote on. Matching those constants against the
+  string starts gives a single strong delta: AOC address = file offset + `0x3f49b5c0`. The format
+  string at file 0xc1b6a7 (`GPIO %d: function %d, ...`) is therefore AOC address 0x400b6c67.
+- **The `dbg gpio` handler.** It is a loadable module at file 0x10000. It reaches the main image
+  through `movw`/`movt`/`bx` veneers:
+  - read config: 0x40039b9f, which is `ldr r0, [0x81408000 + pad*4]`;
+  - write config: 0x40039bad, which takes an array of `{pad, value}` bytes and does
+    `str value, [pcu + 0x8000 + pad*4]`.
+- **The config byte.**
+  - bits 0-2: function;
+  - bit 3: input (the console prints "input" when it is set);
+  - bits 4-5: pull;
+  - bits 6-7: drive strength.
+- **The AP address.** The device tree's AOC node has `pcu-base = <0x1400000>` and
+  `gpio-base = <0x1c00000>` in `blk_aoc` (AP 0x17000000). The firmware uses 0x81400000 (the watchdog
+  at +0x3000/4/8) and 0x81c00000. So the AOC's 0x80000000 is the AP's 0x17000000, and **pad N's CSR
+  is at AP 0x18408000 + 4*N**.
+- **The firmware's own tables.**
+  - Boot default for all 128 pads: AOC 0x401209d8. Pads 72-75 there are 0x89 (function 1).
+  - Touch bus switch (0x40093932 / 0x40093974, logging "on"/"off"), a 6-pad table:
+    - "on" at 0x400d97c8: 106=0x00, 62=0x08, 72..75=0x2a;
+    - "off" at 0x400d97d4: all six 0x28.
+  - "on" is exactly what Android's awake screen shows (step 2d). Pads 72-75 are the touch SPI.
+- **`PROBE_TOUCH=2` now writes the "on" table** after `spi_init` and before the reads.
+  - It reads each pad first with `safe_rd32`, and stops if the AOC block does not answer.
+  - The image is `probe/out/touch11/probe-boot.img` (not run yet: the phone was off USB).
