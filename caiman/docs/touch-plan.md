@@ -317,3 +317,23 @@ All three keys work in iOS.
   - the AOC-side master select (AP USI2 or the AOC's own SPI);
   - or the touch SPI is not on 72-75 at all. To check this, while Android runs touch, park
     72-75 with `dbg gpio -n N -f 0` (a write) and see whether touch stops.
+
+### Pad 72 carries the touch bus (Android, a finger on the screen, 2026-11-16 22:38)
+
+`tools/aoc_padtest.sh` (as root on the phone) counts the `synaptics_tcm` interrupts in
+`/proc/interrupts` over three 6 s windows:
+
+| Window | Pad 72 | Interrupts |
+|---|---|---|
+| A | normal | 174 |
+| B | parked with `dbg gpio -n 72 -o 0 -f 0` | **0** |
+| C | put back with `-f 2` | 0 |
+
+- **C** reads 0 either because the finger had stopped or because the chip had lost its place
+  mid-transfer.
+- **After C:** at the screen-off right after the test, the driver reset the chip and read it
+  over SPI again ("TCM Fw mode: 0x01"), so the bus works with the pad put back.
+
+So the touch SPI does run through AOC pads 72-75 on function 2. What our boot lacks is something
+besides that function. Candidates: the AOC-side master select, the pads' upper CSR bits, or AOC
+clocks or power that the AOC firmware turns on.
