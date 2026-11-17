@@ -854,6 +854,8 @@ void touch_probe(void)
 #elif PROBE_TOUCH == 4
 	buttons_watch();
 	return;
+#elif PROBE_TOUCH == 7
+	/* the usual power-up; the AOC is started just before the SPI read (below) */
 #elif PROBE_TOUCH >= 3
 	hsi0_scan();
 	return;
@@ -889,6 +891,11 @@ void touch_probe(void)
 				pin("reset", PIN_RESET_BANK, PIN_RESET);
 				pin("interrupt", PIN_IRQ_BANK, PIN_IRQ);
 				power_on(l4, l25);
+#if PROBE_TOUCH == 7
+				/* the AOC owns the touch bus: start it and have it hand the bus to the AP */
+				aoc_start();
+				aoc_tbn_to_ap();
+#endif
 				spi_identify();
 			} else {
 				pr("touch: LDO voltages are not 0x3c/0x2c: not powering anything\n");

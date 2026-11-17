@@ -151,6 +151,7 @@ int trusty_ql_connect(const char *port);
 void trusty_ql_disconnect(int h);
 int trusty_ql_xchg(int h, const void *req, u32 req_len, void *rsp, u32 rsp_max, u32 polls);
 void aoc_start(void);
+int aoc_tbn_to_ap(void);
 u64 ufs_load_lp(const char *name, u64 dst, u64 max);
 void display_send_frames(void);
 void kick_frames(u64 decon_main);

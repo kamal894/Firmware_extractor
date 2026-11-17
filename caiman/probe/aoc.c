@@ -26,6 +26,10 @@
 #define FW_MAGIC_AOC		0x00434f41u	/* "AOC\0" at +0x400 */
 #define FW_MAGIC_HDR		0xaabbccddu	/* at +0x1000 */
 #define FWINFO_MAGIC		0x0a0cda7au
+#define AOC_IPC			(AOC_CARVEOUT + 0x1c00000)
+#define AOC_READY_MAGIC		0xa0c00a0cu
+
+static int aoc_ready;
 
 static u8 aoc_hdr[0x1000] __attribute__((aligned(0x1000)));
 
@@ -208,8 +212,148 @@ void aoc_start(void)
 	}
 	trusty_ql_close();
 
-	for (n = 0; n < 4; n++) {
-		delay_us(500000);
-		aoc_watch("after start");
+	for (n = 0; n < 50 && rd32(AOC_IPC) != AOC_READY_MAGIC; n++)
+		delay_us(100000);
+	aoc_watch("after start");
+	aoc_ready = rd32(AOC_IPC) == AOC_READY_MAGIC;
+	pr("aoc: %s after %llu ms\n", aoc_ready ? "online (0xa0c00a0c)" : "NOT online", n * 100);
+	log_flush();
+}
+
+/*
+ * AOC IPC (docs/aoc-ipc.md): the control block at the IPC base, services from a table it
+ * publishes, each with two queues of fixed-size slots (direction 0 AOC to AP, 1 AP to AOC). A
+ * slot is a u16 length, six zero bytes, then the payload. The producer bumps tx, the consumer rx;
+ * the AP rings the service's mailbox bit (google,mailbox-whitechapel +0x20) after writing.
+ */
+#define SVC_FLAGS	0x20
+#define SVC_UP		0x24	/* AOC to AP */
+#define SVC_DOWN	0x40	/* AP to AOC */
+#define Q_OFF		0x00
+#define Q_SIZE		0x04
+#define Q_SLOTS		0x08
+#define Q_TX		0x0c
+#define Q_RX		0x10
+#define Q_WP		0x14
+#define Q_RP		0x18
+
+static u64 svc_find(const char *name)
+{
+	u32 count = rd32(AOC_IPC + 0x18), stride = rd32(AOC_IPC + 0x1c), table = rd32(AOC_IPC + 0x20), i, k;
+
+	pr("aoc: %u services, stride 0x%x, table at +0x%x\n", count, stride, table);
+	if (!count || count > 200 || stride < 0x5c || table + (u64)count * stride > 0x400000)
+		return 0;
+	for (i = 0; i < count; i++) {
+		u64 sv = AOC_IPC + table + (u64)i * stride;
+		const char *n = (const char *)(uptr)sv;
+		u32 f = rd32(sv + SVC_FLAGS);
+
+		char nm[32];
+
+		memcpy(nm, n, 31);
+		nm[31] = 0;
+		pr("aoc:  [%u] %s flags 0x%08x (type 0x%x, mbox %u) up %u x %u, down %u x %u\n", i,
+		   nm, f, f & 0x70000, (f >> 19) & 31, rd32(sv + SVC_UP + Q_SLOTS),
+		   rd32(sv + SVC_UP + Q_SIZE), rd32(sv + SVC_DOWN + Q_SLOTS), rd32(sv + SVC_DOWN + Q_SIZE));
+		for (k = 0; name[k] && n[k] == name[k]; k++)
+			;
+		if (!name[k] && !n[k])
+			return sv;
 	}
+	return 0;
+}
+
+static void mbox_ring(u32 idx)
+{
+	static const u64 mbox[] = { 0x15200000ULL, 0x15220000ULL, 0x15240000ULL };
+
+	if (idx < 48)
+		wr32(mbox[idx / 16] + 0x20, 1u << (idx % 16));
+}
+
+static int svc_send(u64 sv, const void *msg, u32 len)
+{
+	u64 q = sv + SVC_DOWN;
+	u32 size = rd32(q + Q_SIZE), slots = rd32(q + Q_SLOTS), tx = rd32(q + Q_TX), wp = rd32(q + Q_WP);
+	u64 p;
+
+	if (!slots || len + 8 > size || tx - rd32(q + Q_RX) >= slots)
+		return -1;
+	p = AOC_IPC + rd32(q + Q_OFF) + (u64)(tx % slots) * size;
+	wr32(p, len);
+	wr32(p + 4, 0);
+	memcpy((void *)(uptr)(p + 8), msg, len);
+	__asm__ volatile("dsb st" : : : "memory");
+	wr32(q + Q_TX, tx + 1);
+	wr32(q + Q_WP, (wp + 1) % size);
+	__asm__ volatile("dsb st" : : : "memory");
+	mbox_ring((rd32(sv + SVC_FLAGS) >> 19) & 31);
+	return 0;
+}
+
+/* Wait for one message from the AOC; returns its length, or -1. */
+static int svc_recv(u64 sv, void *buf, u32 max, u32 ms)
+{
+	u64 q = sv + SVC_UP, p;
+	u32 size = rd32(q + Q_SIZE), slots = rd32(q + Q_SLOTS), rx, len;
+
+	while (ms-- && rd32(q + Q_TX) == rd32(q + Q_RX))
+		delay_us(1000);
+	rx = rd32(q + Q_RX);
+	if (rd32(q + Q_TX) == rx || !slots)
+		return -1;
+	p = AOC_IPC + rd32(q + Q_OFF) + (u64)(rx % slots) * size;
+	len = rd32(p) & 0xffff;
+	if (len > size - 8)
+		len = size - 8;
+	memcpy(buf, (const void *)(uptr)(p + 8), len < max ? len : max);
+	wr32(q + Q_RX, rx + 1);
+	wr32(q + Q_RP, (rd32(q + Q_RP) + 1) % size);
+	return (int)len;
+}
+
+/*
+ * touch_bus_negotiator.ko tbn_handshaking(): {transaction id, 2} asks for the bus for the AP
+ * (1 gives it back). The reply is 13 bytes {id, status, op, result}; ops 3 and 4 are unrelated
+ * notifications.
+ */
+int aoc_tbn_to_ap(void)
+{
+	u64 sv;
+	u32 req[2] = { 1, 2 }, tries;
+	u8 rsp[64];
+	int n;
+
+	if (!aoc_ready)
+		return -1;
+	sv = svc_find("com.google.tbn_service");
+	pr("aoc: com.google.tbn_service at 0x%llx\n", sv);
+	if (!sv || (rd32(sv + SVC_FLAGS) & 0x70000)) {
+		log_flush();
+		return -1;
+	}
+	pr("aoc: tbn queues before: down tx %u rx %u, up tx %u rx %u\n", rd32(sv + SVC_DOWN + Q_TX),
+	   rd32(sv + SVC_DOWN + Q_RX), rd32(sv + SVC_UP + Q_TX), rd32(sv + SVC_UP + Q_RX));
+	n = svc_send(sv, req, sizeof(req));
+	pr("aoc: tbn request {1, 2} sent = %d\n", n);
+	log_flush();
+	for (tries = 0; tries < 8; tries++) {
+		n = svc_recv(sv, rsp, sizeof(rsp), 1000);
+		if (n < 0)
+			break;
+		pr("aoc: tbn reply %d bytes: id %u status %u op %u result 0x%02x\n", n, le32(rsp), le32(rsp + 4),
+		   le32(rsp + 8), rsp[12]);
+		if (n >= 13 && le32(rsp) == 1 && le32(rsp + 8) == 2)
+			break;
+	}
+	if (n < 0) {
+		u64 d = sv + SVC_DOWN, u = sv + SVC_UP;
+
+		pr("aoc: no tbn reply; down tx %u rx %u, up tx %u rx %u; mbox0 +0x20 0x%x +0x40 0x%x +0x44 0x%x +0x48 0x%x"
+		   " +0x4c 0x%x\n", rd32(d + Q_TX), rd32(d + Q_RX), rd32(u + Q_TX), rd32(u + Q_RX), rd32(0x15200020),
+		   rd32(0x15200040), rd32(0x15200044), rd32(0x15200048), rd32(0x1520004c));
+	}
+	log_flush();
+	return n >= 13 && le32(rsp + 4) == 0 ? 0 : -1;
 }

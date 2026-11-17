@@ -447,3 +447,28 @@ Way 2, starting the AOC from our boot, needs:
 2. GSA mailbox commands to authenticate it and start it;
 3. the SRAM sysctl and ring set-up that `aoc_fw_callback` does;
 4. probably an IPC message for the GTI "Change bus owner to AP".
+
+### The touch SPI moves data once the AOC runs (PROBE_TOUCH=7, 2026-11-17)
+
+The order is: touch power and reset, then `aoc_start()` (docs/aoc-boot-map.md §12), then
+`aoc_tbn_to_ap()`, then `spi_identify()`. The AOC start had to move after the PMIC power-up:
+with the AOC started first, ACPM gave no answer to our PMIC read (run aoc3).
+
+What happened (docs/probe-log-aoc4.txt):
+- **The AOC came online** (0xa0c00a0c) after 700 ms and published 94 services.
+  `com.google.tbn_service` is service 20, a queue on mailbox index 0, 4 x 64 bytes each way.
+- **The TBN request got no reply.** The request {1, 2} was written and mailbox 0x15200000 +0x20
+  bit 0 was rung. The AOC never consumed it: down tx 1, rx 0. Mailbox +0x40 and +0x4c read 0x401.
+- **The SPI works all the same:**
+
+      touch: SPI read 0: 48 of 48 bytes: d2 ff ff ff ...
+      touch: SPI read 1: 48 of 48 bytes: f9 ff ff ff ...
+      touch: AOC pads 72-75 = 0x8a, FB_CLK 0: 16 of 16 bytes, STATUS 0x02000000: f9 ff ...
+
+  Before this, every read got 0 bytes with STATUS 0x3c0. Now the clock runs and bytes come back.
+  The first byte (0xd2, then 0xf9) is not the Synaptics TCM 0xa5 header yet. The interrupt line
+  still stayed high for 3 s after reset.
+
+So what the AP lacked was something the running AOC turns on, not the TBN handover itself.
+Next: the Synaptics TCM read protocol (what 0xd2 and 0xf9 mean, and the reset and identify
+timing), and why the AOC does not take the TBN message.
