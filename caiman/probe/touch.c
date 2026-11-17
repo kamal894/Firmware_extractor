@@ -559,6 +559,66 @@ static void aoc_regs_dump(void)
 	log_flush();
 }
 
+/*
+ * HSI0's sysreg (0x11020000, regmap range 0-0xfffc in Android): USI2's signals reach AOC pads 72-75
+ * without AP pins, so a route select may live here. Map which words exist (holes may come back as
+ * SErrors) and log the non-zero ones; Android is then read only at offsets found here.
+ */
+#define SYSREG_HSI0	0x11020000ULL
+
+static void hsi0_sysreg_dump(void)
+{
+	u32 off, v, n = 0, hole = 0, hole_start = 0;
+	int ok;
+
+	for (off = 0; off <= 0x10000; off += 4) {
+		ok = 0;
+		if (off < 0x10000)
+			v = safe_rd32_async(SYSREG_HSI0 + off, &ok);
+		if (!ok) {
+			if (!hole++)
+				hole_start = off;
+			continue;
+		}
+		if (hole) {
+			pr("touch: hsi0 sysreg +0x%04x..+0x%04x: aborted\n", hole_start, off - 4);
+			hole = 0;
+		}
+		if (v) {
+			pr("touch: hsi0 sysreg +0x%04x = 0x%08x\n", off, v);
+			n++;
+		}
+	}
+	if (hole)
+		pr("touch: hsi0 sysreg +0x%04x..+0x%04x: aborted\n", hole_start, 0xfffc);
+	pr("touch: hsi0 sysreg: %u non-zero words\n", n);
+	log_flush();
+}
+
+/*
+ * The readable words that differ from Android with touch working (regmap debugfs, one line at a
+ * time, 2026-11-17): +0x104 is 0x8007ffff there (0 here), +0x700 is 0x11 there (0x3011 here).
+ */
+static const u32 hsi0_sysreg_android[][2] = { { 0x104, 0x8007ffff }, { 0x700, 0x00000011 } };
+
+static void hsi0_sysreg_copy(void)
+{
+	u32 i, v;
+	int ok;
+
+	for (i = 0; i < sizeof(hsi0_sysreg_android) / sizeof(hsi0_sysreg_android[0]); i++) {
+		u64 a = SYSREG_HSI0 + hsi0_sysreg_android[i][0];
+
+		v = safe_rd32_async(a, &ok);
+		if (!ok)
+			continue;
+		wr32(a, hsi0_sysreg_android[i][1]);
+		pr("touch: hsi0 sysreg +0x%03x: 0x%08x -> 0x%08x, reads 0x%08x\n", hsi0_sysreg_android[i][0], v,
+		   hsi0_sysreg_android[i][1], safe_rd32_async(a, &ok));
+	}
+	log_flush();
+}
+
 static void spi_identify(void)
 {
 	u8 buf[48];
@@ -568,6 +628,8 @@ static void spi_identify(void)
 		return;
 	aoc_touch_pads();
 	aoc_regs_dump();
+	hsi0_sysreg_dump();
+	hsi0_sysreg_copy();
 	/* the controller's own loopback (MODE_CFG bit 3): needs its clock, not the pins */
 	wr32(TOUCH_SPI + SPI_MODE_CFG, rd32(TOUCH_SPI + SPI_MODE_CFG) | (1u << 3));
 	got = spi_read(buf, 16);

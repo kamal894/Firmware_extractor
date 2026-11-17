@@ -92,6 +92,7 @@ void uart_putc(char c);
  * which is why every risky read is preceded by a breadcrumb in the log.)
  */
 u32 safe_rd32(u64 addr, int *ok);
+u32 safe_rd32_async(u64 addr, int *ok);
 void exc_handler(u64 idx, u64 esr, u64 far, u64 elr, u64 spsr, u64 *frame);
 
 /* ---- fdt.c ------------------------------------------------------------ */

@@ -22,6 +22,29 @@ u32 safe_rd32(u64 addr, int *ok)
 	return v;
 }
 
+/*
+ * The same for a read whose error may come back as an SError rather than a synchronous abort
+ * (Android panicked on one reading a hole in HSI0's sysreg): unmask SErrors around the load and
+ * wait for it to complete, so a pending one is taken here and counted as this read's fault.
+ */
+u32 safe_rd32_async(u64 addr, int *ok)
+{
+	u32 v = 0xdeadbeefu;
+
+	guard_faulted = 0;
+	guard_active = 2;
+	__asm__ volatile("msr daifclr, #4\n\tldr %w0, [%1]\n\tdsb sy\n\tisb\n\tmsr daifset, #4"
+			 : "+r"(v) : "r"(addr) : "memory");
+	guard_active = 0;
+	if (guard_faulted) {
+		g.faults++;
+		*ok = 0;
+		return 0xdeadbeefu;
+	}
+	*ok = 1;
+	return v;
+}
+
 static const char *exc_kind(u64 idx)
 {
 	switch (idx & 3) {
@@ -74,6 +97,11 @@ void exc_handler(u64 idx, u64 esr, u64 far, u64 elr, u64 spsr, u64 *frame)
 	if ((idx & 3) == 0 && (ec == 0x24 || ec == 0x25) && guard_active && !in_exc) {
 		guard_faulted = 1;
 		frame[31] = elr + 4;
+		return;
+	}
+	/* An SError during safe_rd32_async(): note it and resume where it was taken. */
+	if ((idx & 3) == 3 && guard_active == 2 && !in_exc) {
+		guard_faulted = 1;
 		return;
 	}
 

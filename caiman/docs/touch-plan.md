@@ -382,3 +382,23 @@ the AP cannot read, and the AP side of the path (HSI0 pads or sysreg).
   range is 0-0xfffc, and reading the whole of it hits a hole. Android panicked with an
   asynchronous SError and rebooted ("kernel_panic,asynchroomus_serror_interrupt"). HSI0 sysreg
   words have to be read one by one, at offsets known to exist.
+
+### HSI0 sysreg: a map, then Android (runs 18 and 19, 2026-11-17)
+
+- **Run 18:** `safe_rd32_async()` unmasks SErrors around one load, so a hole is counted instead of
+  stopping the probe. `hsi0_sysreg_dump()` maps 0x11020000-0x1102fffc this way.
+  - Readable: +0x0-0x10, +0x100-0x108, +0x180, +0x300-0x31c, +0x700, +0x708, +0x1010-0x102c,
+    and a 0x800-byte pattern repeated from +0xc000.
+  - +0xf084 to the end is a hole. Run 18 did not print that last range, which caused the next mistake.
+- **In Android:** the regmap debugfs `registers` file reads only the lines asked for. Each line
+  is 15 bytes, so `dd bs=15 skip=$((off / 4)) count=1` reads one word.
+  - Offsets up to +0xf080: `docs/hsi0-sysreg-android.txt`.
+  - Reading +0xf084, wrongly taken as readable, panicked Android again (SError).
+- **Differences from our boot:**
+  - +0x104: 0x8007ffff in Android, 0 here;
+  - +0x700: 0x11 in Android, 0x3011 here;
+  - +0x1014/18/20/24: 2 in Android (the other USIs' SW_CONF; ours is +0x101c).
+- **Run 19:** writes +0x104 and +0x700 as in Android; both writes take. Still 0 bytes, STATUS 0x3c0.
+
+What is left are the AOC PCU pages that abort from the AP (0x81400-0x81402, 0x81404-0x81407,
+0x81409). Android has non-zero values in them that only the AOC can read.
