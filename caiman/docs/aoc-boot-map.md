@@ -142,3 +142,47 @@ Steps that work on hardware:
 
 The client is now in place for `gsa_send_aoc_cmd`: SEND `{1, state}` and RECV
 `{0x80000001, 0, result}`. Nothing has been sent to the AOC service yet.
+
+## 9. aoc.bin layout and what Linux writes (read statically, 2026-11-17)
+
+- **Header checks:**
+  - +0x400 must be "AOC\0" (0x434f41) and +0x404 the header version (2 here).
+  - The firmware header at +0x1000 starts with 0xaabbccdd (`_aoc_fw_is_valid` 0x6ebc).
+- **Header words at +0x1000 in this aoc.bin:**
+
+  | Offset | Value | Meaning |
+  |---|---|---|
+  | +0x4 | 1 | release flag (`_aoc_fw_is_release`) |
+  | +0xc | 0x1c00000 | **ipc offset** (`_aoc_fw_ipc_offset`) |
+  | +0x14 | 0x98000000 | — |
+  | +0x18 | 0x1000 | bootloader offset (`_aoc_fw_bootloader_offset`) |
+  | +0x1c..+0x24 | 0x7000, 0x8000, 0x2290 | — |
+  | +0x30 | "15231849-polygon" | version string |
+
+- **Image config at +0x580** (v2; +0x560 for v1):
+  - +0x10: bootloader blob offset 0x40, size 0x80;
+  - +0x14: iommu table offset 0xc0, size 0x38, so 7 entries.
+  - Each entry decodes as `iova = e << 12` (low 32 bits), `pa = (e >> 8) & 0xffffff000`,
+    `size = (e >> 32) & 0xfffff000`:
+
+  | iova | pa | size | Note |
+  |---|---|---|---|
+  | 0x98000000 | 0x94000000 | 0x3000000 | the carveout, DT `aoc_reserve` |
+  | 0x9b000000 | 0x97000000 | 0x400000 | |
+  | 0x9e000000 | 0x15100000 | 0x200000 | |
+  | 0x9e200000 | 0x16400000 | 0x100000 | |
+  | 0x9e500000 | 0x11200000 | 0x100000 | |
+  | 0x9e300000 | 0x40000000 | 0x80000 | |
+  | 0x9e380000 | 0x40400000 | 0x80000 | |
+
+  The AOC SysMMU is `sysmmu_aoc@19090000`, compatible "samsung,sysmmu-v9" (samsung_iommu_v9.ko).
+  Our boot would have to program it.
+- **`_aoc_fw_commit`** (0x76c4): `memcpy(carveout, aoc.bin + 0x1000, size - 0x1000)`.
+- **`aoc_pass_fw_information`** (0x1a44) writes at carveout + ipc offset (pa 0x95c00000):
+  - the words 0x0a0cda7a, 22, 0x114;
+  - then 22 entries of `{key, 4, value}`, with keys 0x1001..0x1017. The values come from
+    `aoc_fw_callback` 0x2d8-0x530: carveout base/size, board id/rev, chip id/revision/type,
+    `get_random_u32`, DT properties. The mapping of each key to its value is not finished.
+- **Do not use `mem dump` on carveout addresses through the AOC console.** 0x99c00000 is not mapped
+  in the A32 core's MMU. Reading it crashed the AOC (CONSOLE task, DFAR 0x99c00000, DFSR 5).
+  Android restarted it.
