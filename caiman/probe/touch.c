@@ -766,6 +766,77 @@ static void buttons_watch(void)
 }
 #endif
 
+/*
+ * Two gates before starting the AOC ourselves (docs/aoc-boot-map.md). Only harmless calls:
+ * - Trusty: SMC_FC_GET_VERSION_STR (SMC_FASTCALL_NR(SMC_ENTITY_SECURE_MONITOR = 60, 10)), which only
+ *   reads the version string; an unknown call returns SMC_UNK (-1).
+ * - GSA mailbox (0x16490000): gsa.ko's wake (0x96) and sleep (0x97) commands, no arguments, the
+ *   reply polled at +0x30 bit 0 instead of taken as an interrupt.
+ */
+#define TRUSTY_FC_GET_VERSION_STR	0xbc00000aULL
+#define GSA_MBOX		0x16490000ULL
+
+static u64 smc1(u64 fn, u64 a1)
+{
+	register u64 x0 __asm__("x0") = fn;
+	register u64 x1 __asm__("x1") = a1;
+
+	__asm__ volatile("smc #0" : "+r"(x0), "+r"(x1) : : "x2", "x3", "x4", "x5", "x6", "x7", "x8", "x9",
+			 "x10", "x11", "x12", "x13", "x14", "x15", "x16", "x17", "memory");
+	return x0;
+}
+
+static void trusty_version(void)
+{
+	char str[96];
+	u64 len = smc1(TRUSTY_FC_GET_VERSION_STR, (u64)-1), i;
+
+	pr("touch: trusty GET_VERSION_STR(-1) = 0x%llx\n", len);
+	if ((s64)len <= 0 || len > 0x1000) {
+		log_flush();
+		return;
+	}
+	for (i = 0; i < len && i < sizeof(str) - 1; i++)
+		str[i] = (char)smc1(TRUSTY_FC_GET_VERSION_STR, i);
+	str[i] = 0;
+	pr("touch: trusty version: \"%s\"\n", str);
+	log_flush();
+}
+
+static int gsa_mbox_cmd(u32 cmd)
+{
+	u32 ms, st = 0;
+	int ok;
+
+	safe_rd32_async(GSA_MBOX + 0x30, &ok);
+	if (!ok) {
+		pr("touch: GSA mailbox: read aborted\n");
+		return -1;
+	}
+	pr("touch: GSA mailbox before 0x%x: +0x28 0x%08x +0x30 0x%08x +0x80 0x%08x +0x84 0x%08x\n", cmd,
+	   rd32(GSA_MBOX + 0x28), rd32(GSA_MBOX + 0x30), rd32(GSA_MBOX + 0x80), rd32(GSA_MBOX + 0x84));
+	wr32(GSA_MBOX + 0x80, cmd);
+	wr32(GSA_MBOX + 0x84, 0);
+	wr32(GSA_MBOX + 0x24, 1);
+	wr32(GSA_MBOX + 0x28, rd32(GSA_MBOX + 0x28) & ~1u);
+	wr32(GSA_MBOX + 0x40, 1);
+	for (ms = 0; ms < 2000 && !((st = rd32(GSA_MBOX + 0x30)) & 1); ms++)
+		delay_us(1000);
+	pr("touch: GSA mailbox 0x%x: +0x30 0x%08x after %u ms; reply cmd 0x%08x status 0x%08x count %u\n", cmd, st,
+	   ms, rd32(GSA_MBOX + 0x80), rd32(GSA_MBOX + 0x84), rd32(GSA_MBOX + 0x88));
+	wr32(GSA_MBOX + 0x24, 1);
+	wr32(GSA_MBOX + 0x28, rd32(GSA_MBOX + 0x28) | 1);
+	log_flush();
+	return (st & 1) && rd32(GSA_MBOX + 0x80) == (cmd | 0x80000000u) ? 0 : -1;
+}
+
+static void aoc_gates(void)
+{
+	trusty_version();
+	if (gsa_mbox_cmd(0x96) == 0)
+		gsa_mbox_cmd(0x97);
+}
+
 void touch_probe(void)
 {
 	u32 ipc_channels, ap_max, ch_off, i;
@@ -773,7 +844,10 @@ void touch_probe(void)
 
 	pr("\n--- touch screen (read-only) ---\n");
 	log_flush();
-#if PROBE_TOUCH == 4
+#if PROBE_TOUCH == 5
+	aoc_gates();
+	return;
+#elif PROBE_TOUCH == 4
 	buttons_watch();
 	return;
 #elif PROBE_TOUCH >= 3

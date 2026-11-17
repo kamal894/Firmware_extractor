@@ -102,3 +102,12 @@ The AOC needs only:
 5. **A Trusty IPC client** to send `{1, 1}` to `com.android.trusty.gsa.hwmgr.aoc`. This is the
    largest part.
 6. AOC IPC (rings and mailboxes 0x15200000...), then `com.google.tbn_service` to ask for the bus.
+
+## 7. Gates checked on hardware (PROBE_TOUCH=5, 2026-11-17)
+
+- **Trusty is alive in our boot.** `SMC_FC_GET_VERSION_STR` (0xbc00000a) returns length 0x44:
+  "Project: ripcurrentpro, Build: 15189916, Built: 12:53:31 Apr 12 2026". The bootloader log
+  shows it selecting Trusty API version 3.
+- **The GSA mailbox answers when polled.** It had last been left at 0x80000041 by the bootloader.
+  - 0x96: reply 0x80000096, status 0, after 3 ms;
+  - 0x97: reply 0x80000097, status 0, after 1 ms.
