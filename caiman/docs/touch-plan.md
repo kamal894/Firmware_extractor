@@ -173,3 +173,35 @@ Getting them to iOS needs kernel code: `/dev/hakios-touch`'s reader sleeps until
 `hakios.buttons.c` is the POCO X5 Pro's (Qualcomm PMIC over SPMI). A caiman driver that polls these
 three bits is small; it needs the kernel built here (`xnu-deps/setup.sh`, `xnu/apply.sh`,
 `xnu-build.sh`).
+
+### The kernel built here, with the buttons (2026-11-16)
+
+The SDKs come from Xcode 27.2 (App Store), not from the mirrors `xnu-deps/setup.sh` downloads by
+default. `hakios/caiman-kernel.patch` (on HackiOS 63fc2b4) adds `XNU_XCODE_SDKS=1` to the setup
+script: Xcode's iPhoneOS SDK stands in for 16.5, and the DriverKit headers are copied (not linked:
+`host/bin/iig` does not follow links) from Xcode's macOS SDK. It also adds `buttons=2` to
+`hakios.buttons.c`: the three GPIO_ALIVE bits above, read every 16 ms, read-only.
+
+```
+cd hakios-xnu-kernel && git apply ../caiman/hakios/caiman-kernel.patch
+XNU_XCODE_SDKS=1 xnu-deps/setup.sh --stage1 && xnu/apply.sh && XNU_XCODE_SDKS=1 xnu-deps/setup.sh --stage2
+./xnu-build.sh -j8 -k
+BOOT_ARGS=buttons=2 caiman/tools/run_darwin.sh LOADER \
+    xnu-src/xnu-8796.121.2/BUILD/obj/DEVELOPMENT_ARM64_BCM2837/mach.development.bcm2837 userland/root.apfs
+```
+
+The build stops at the kext symbol sets (`check_all_exports`): Xcode 27's DriverKit headers give
+the RPC methods other signatures than the 13.3 export lists name. The kernel itself is linked by then,
+and nothing here loads kexts, so `mach.development.bcm2837` is used as it is.
+
+That kernel boots on the phone like the prebuilt one (same home screen, 1320 of 3072 cells lit):
+
+```
+Darwin Kernel Version 22.5.0: Mon 16 Nov 2026 18:00:31 CST; ...xnu-8796.121.2-dirty
+buttons: caiman: gpa4 CON 0 DAT 0x3, gpa6 CON 0 DAT 0x2d
+buttons: caiman: watching power volume-up volume-down, every 16 ms: power is the side button
+hakios: input: touch screen service 0x10075cd90, buttons 0x100760f90
+buttons: so far 0 presses of power, 0 of volume up, 0 of volume down; now none held; 3750 reads ...
+```
+
+No key was pressed in that run; a run with presses is next.

@@ -10,6 +10,7 @@
 # KERNEL: HackiOS's prebuilt/hakios-kernel; ROOT_APFS: HackiOS's userland/root.apfs. The system
 # image itself is the logical partition xnusys in super (docs/m4-system-image-plan.md).
 # The boot image is made here, in fastboot, so that its epoch= is the time of the boot.
+# BOOT_ARGS: more boot-args for XNU (buttons=2: the power and volume keys, with a kernel built from source).
 set -euo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
 loader=$1 kernel=$2 root=$3 log=${4:-darwin-log.txt}
@@ -23,7 +24,7 @@ export ANDROID_SERIAL
 adb reboot bootloader
 for _ in $(seq 60); do fastboot devices | grep -q "^$ANDROID_SERIAL" && break; sleep 1; done
 python3 "$here/mkxnuimg.py" --loader "$loader" --kernel "$kernel" --ramdisk "$root" \
-	--cmdline "epoch=$(date +%s)" --out-image "$img.Image" --out-bootimg "$img" >/dev/null
+	--cmdline "epoch=$(date +%s)${BOOT_ARGS:+ $BOOT_ARGS}" --out-image "$img.Image" --out-bootimg "$img" >/dev/null
 rm -f "$img.Image"
 fastboot boot "$img"
 echo "booted at $(date '+%H:%M:%S'); the loader reads xnusys (~90 s), then XNU runs until the watcher resets the phone"
