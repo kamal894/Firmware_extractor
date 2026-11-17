@@ -337,3 +337,36 @@ All three keys work in iOS.
 So the touch SPI does run through AOC pads 72-75 on function 2. What our boot lacks is something
 besides that function. Candidates: the AOC-side master select, the pads' upper CSR bits, or AOC
 clocks or power that the AOC firmware turns on.
+
+### Run 15: aoc_req and pd_aoc
+
+`aoc_request_on()` (aoc_core.ko's `request_aoc_on`): `aoc_req` was already 1, its status 1, and
+`pd_aoc` on. The AOC is powered in our boot; still 0 bytes.
+
+### AOC registers: Android against our boot (runs 16 and 17, 2026-11-17)
+
+- **Reading them in Android:** the AOC console's `mem dump <addr> <bytes>` (`help -d mem`).
+  - The console sends at most ~40 lines per command, so `tools/aoc_memdump.sh` sends 256-byte
+    commands from a file written on the Mac.
+  - Never compute addresses on the phone: Android's `sh` does 32-bit signed arithmetic. A
+    sign-extended `0xffffffff81408000` reaches the console as 0xffffffff, and the AOC crashes in
+    its dump loop (CONSOLE task, PC 0x78013cd4, DFAR 0xffffffff). Android restarts it within a
+    second; this happened twice. `mem dump` with no address crashes the same way.
+- **Reading them in our boot:** run 16 (`aoc_regs_dump()`) reads the same ranges from the AP
+  (blk_aoc + 0x1400000, 11 pages; + 0x1c00000, 5 pages) after the pad writes.
+- **The comparison** (`~/caiman-work/aocdiff.py`):
+  - **Pad CSRs:** identical to Android after our writes.
+  - **PCU pages 0x81400, 0x81401, 0x81402, 0x81404-0x81407, 0x81409:** reads abort from the AP in
+    our boot. The AOC reads them in Android; 0x81409000 holds 3, 2. It is not known whether these
+    pages are off in our boot or simply closed to the AP.
+  - **0x81403000 (watchdog):** 0x11 in Android, 0 in ours.
+  - **The GPIO block** is mirrored every 0x80 bytes. Android has these outputs:
+    - 106 low and 67 high;
+    - 25, 57-59, 70, 75 and 80 low;
+    - 87 and 105 are not outputs, although run 13 drove them.
+- **Run 17:** copies Android's output and enable words. Still 0 bytes, STATUS 0x3c0, for every pad
+  function and FB_CLK. The chip's interrupt line still stays high for 3 s after reset ("no sign of
+  the chip"), then drops when the AOC GPIOs are written.
+
+So the GPIOs and the pad CSRs match Android and the bus is still dead. What is left: the PCU pages
+the AP cannot read, and the AP side of the path (HSI0 pads or sysreg).

@@ -429,11 +429,14 @@ static const u8 aoc_touch_on[][2] = {
  * The same switch also drives three AOC GPIOs (pads 87 and 105 once, the first time; one more on
  * every "on"), all function 0 outputs in Android. The AOC's GPIO block (blk_aoc + gpio-base
  * 0x1c00000; its driver: 32 pins per bank at 12-byte strides, +0 output level, +4 output enable,
- * inputs at +0x50 + 4 * bank). Which object is which pad is not read out of the firmware yet: drive
- * all three high, as an output each is anyway.
+ * inputs at +0x50 + 4 * bank). Android with touch working (AOC console "mem dump 0x81c00000 256",
+ * 2026-11-17): only 106 of the three is an output, and it is low; 67 is an output high; 25, 57-59,
+ * 70, 75 and 80 are outputs low. Copy that state, bank by bank: { out, oe }.
  */
 #define AOC_GPIO	0x18c00000ULL
-static const u8 aoc_touch_out[] = { 87, 105, 106 };
+static const u32 aoc_gpio_android[4][2] = {
+	{ 0, 0x02000000 }, { 0, 0x0e000000 }, { 0x00000008, 0x00010848 }, { 0, 0x00000400 },
+};
 
 static void aoc_gpio_dump(const char *when)
 {
@@ -463,22 +466,48 @@ static void aoc_touch_gpios(void)
 	safe_rd32(AOC_GPIO, &ok);
 	if (!ok)
 		return;
-	for (i = 0; i < sizeof(aoc_touch_out); i++) {
-		u64 bank = AOC_GPIO + 12 * (aoc_touch_out[i] >> 5);
-		u32 bit = 1u << (aoc_touch_out[i] & 31);
-
-		wr32(bank, rd32(bank) | bit);
-		wr32(bank + 4, rd32(bank + 4) | bit);
+	for (i = 0; i < 4; i++) {
+		wr32(AOC_GPIO + 12 * i, aoc_gpio_android[i][0]);
+		wr32(AOC_GPIO + 12 * i + 4, aoc_gpio_android[i][1]);
 	}
 	delay_us(20000);
-	aoc_gpio_dump("after driving 87, 105, 106 high");
-	pin("interrupt (AOC GPIOs high)", PIN_IRQ_BANK, PIN_IRQ);
+	aoc_gpio_dump("after copying Android's outputs");
+	pin("interrupt (AOC GPIOs as in Android)", PIN_IRQ_BANK, PIN_IRQ);
+}
+
+/*
+ * aoc_core.ko's request_aoc_on(): write 1 to aoc_req (the DT's "aoc_req", 0x154b0000) and wait for
+ * +0x40 to read non-zero (wait_for_aoc_status). This is what Linux does before it touches the
+ * AOC: the request for the AOC's power and clocks. Also show pd_aoc (PMU 0x15462280).
+ */
+#define AOC_REQ		0x154b0000ULL
+#define PD_AOC		0x15462280ULL
+
+static void aoc_request_on(void)
+{
+	u32 ms, st;
+	int ok;
+
+	st = safe_rd32(AOC_REQ + 0x40, &ok);
+	if (!ok) {
+		pr("touch: aoc_req: read aborted\n");
+		return;
+	}
+	pr("touch: aoc_req 0x%08x status 0x%08x; pd_aoc conf 0x%08x status 0x%08x\n", rd32(AOC_REQ), st,
+	   safe_rd32(PD_AOC, &ok), safe_rd32(PD_AOC + 4, &ok));
+	wr32(AOC_REQ, 1);
+	for (ms = 0; ms < 500 && !(st = rd32(AOC_REQ + 0x40)); ms++)
+		delay_us(1000);
+	pr("touch: aoc_req set: status 0x%08x after %u ms; pd_aoc status 0x%08x\n", st, ms, safe_rd32(PD_AOC + 4, &ok));
+	log_flush();
 }
 
 static int aoc_touch_pads(void)
 {
 	u32 i, v;
 	int ok;
+
+	aoc_request_on();
 
 	for (i = 0; i < sizeof(aoc_touch_on) / sizeof(aoc_touch_on[0]); i++) {
 		u64 a = AOC_PAD_CSR + 4 * aoc_touch_on[i][0];
@@ -497,6 +526,39 @@ static int aoc_touch_pads(void)
 	return 0;
 }
 
+/*
+ * The AOC's PCU (blk_aoc + 0x1400000, 11 pages) and GPIO block (+0x1c00000, 5 pages): every
+ * non-zero word, under its AOC address, to diff against the same ranges read in Android with the
+ * AOC console's "mem dump <addr> 256" while touch works there (docs/touch-plan.md).
+ */
+static const struct { u64 base; u32 pages; } aoc_dump_ranges[] = {
+	{ 0x18400000ULL, 11 }, { 0x18c00000ULL, 5 },
+};
+
+static void aoc_regs_dump(void)
+{
+	u32 r, off, v, n = 0;
+	int ok;
+
+	for (r = 0; r < sizeof(aoc_dump_ranges) / sizeof(aoc_dump_ranges[0]); r++)
+		for (off = 0; off < aoc_dump_ranges[r].pages * 0x1000; off += 4) {
+			u64 a = aoc_dump_ranges[r].base + off;
+
+			v = safe_rd32(a, &ok);
+			if (!ok) {
+				pr("touch: aocreg 0x%08llx: read aborted\n", a - 0x17000000ULL + 0x80000000ULL);
+				off |= 0xffc;	/* skip the rest of this page */
+				continue;
+			}
+			if (v) {
+				pr("touch: aocreg 0x%08llx = 0x%08x\n", a - 0x17000000ULL + 0x80000000ULL, v);
+				n++;
+			}
+		}
+	pr("touch: aocreg: %u non-zero words\n", n);
+	log_flush();
+}
+
 static void spi_identify(void)
 {
 	u8 buf[48];
@@ -505,6 +567,7 @@ static void spi_identify(void)
 	if (spi_init())
 		return;
 	aoc_touch_pads();
+	aoc_regs_dump();
 	/* the controller's own loopback (MODE_CFG bit 3): needs its clock, not the pins */
 	wr32(TOUCH_SPI + SPI_MODE_CFG, rd32(TOUCH_SPI + SPI_MODE_CFG) | (1u << 3));
 	got = spi_read(buf, 16);
