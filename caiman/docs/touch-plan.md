@@ -428,3 +428,22 @@ Conclusion: only the AOC itself can hand the touch bus to the AP. The ways left 
 1. Find what opens these pages to the AP (an AOC sysreg or TZPC setting, or a clock left off in
    our boot).
 2. Start the AOC firmware in our boot, as aoc_core.ko does, and ask it to give the bus to the AP.
+
+### Way 1 is closed: Linux never touches those pages either
+
+aoc_core.ko reaches blk_aoc only in three places:
+- the AOC's SRAM (`aoc_release_from_reset` sets bit 0 of a word in it);
+- `aoc_req`;
+- the PCU doorbells (`pcu-db-set-offset` 0x1f004, `pcu-db-clr-offset` 0x1f008).
+
+The bus owner registers are changed only by the AOC firmware. Starting the firmware goes through
+GSA (`gsa-enabled`; GSA mailbox 0x16490000, gsa.ko):
+1. `aoc_fw_authenticate` calls `gsa_load_aoc_fw_image`;
+2. `aoc_fw_callback` calls `gsa_send_aoc_cmd`;
+3. `aoc_take_offline` calls `gsa_send_aoc_cmd` and `gsa_unload_aoc_fw_image`.
+
+Way 2, starting the AOC from our boot, needs:
+1. aoc.bin in the AOC's DRAM carveout (`memory-region`);
+2. GSA mailbox commands to authenticate it and start it;
+3. the SRAM sysctl and ring set-up that `aoc_fw_callback` does;
+4. probably an IPC message for the GTI "Change bus owner to AP".
