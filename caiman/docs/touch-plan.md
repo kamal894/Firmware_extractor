@@ -598,3 +598,23 @@ CPU_ON(mpidr, secondary-entry, LowResetVectorBase).
 Run smp2 (`cpus=4`): `4 of 4 processors are running`. The framebuffer's scaling (fb_threads=3) now has
 cores: 11-20 ms a frame in the driver (was 20-80), up to 24 frames a second (was 2-20). By hand: "much
 faster". Touch: first move after ~50 ms on average (was ~107). Log: docs/darwin-log-smp2.txt.
+
+## CPU clocks through ACPM (2026-11-17, probe/dvfs.c)
+
+Google's `cal-if/acpm_dvfs.c`: `{domain, kHz, FREQ_REQ 0 / FREQ_GET 1, ms}` on the DVFS manager's ACPM
+channel 1 (exynos-dm in the DT); domains 2/3/4 = CPUCL0 (A520), CL1 (A720), CL2 (X4) (`zuma.h`
+ACPM_DVFS_CPUCL0..2). A get answers in cmd[1]. Every reply must be taken off ACPM's queue, also those
+to requests nobody waits for: the first try left them, the queue filled and ACPM stopped answering.
+
+| cluster | boot loader leaves | asked (PROBE_DVFS=2) | max |
+|---|---|---|---|
+| A520 | 1328 MHz | 1696 | 1950 |
+| A720 | 1065 MHz | 2130 | 2600 |
+| X4   | 1164 MHz | 2499 | 3105 |
+
+Each set answered in 0.2-0.4 ms and read back as asked (docs/probe-log-dvfs3.txt). About four fifths of
+max on purpose: nothing in iOS here slows the clocks when the phone gets hot.
+
+Run darwin-fast1 (`LOADER=1 ... PROBE_DVFS=2`, `cpus=5`): 5 of 5 processors, 8-12 ms a frame in the
+framebuffer (11-20 with the boot clocks), up to 40 frames a second, touch's first move after 41 ms.
+With `cpus=7` (run smp3) only 5 of 7 came up; the two small cores are not looked into yet.

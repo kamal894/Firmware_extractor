@@ -1,0 +1,18 @@
+dvfs: reply 1 after 35 us: 00010000 00144380 00000001 00000000
+dvfs: now: cl0 A520 (domain 2) 1328000 kHz (min 820000, max 1950000, resume 1425000)
+dvfs: reply 2 after 35 us: 00020000 00104028 00000001 00000000
+dvfs: now: cl1 A720 (domain 3) 1065000 kHz (min 357000, max 2600000, resume 1797000)
+dvfs: reply 3 after 34 us: 00030000 0011c2e0 00000001 00000000
+dvfs: now: cl2 X4   (domain 4) 1164000 kHz (min 500000, max 3105000, resume 1164000)
+dvfs: asking for 1696000 kHz on cl0 A520
+dvfs: reply 4 after 432 us: 00040000 0019e100 00000000 00000000
+dvfs: asking for 2130000 kHz on cl1 A720
+dvfs: reply 5 after 214 us: 00050000 00208050 00000000 00000000
+dvfs: asking for 2499000 kHz on cl2 X4
+dvfs: reply 6 after 242 us: 00060000 002621b8 00000000 00000000
+dvfs: reply 7 after 33 us: 00070000 0019e100 00000001 00000000
+dvfs: after: cl0 A520 (domain 2) 1696000 kHz (min 820000, max 1950000, resume 1425000)
+dvfs: reply 8 after 36 us: 00080000 00208050 00000001 00000000
+dvfs: after: cl1 A720 (domain 3) 2130000 kHz (min 357000, max 2600000, resume 1797000)
+dvfs: reply 9 after 21 us: 00090000 002621b8 00000001 00000000
+dvfs: after: cl2 X4   (domain 4) 2499000 kHz (min 500000, max 3105000, resume 1164000)

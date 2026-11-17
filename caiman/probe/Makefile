@@ -12,6 +12,7 @@
 #   PROBE_CRASHTEST=1       fault on purpose at the end (tests the handler)
 #   PROBE_TOUCH=1           read-only look at the touch screen's power (PMIC through ACPM), pins, SPI
 #   PROBE_TOUCH=9           with LOADER=1: the touch chip powered, its SPI set up and the chip identified for XNU (touchscreen=2)
+#   PROBE_DVFS=1|2          CPU cluster clocks through ACPM: 1 read them, 2 also raise them (dvfs.c)
 #   LOADER=1                the M2 loader: probe, then start XNU from an appended payload
 #                           (OUT=out/loader-$(PLATFORM); ../tools/mkxnuimg.py builds the image)
 #   BOOTIMG_ARGS="..."      extra args for tools/pack_bootimg.py, e.g.
@@ -45,6 +46,9 @@ CFLAGS := --target=aarch64-none-elf -march=armv8.2-a -O2 -g -std=gnu11 \
 ifdef PROBE_UFS
 CFLAGS += -DPROBE_UFS=$(PROBE_UFS)
 endif
+ifdef PROBE_DVFS
+CFLAGS += -DPROBE_DVFS=$(PROBE_DVFS)
+endif
 ifdef PROBE_TOUCH
 CFLAGS += -DPROBE_TOUCH=$(PROBE_TOUCH)
 endif
@@ -57,7 +61,7 @@ endif
 LDFLAGS := -pie --no-dynamic-linker -z norelro -z noexecstack --build-id=none -T linker.ld
 
 LOADER ?= 0
-SRCS := start.S main.c log.c uart.c timer.c fdt.c psci.c exception.c display.c wdt.c ufs.c touch.c trusty.c aoc.c lib.c
+SRCS := start.S main.c log.c uart.c timer.c fdt.c psci.c exception.c display.c wdt.c ufs.c touch.c trusty.c aoc.c dvfs.c lib.c
 ifeq ($(LOADER),1)
 SRCS += xnu.c watcher.c handoff.S
 CFLAGS += -DPROBE_LOADER=1

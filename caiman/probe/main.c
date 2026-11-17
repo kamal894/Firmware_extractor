@@ -488,6 +488,9 @@ void c_entry(u64 dtb, u64 load_base, u64 cur_el)
 #if PROBE_TOUCH
 	touch_probe();
 #endif
+#if PROBE_DVFS
+	dvfs_probe();
+#endif
 
 	display_probe();
 

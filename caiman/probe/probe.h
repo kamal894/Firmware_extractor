@@ -144,6 +144,7 @@ void __attribute__((noreturn)) probe_finish(const char *why);
 void display_probe(void);
 void ufs_probe(void);
 void touch_probe(void);
+void dvfs_probe(void);		/* dvfs.c, PROBE_DVFS */
 void trusty_aoc_probe(void);
 int trusty_ql_open(void);
 void trusty_ql_close(void);
