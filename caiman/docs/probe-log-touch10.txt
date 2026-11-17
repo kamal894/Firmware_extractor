@@ -1,0 +1,1860 @@
+[   0.000000] [I] secure payload loading took 0ms
+[   0.000000] [I] platform info binded: true
+[   0.000000] [I] platform info: 060906010000
+[   0.805339] [I] 
+welcome to lk/MP
+
+[   0.805370] [I] boot args 0x1 0x0 0x0 0x0
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   0.806118] [I] acpm locks regulators
+[   0.806174] [I] Soc Product ID: 0x09875
+[   0.806209] [I] Soc rev: A1
+[   0.806236] [I] Soc ID: 0x12b44c577850
+[   0.806271] [I] DVFS version: 2
+[   0.806305] [E] vendor magic_number must be 0xcceeddff but 0xcce45dff
+[   0.806359] [E] magic_number must be 0xcceeddff but 0xcceeddfb
+[   0.806442] [I] S2MPG_M CHIPID read: 0x10
+[   0.806506] [I] S2MPG_S CHIPID read: 0x10
+[   0.806575] [I] S2MPG_M PWRONSRC read: 0x20
+[   0.806642] [I] S2MPG_M OFFSRC1 read: 0x10
+[   0.806715] [I] S2MPG_M OFFSRC2 read: 0x0
+[   0.806780] [I] S2MPG_M RTC_WTSR read: 0x7e
+[   0.806821] [I] S2MPG_M INT1: 0x30
+[   0.806849] [I] S2MPG_M INT2: 0x0
+[   0.806876] [I] S2MPG_M INT3: 0x0
+[   0.806902] [I] S2MPG_M INT4: 0x0
+[   0.806931] [I] S2MPG_M INT5: 0x0
+[   0.806991] [I] S2MPG_S OFFSRC1 read: 0x11
+[   0.807031] [I] S2MPG_S INT1: 0x83
+[   0.807060] [I] S2MPG_S INT2: 0x80
+[   0.807087] [I] S2MPG_S INT3: 0x0
+[   0.807117] [I] S2MPG_S INT4: 0x0
+[   0.807143] [I] S2MPG_S INT5: 0x0
+APC Bootmetrics:
+  BL1: MT:1 / DT:ENTRY / 96720 us
+  BL1: MT:2 / DT:LOAD  / 7360 us
+  BL1: MT:F / DT:EXIT  / 147792 us
+  PBL: MT:1 / DT:ENTRY / 147920 us
+  PBL: MT:2 / DT:LOAD  / 19592 us
+  PBL: MT:F / DT:EXIT  / 213016 us
+  BL2: MT:1 / DT:ENTRY / 214584 us
+  BL2: MT:2 / DT:LOAD  / 160 us
+  BL2: MT:3 / DT:LOAD  / 152 us
+  BL2: MT:4 / DT:CHECK / 342544 us
+  BL2: MT:5 / DT:CHECK / 2096 us
+  BL2: MT:6 / DT:LOAD  / 62392 us
+  BL2: MT:7 / DT:CHECK / 157720 us
+  BL2: MT:8 / DT:CHECK / 157864 us
+  BL2: MT:9 / DT:LOAD  / 44304 us
+  BL2: MT:A / DT:LOAD  / 31536 us
+  BL2: MT:B / DT:LOAD  / 330344 us
+  BL2: MT:C / DT:LOAD  / 8 us
+  BL2: MT:F / DT:EXIT  / 613376 us
+  PBL: MT:3 / DT:LOAD  / 81272 us
+  PBL: MT:4 / DT:LOAD  / 28160 us
+  PBL: MT:5 / DT:LOAD  / 6184 us
+  PBL: MT:6 / DT:CHECK / 729176 us
+  PBL: MT:7 / DT:CHECK / 729312 us
+  EL3: MT:1 / DT:ENTRY / 732080 us
+  EL3: MT:D / DT:CHECK / 747648 us
+  EL3: MT:E / DT:CHECK / 794184 us
+  EL3: MT:F / DT:EXIT  / 794224 us
+APC Breadcrumbs(v2.4):
+ stages(S): 00000000 / 0000404F
+  flags(S): 00000000 / 000022C0
+stages(NS): 00000000 / 00005004
+ flags(NS): 00000000 / 0000D400
+    status: 00000000 / 00000000
+    device: 00000000 / 00000001
+   tmutrip: 00000000 / 00000000
+     reset: 00000000 / 00180000
+[   0.808135] [E] GSA Breadcrumb:
+00000000 0000000d 00000000 00000000  |................|
+00000000 00000000 00000001           |............    |
+[   0.808268] [I] SBDP initialized: chipid allowed=0, dpm_state=0x0000
+[   0.808323] [E] check header failed
+[   0.808451] [I] initializing device i2c:usi00
+[   0.808491] [I] usi00: version 2.2
+[   0.808540] [I] initializing device i2c:usi04
+[   0.808582] [I] usi04: version 2.2
+[   0.808631] [I] initializing device i2c:usi06
+[   0.808671] [I] usi06: version 2.2
+[   0.808716] [I] initializing device i2c:usi09
+[   0.808757] [I] usi09: version 2.2
+[   0.808806] [I] initializing device i2cm:i2cm0
+[   0.808848] [I] DVFS init
+[   0.811107] [I] DVFS init done
+[   0.811136] [I] UFS EVT version 0
+[   0.811178] [I] controller version 3.0 found
+[   0.811214] [I] capabilities 0x1383ff1f
+[   0.811384] [I] UFS device found
+zuma_ufs_device_init_done
+[   0.811427] [E] ufshc_notify done
+[   0.811500] [I] ufshc_power_mode_change HS gear 4
+[   0.821694] [I] ufshc: bBootLunEn 0x1
+[   0.821839] [I] UFS device SAMSUNG KLUDG4UHGC-B0E1 version 3.1
+[   0.821889] [I] Enabled LUNs found 4
+[   0.821949] [I] UFS device total size 127984992256
+[   0.822052] [I] Temp too high enabled
+[   0.822149] [I] Temp too low enabled
+[   0.824901] [I] Write Booster: available buffer=0x7 lifetime=0x2 current buffer=0x1dcb
+[   0.824992] [I] boot slot: a
+[   0.827191] [I] slot data a: 0x00001e02
+[   0.827222] [I] slot data b: 0x00001000
+[   0.828017] [I] platform info: 060906010000
+[   0.828258] [I] initializing device cs40l2x:cs40l26
+[   0.838747] [I] CS40L26 found
+[   0.840412] [I] initializing device nfc:st21nfc
+[   0.842288] [I] tcpc vendor id 56
+[   0.843220] found 77779 on usi6
+[   0.843248] bms_init init usi10 as sec_i2c
+[   0.843282] [I] initializing device i2c:usi10
+[   0.843318] [I] usi10: version 2.2
+[   0.843516] [I] FG device name 0x5100
+[   0.844022] [I] [max77779fg] SOC(99), VCELL(4408), INOW(-432), IAVG(-239)
+[   0.844658] [I] fship 0x0
+[   0.844778] [I] master disconnect reason 0x0
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   0.847603] [I] LCS state:PRODUCTION
+[   0.847742] [I] no valid file
+[TMU:0] 41
+[TMU:1] 41
+[   0.851033] [I] dsim_probe dsim0+
+[   0.851070] [I] using data lane count(4)
+[   0.851791] [E] 
+Reboot Info:
+  RST_STAT: 0x180000 - PIN_RESET | PO_RESET
+  GSA_RESET_STATUS: 0x1 - GSA_PINRESET
+  Reboot reason: 0xcafe - User Reboot(S/W Reboot)
+  Reboot mode: 0xfc - Bootloader
+[   0.871506] [E] failed to get eUSB revision -62
+[   0.871549] [I] Set EUSB Ref clock auto
+[   0.871870] [I] LK build date: Apr 14 2026, time: 06:16:15
+[   0.871913] [I] BL version: ripcurrentpro-17.0-15199480
+[   0.871956] [I] BL type: official build
+starting app pixel_loader
+[   0.872426] [I] sota: empty signature.
+[   0.872458] [I] ABL start time (METRICS_BL3): 794ms
+[   0.872499] [I] AB Decision: active slot boot ok
+[   0.872539] [I] AB Decisions: 00000000
+[   0.872766] [I] TCPC BC1.2, type: 2 val:2
+[   0.872969] [I] boot voltage threshold=3400mV
+[   0.873083] [I] bootloader message:bootonce-bootloader
+[   0.873561] [I] fastboot enter reason: reboot bootloader
+[   0.873610] [W] power on source: 20
+starting app pixel_charger
+[   0.881752] [E] dsim0 wait phy pll stable
+[   0.902941] [I] Succeeded to read panel product id : 0x22a8a00a
+[   0.903020] [E] is_compatible is not defined!
+[   0.903059] [I] panel_rev: 0x1000
+[   0.908244] [I] use panel google-cm4 for dsim0
+[   0.908282] [I] dsim_probe -: dsim0 driver(cmd mode) has been probed.
+[   0.908331] [I] dsim_probe dsim1+
+[   0.908363] [I] using data lane count(4)
+[   0.908429] [E] dsim1 wait phy pll stable
+[   0.959530] [E] timeout!! wait for DSIM interrupt (0x40300000)
+[   0.959622] [E] MIPI DSIM (id=6) read Timeout! 0x4
+[   0.959662] [E] dsim fail to get panel operation
+[   0.959735] [E] dsim has error.
+[   0.959762] [E] dsim_probe -: dsim1 probe failed.
+[   0.959798] [I] dsim1 probe was failed
+[   0.959834] [I] dsim_init -: set dsim0 driver as primary.
+[   0.971074] [E] dsim0 wait phy pll stable
+[   0.990245] [I] dpp_probe +
+[   0.990269] [I] dpp-0's attr is (0x004d0047)
+[   0.990304] [I] dpp(0) init resources.
+[   0.990362] [I] dpp_probe -: dpp0 is probed successfully
+[   0.990410] [I] decon-int: max win6, command mode, hw trigger
+[   0.990457] [I] single dsi mode
+[   0.990496] [I] [decon0] d_path(0xB1) DSCC DSC_ENC1 DSC_ENC0 OFIFO.0
+[   0.990610] [I] [decon0] sel(0x0) OFIFO.0 - dsim0 - google-cm4
+[   0.990657] [I] Display 1st window(5) xres(1280) yres(2856) win_start_pos(0) win_end_pos(b2704ff)
+[   1.043004] [I] port connected
+[   1.057637] [I] TCPC BC1.2, type: 2 val:2
+[   1.125945] [I] decon0 registered successfully
+[   1.161303] [I] version: g5400c-260317-260429-B-15308590
+USB Pipe3 Initialization...
+[dwc3_dptx] CR write failed to 0x31c5
+[dwc3_dptx] CR write failed to 0x32c5
+[dwc3_dptx] CR write failed to 0x402d
+[dwc3_dptx] CR write failed to 0x412d
+[dwc3_dptx] CR write failed to 0x422d
+[dwc3_dptx] CR write failed to 0x432d
+[dwc3_dptx] CR write failed to 0x2021
+[dwc3_dptx] CR write failed to 0x2024
+[dwc3_dptx] CR write failed to 0x2027
+[dwc3_dptx] CR write failed to 0x202a
+[dwc3_dptx] CR write failed to 0x202d
+[dwc3_dptx] CR write failed to 0x2030
+[dwc3_dptx] CR write failed to 0x2033
+[dwc3_dptx] CR write failed to 0x2036
+[dwc3_dptx] CR write failed to 0x2022
+[dwc3_dptx] CR write failed to 0x2025
+[dwc3_dptx] CR write failed to 0x2028
+[dwc3_dptx] CR write failed to 0x202b
+[dwc3_dptx] CR write failed to 0x202e
+[dwc3_dptx] CR write failed to 0x2031
+[dwc3_dptx] CR write failed to 0x2034
+[dwc3_dptx] CR write failed to 0x2037
+[dwc3_dptx] PMA version:0x4604
+[dwc3_dptx] PCS ID:0x6790
+[dwc3_dptx] Firmware ID:0x6044, 0x04b3
+[   1.236347] [I] TCPC BC1.2, type: 2 val:2
+[   1.509108] [I] TCPC BC1.2, type: 2 val:2
+[   1.521773] [I] new high-speed device found
+[   1.521931] [I] TCPC BC1.2, type: 2 val:2
+[   1.529536] [I] TCPC BC1.2, type: 2 val:2
+[   2.444130] [I] Accept cmd:download:0000f000
+[   2.444246] [I] Downloading. Download size is 61440 bytes
+[   2.444340] [I] DATA0000f000
+[   2.445882] [I] OKAY
+[   2.446126] [I] Accept cmd:boot
+[   2.453131] [I] OKAY
+[   2.473772] [I] TCPC BC1.2, type: 2 val:2
+[   2.474593] [I] TCPC BC1.2, type: 2 val:2
+[   2.575881] [E] avb_property(com.android.build.boot.security_patch): not found
+[   2.575997] [E] boot_spl: can't find property
+[   2.576072] [I] boot_state: 160000:20261100:20000000
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   2.579094] [I] using init_boot ramdisk
+[   2.579164] [I] using vendor_kernel_boot ramdisk
+[   2.579371] [I] kernel: addr:0xffff000090701000, size:c054
+[   2.579513] [I] kernel: total_time:1
+[   2.579576] [I] vendor kernel ramdisk copy
+[   2.579643] [I] ramdisk dst addr: 0xffff000086000000 src addr: 0xffff0000a5901000 size: 0x67591e(6773022)
+[   2.579789] [I] padding prepended: 0
+[   2.583579] [I] vendor ramdisk copy
+[   2.583641] [I] ramdisk dst addr: 0xffff00008667591e src addr: 0xffff0000a0001000 size: 0x1663ae2(23476962)
+[   2.583792] [I] padding prepended: 18
+[   2.596234] [I] ramdisk copy
+[   2.596299] [I] ramdisk dst addr: 0xffff000087cd9412 src addr: 0xffff0000a5101000 size: 0x250d04(2428164)
+[   2.596450] [I] padding prepended: 14
+[   2.597786] [I] Ramdisk load size with padding: 32678180
+[   2.597930] [I] rev: 09865.00.00
+[   2.598005] [I] rev: 09865.00.00
+[   2.598071] [I] rev: 09865.01.00
+[   2.598126] [I] rev: 09865.01.01
+[   2.598194] [I] rev: 09865.01.00
+[   2.598247] [I] rev: 09865.01.01
+[   2.598313] [I] rev: 09875.00.00
+[   2.598380] [I] rev: 09875.00.00
+[   2.598446] [I] rev: 09875.00.00
+[   2.598500] [I] rev: 09875.00.01
+[   2.598566] [I] rev: 09875.00.00
+[   2.598620] [I] rev: 09875.00.01
+[   2.598671] [I] SOC DTB: index:6
+[   2.598748] [I] DTBO match: id 0x60906, rev 0x10000
+[   2.621282] [I] dpm not merged
+[   2.623508] [I] MTE S: 0, NS: 0, tag base: 0x0
+[   2.661649] [W] power on source: 20
+[   2.661728] [I] bootmode:
+[   2.661866] [I] DDR size: 16GiB
+[   2.661915] [I] DDR Manufacturer: Samsung
+[   2.664142] [I] ro.misctrl.16kb_before=0
+[   2.664230] [I] console is disabled
+[   2.664474] [I] secure dram base 0xb6200000, size 0x9e00000
+[   2.664619] [I] secure PGTBL base 0xe0000000, size 58720256
+[   2.669841] [I] MTE S: 0, NS: 0, tag base: 0x0
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   2.686716] [I] device: /reserved-memory/debug_snapshot/log_s2d path not found (-1)
+[   2.686975] [I] device: /reserved-memory/debug_snapshot/log_array_reset path not found (-1)
+[   2.687205] [I] device: /reserved-memory/debug_snapshot/log_kevents path not found (-1)
+[   2.687455] [I] device: /reserved-memory/debug_snapshot/log_itmon path not found (-1)
+[   2.687701] [I] device: /reserved-memory/debug_snapshot/log_s2d_extract path not found (-1)
+[   2.689239] [I] device: /google,mitigation enabled ret=0
+[   2.709786] [I] ro.boot.hardware.cpu.pagesize=4096
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   2.710680] [I] panel settings after overriding: google-cm4.22a8a00a@dsim0 null@dsim1
+[   2.726198] [I] linux,initrd-start: 0x86000000, linux,initrd-end: 0x87f32125
+[   2.738971] [E] avb_property(com.android.build.microdroid-vendor.root_digest): not found
+[   2.739100] [W] failed to get microdroid vendor hashtree digest from avb property, skip appending value
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   2.741364] [W] no avf debug policy, because dpm is NULL
+[  12.813941] [I] slot data a: 0x00001e02
+[  12.814004] [I] slot data b: 0x00001000
+[  12.817654] [E] avb_property(com.android.build.boot.fingerprint): not found
+[  12.817758] [E] fingerprint property not found 
+[  12.921633] [I] shutdown complete
+[  12.921720] [I] thread stats (cpu 0): total idle time: 11655296, total busy time: 1266423
+Heap dump (using miniheap):
+	base 0xffff0000f8b93000, len 0x527000
+	free list:
+		base 0xffff0000f8d1b220, end 0xffff0000f8d3b660, len 0x20440
+		base 0xffff0000f8d3b6f0, end 0xffff0000f8d3b710, len 0x20
+		base 0xffff0000f8d783b0, end 0xffff0000f8d783d0, len 0x20
+		base 0xffff0000f8d7b510, end 0xffff0000f8d7b680, len 0x170
+		base 0xffff0000f8d7bd70, end 0xffff0000f8d7bdb0, len 0x40
+		base 0xffff0000f8d7bfd0, end 0xffff0000f8d7bff0, len 0x20
+		base 0xffff0000f8d7e7e0, end 0xffff0000f8d7e9a0, len 0x1c0
+		base 0xffff0000f8d7f850, end 0xffff0000f8d85980, len 0x6130
+		base 0xffff0000f8e07da0, end 0xffff0000f8e07dd0, len 0x30
+		base 0xffff0000f8e081a0, end 0xffff0000f8e09000, len 0xe60
+		base 0xffff0000f8e31020, end 0xffff0000f8e32000, len 0xfe0
+		base 0xffff0000f8ee03e0, end 0xffff0000f8f20240, len 0x3fe60
+		base 0xffff0000f8f30320, end 0xffff0000f90ba000, len 0x189ce0
+[  12.923026] [I] Starting Linux kernel ...
+=== caiman-probe 0668e60-dirty on caiman (Pixel 9 Pro, Tensor G4 / zumapro) ===
+hello from bare metal: loaded at 0x80000000 (file 0xc060 bytes, 0x2c010 with bss+stack), x0/DTB=0x8a000000
+entry: EL2 SCTLR=0x30c50990 MMU=off D-cache=off I-cache=off
+
+--- cpu ---
+cpu: CurrentEL=2  MPIDR=0x81000000 (aff2.1.0 = 0.0.0)
+cpu: MIDR=0x410fd801 (Cortex-A520 r0p1) REVIDR=0x3
+cpu: SCTLR_EL2=0x30c50990 HCR_EL2=0x100000080000000 CPTR_EL2=0x33ff CNTHCTL_EL2=0x3ff5f
+cpu: entered at EL2 (hypervisor level): a loader for XNU must drop to EL1
+cpu: DAIF=0x3c0 ISR_EL1=0x0 CNTFRQ=24576000 Hz CNTVCT=318073441
+cpu: ID_AA64PFR0=0x1201111123111111 PFR1=0x0000000000010321
+cpu: ID_AA64ISAR0=0x0221111110212120 ISAR1=0x0111111100211002 ISAR2=0x0000000001005102
+cpu: ID_AA64MMFR0=0x2100022200101122 MMFR1=0x1001111011312122 MMFR2=0x1221011110101011
+cpu: ID_AA64DFR0=0x100f11f010305719 ZFR0=0x0000110100110021 SMFR0=0x0000000000000000
+cpu: CTR_EL0=0x49444c004 DCZID_EL0=0x4 CLIDR_EL1=0x54c3000123
+
+--- device tree ---
+dt: blob at 0x8a000000, 505098 bytes, version 17
+dt: memory 0xb80000000 - 0xc00000000 (2048 MiB)
+dt: memory 0xb00000000 - 0xb80000000 (2048 MiB)
+dt: memory 0xa80000000 - 0xb00000000 (2048 MiB)
+dt: memory 0xa00000000 - 0xa80000000 (2048 MiB)
+dt: memory 0x980000000 - 0xa00000000 (2048 MiB)
+dt: memory 0x900000000 - 0x980000000 (2048 MiB)
+dt: memory 0x880000000 - 0x900000000 (2048 MiB)
+dt: rsv pkvm_guest_firmware                  0x8b000000+0xd0000 no-map [linux,pkvm-guest-firmware-memory]
+dt: rsv abl@f8800000                         0xf8800000+0x1000000 no-map
+dt: rsv sec_pt                               0xe0000000+0x3800000 no-map
+dt: rsv sec_dram                             0xb6200000+0x9e00000 no-map
+dt: rsv ect_binary                           0x90000000+0x60000 [exynos,ect_rmem]
+dt: rsv gsa@90200000                         0x90200000+0x3ff000 no-map
+dt: rsv gsa@905FF000                         0x905ff000+0x1000 no-map
+dt: rsv gxp_scratchpad@91300000              0x91300000+0x60000 no-map
+dt: rsv iif_wait_table@91360000              0x91360000+0x20000 no-map
+dt: rsv iif_signal_table@91380000            0x91380000+0x20000 no-map
+dt: rsv gxp_secure_data@91400000             0x91400000+0x900000 no-map
+dt: rsv gxp_fw@91D00000                      0x91d00000+0x300000 no-map
+dt: rsv gxp_mcu_fw@92000000                  0x92000000+0x400000 no-map
+dt: rsv tpu_fw@92e00000                      0x92e00000+0x1200000 no-map
+dt: rsv aoc@94000000                         0x94000000+0x3000000 no-map
+dt: rsv dss_log_reserved@fd3f0000            0xfd3f0000+0xe000 no-map
+dt: rsv debug_kinfo_reserved@fd3fe000        0xfd3fe000+0x1000 no-map
+dt: rsv ramoops_mem@fd3ff000                 0xfd3ff000+0x400000 [ramoops]
+dt: rsv bldr_log_reserved@fd800000           0xfd800000+0x100000 no-map
+dt: rsv cp_rmem                              0xea400000+0xc00000 [exynos,modem_if]
+dt: rsv cp_msi_rmem                          0xf6200000+0x1000 [exynos,modem_if]
+dt: rsv cp_rmem_1                            0xe8000000+0x2000000 [exynos,modem_if]
+dt: rsv cp_aoc_rmem                          0x197fd000+0x3000 [exynos,modem_if]
+dt: rsv header                               0xd8100000+0x10000 no-map
+dt: rsv log_kevents                          0xd8110000+0x700000 no-map
+dt: rsv log_bcm                              0xdd610000+0x400000 no-map
+dt: rsv log_s2d                              0xd8810000+0x1800000 no-map
+dt: rsv log_array_reset                      0xda010000+0xa00000 no-map
+dt: rsv log_array_panic                      0xdaa10000+0xa00000 no-map
+dt: rsv log_slcdump                          0xdb410000+0x1100000 no-map
+dt: rsv log_preslcdump                       0xdc510000+0x1100000 no-map
+dt: rsv log_itmon                            0xdda10000+0x10000 no-map
+dt: rsv log_s2d_extract                      0xdda20000+0x600000 no-map
+dt: rsv seclog_mem                           0xc3000000+0x80000 [exynos,seclog]
+dt: rsv xhci_dma_buffer@17BB5000             0x17bb5000+0xb000 no-map [xhci-dma-pool]
+dt: rsv xhci_dma@17BC0000                    0x17bc0000+0x40000 no-map [xhci-dma-pool]
+dt: rsv xhci_dma_dram@97000000               0x97000000+0x400000 no-map [xhci-dma-pool]
+dt: rsv vstream                              [shared-dma-pool]
+dt: rsv vframe                               [shared-dma-pool]
+dt: rsv vscaler                              [shared-dma-pool]
+dt: rsv tui                                 
+dt: rsv gcma_camera                         
+dt: rsv faceauth_dsp                        
+dt: rsv faceauth_tpu                        
+dt: rsv famodel                             
+dt: rsv faimg                                [shared-dma-pool]
+dt: rsv farawimg                            
+dt: rsv faeval                              
+dt: rsv faprev                               [shared-dma-pool]
+dt: rsv mfc_fw                              
+dt: rsv dpado-rmem                           [exynos,dp_ado_rmem]
+dt: psci method=smc
+dt: memory 0x80000000 - 0x100000000 (2048 MiB)
+dt: /chosen bootargs: root=/dev/ram0 rw clocksource=arch_sys_counter clk_ignore_unused loop.max_part=7 loop.hw_queue_depth=31 coherent_pool=4M firmware_class.path=/vendor/firmware irqaffinity=0 sysrq_always_enabled no_console_suspend softlockup_panic=1 kasan_multi_shot kvm-arm.protected_modules=exynos-pd,pkvm_s2mpu-v9 fips140.load_sequential=1 exynos_drm.load_sequential=1 g2d.load_sequential=1 samsung_iommu_v9.load_sequential=1 vh_sched.load_sequential=1 pcie_exynos_gs.load_sequential=1 dyndbg="func alloc_contig_dump_pages +p" printk.devkmsg=on cma_sysfs.experimental=Y cgroup.memory=nokmem rcupdate.rcu_expedited=1 rcu_nocbs=all rcutree.enable_rcu_lazy swiotlb=noforce disable_dma32=on sysctl.kernel.sched_pelt_multiplier=4 rodata=on kasan=off at24.write_timeout=100 log_buf_len=1024K android_arch_task_struct_size=512 bootconfig console=null exynos_drm.panel_name=google-cm4.22a8a00a tcpci_max77759.conf_sbu=0 arm64.nomte ufs_pixel_fips140.fips_first_lba=151942 ufs_pixel_fips140.fips_last_lba=152453 ufs_pixel_fips140.fips_lu=0 ufs_pixel_fips140.use_hw_keys=true id_aa64mmfr1.vh=0  bootconfig
+dt: /chosen initrd 0x86000000 - 0x87f32125
+ramoops: DT ramoops_mem@fd3ff000: 0xfd3ff000 size 0x400000 record 0x0 console 0x200000 ftrace 0x0 pmsg 0x200000 ecc 0
+ramoops: console zone 0xfd3ff000 size 0x200000 matches the built-in default
+
+--- uart ---
+uart: samsung @ 0x10870000: reading ULCON/UCON/UFCON
+uart: ULCON=0x00000000 UCON=0x00003000 UFCON=0x00000000
+uart: transmitter disabled (UCON tx mode 0): bootloader did not enable the
+      debug UART. Try `fastboot oem uart enable` before `fastboot boot`.
+
+--- psci ---
+psci: conduit=smc version=1.1 (raw 0x10001)
+psci: SYSTEM_RESET2 supported (PSCI_FEATURES=0)
+
+--- bootloader log @ 0xfd800000 (0x100000 bytes) ---
+bldr: first 64 bytes:
+  fd800000: 35 34 00 00 00 00 00 00 f0 ff 07 00 00 00 00 00  |54..............|
+  fd800010: 5b 20 20 20 30 2e 30 30 30 30 30 30 5d 20 5b 49  |[   0.000000] [I|
+  fd800020: 5d 20 73 65 63 75 72 65 20 70 61 79 6c 6f 61 64  |] secure payload|
+  fd800030: 20 6c 6f 61 64 69 6e 67 20 74 6f 6f 6b 20 30 6d  | loading took 0m|
+bldr: printable text (runs of >= 4 chars), up to 524288 bytes:
+[   0.000000] [I] secure payload loading took 0ms
+[   0.000000] [I] platform info binded: true
+[   0.000000] [I] platform info: 060906010000
+[   0.805339] [I] 
+welcome to lk/MP
+
+[   0.805370] [I] boot args 0x1 0x0 0x0 0x0
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   0.806118] [I] acpm locks regulators
+[   0.806174] [I] Soc Product ID: 0x09875
+[   0.806209] [I] Soc rev: A1
+[   0.806236] [I] Soc ID: 0x12b44c577850
+[   0.806271] [I] DVFS version: 2
+[   0.806305] [E] vendor magic_number must be 0xcceeddff but 0xcce45dff
+[   0.806359] [E] magic_number must be 0xcceeddff but 0xcceeddfb
+[   0.806442] [I] S2MPG_M CHIPID read: 0x10
+[   0.806506] [I] S2MPG_S CHIPID read: 0x10
+[   0.806575] [I] S2MPG_M PWRONSRC read: 0x20
+[   0.806642] [I] S2MPG_M OFFSRC1 read: 0x10
+[   0.806715] [I] S2MPG_M OFFSRC2 read: 0x0
+[   0.806780] [I] S2MPG_M RTC_WTSR read: 0x7e
+[   0.806821] [I] S2MPG_M INT1: 0x30
+[   0.806849] [I] S2MPG_M INT2: 0x0
+[   0.806876] [I] S2MPG_M INT3: 0x0
+[   0.806902] [I] S2MPG_M INT4: 0x0
+[   0.806931] [I] S2MPG_M INT5: 0x0
+[   0.806991] [I] S2MPG_S OFFSRC1 read: 0x11
+[   0.807031] [I] S2MPG_S INT1: 0x83
+[   0.807060] [I] S2MPG_S INT2: 0x80
+[   0.807087] [I] S2MPG_S INT3: 0x0
+[   0.807117] [I] S2MPG_S INT4: 0x0
+[   0.807143] [I] S2MPG_S INT5: 0x0
+APC Bootmetrics:
+  BL1: MT:1 / DT:ENTRY / 96720 us
+  BL1: MT:2 / DT:LOAD  / 7360 us
+  BL1: MT:F / DT:EXIT  / 147792 us
+  PBL: MT:1 / DT:ENTRY / 147920 us
+  PBL: MT:2 / DT:LOAD  / 19592 us
+  PBL: MT:F / DT:EXIT  / 213016 us
+  BL2: MT:1 / DT:ENTRY / 214584 us
+  BL2: MT:2 / DT:LOAD  / 160 us
+  BL2: MT:3 / DT:LOAD  / 152 us
+  BL2: MT:4 / DT:CHECK / 342544 us
+  BL2: MT:5 / DT:CHECK / 2096 us
+  BL2: MT:6 / DT:LOAD  / 62392 us
+  BL2: MT:7 / DT:CHECK / 157720 us
+  BL2: MT:8 / DT:CHECK / 157864 us
+  BL2: MT:9 / DT:LOAD  / 44304 us
+  BL2: MT:A / DT:LOAD  / 31536 us
+  BL2: MT:B / DT:LOAD  / 330344 us
+  BL2: MT:C / DT:LOAD  / 8 us
+  BL2: MT:F / DT:EXIT  / 613376 us
+  PBL: MT:3 / DT:LOAD  / 81272 us
+  PBL: MT:4 / DT:LOAD  / 28160 us
+  PBL: MT:5 / DT:LOAD  / 6184 us
+  PBL: MT:6 / DT:CHECK / 729176 us
+  PBL: MT:7 / DT:CHECK / 729312 us
+  EL3: MT:1 / DT:ENTRY / 732080 us
+  EL3: MT:D / DT:CHECK / 747648 us
+  EL3: MT:E / DT:CHECK / 794184 us
+  EL3: MT:F / DT:EXIT  / 794224 us
+APC Breadcrumbs(v2.4):
+ stages(S): 00000000 / 0000404F
+  flags(S): 00000000 / 000022C0
+stages(NS): 00000000 / 00005004
+ flags(NS): 00000000 / 0000D400
+    status: 00000000 / 00000000
+    device: 00000000 / 00000001
+   tmutrip: 00000000 / 00000000
+     reset: 00000000 / 00180000
+[   0.808135] [E] GSA Breadcrumb:
+00000000 0000000d 00000000 00000000  |................|
+00000000 00000000 00000001           |............    |
+[   0.808268] [I] SBDP initialized: chipid allowed=0, dpm_state=0x0000
+[   0.808323] [E] check header failed
+[   0.808451] [I] initializing device i2c:usi00
+[   0.808491] [I] usi00: version 2.2
+[   0.808540] [I] initializing device i2c:usi04
+[   0.808582] [I] usi04: version 2.2
+[   0.808631] [I] initializing device i2c:usi06
+[   0.808671] [I] usi06: version 2.2
+[   0.808716] [I] initializing device i2c:usi09
+[   0.808757] [I] usi09: version 2.2
+[   0.808806] [I] initializing device i2cm:i2cm0
+[   0.808848] [I] DVFS init
+[   0.811107] [I] DVFS init done
+[   0.811136] [I] UFS EVT version 0
+[   0.811178] [I] controller version 3.0 found
+[   0.811214] [I] capabilities 0x1383ff1f
+[   0.811384] [I] UFS device found
+zuma_ufs_device_init_done
+[   0.811427] [E] ufshc_notify done
+[   0.811500] [I] ufshc_power_mode_change HS gear 4
+[   0.821694] [I] ufshc: bBootLunEn 0x1
+[   0.821839] [I] UFS device SAMSUNG KLUDG4UHGC-B0E1 version 3.1
+[   0.821889] [I] Enabled LUNs found 4
+[   0.821949] [I] UFS device total size 127984992256
+[   0.822052] [I] Temp too high enabled
+[   0.822149] [I] Temp too low enabled
+[   0.824901] [I] Write Booster: available buffer=0x7 lifetime=0x2 current buffer=0x1dcb
+[   0.824992] [I] boot slot: a
+[   0.827191] [I] slot data a: 0x00001e02
+[   0.827222] [I] slot data b: 0x00001000
+[   0.828017] [I] platform info: 060906010000
+[   0.828258] [I] initializing device cs40l2x:cs40l26
+[   0.838747] [I] CS40L26 found
+[   0.840412] [I] initializing device nfc:st21nfc
+[   0.842288] [I] tcpc vendor id 56
+[   0.843220] found 77779 on usi6
+[   0.843248] bms_init init usi10 as sec_i2c
+[   0.843282] [I] initializing device i2c:usi10
+[   0.843318] [I] usi10: version 2.2
+[   0.843516] [I] FG device name 0x5100
+[   0.844022] [I] [max77779fg] SOC(99), VCELL(4408), INOW(-432), IAVG(-239)
+[   0.844658] [I] fship 0x0
+[   0.844778] [I] master disconnect reason 0x0
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   0.847603] [I] LCS state:PRODUCTION
+[   0.847742] [I] no valid file
+[TMU:0] 41
+[TMU:1] 41
+[   0.851033] [I] dsim_probe dsim0+
+[   0.851070] [I] using data lane count(4)
+[   0.851791] [E] 
+Reboot Info:
+  RST_STAT: 0x180000 - PIN_RESET | PO_RESET
+  GSA_RESET_STATUS: 0x1 - GSA_PINRESET
+  Reboot reason: 0xcafe - User Reboot(S/W Reboot)
+  Reboot mode: 0xfc - Bootloader
+[   0.871506] [E] failed to get eUSB revision -62
+[   0.871549] [I] Set EUSB Ref clock auto
+[   0.871870] [I] LK build date: Apr 14 2026, time: 06:16:15
+[   0.871913] [I] BL version: ripcurrentpro-17.0-15199480
+[   0.871956] [I] BL type: official build
+starting app pixel_loader
+[   0.872426] [I] sota: empty signature.
+[   0.872458] [I] ABL start time (METRICS_BL3): 794ms
+[   0.872499] [I] AB Decision: active slot boot ok
+[   0.872539] [I] AB Decisions: 00000000
+[   0.872766] [I] TCPC BC1.2, type: 2 val:2
+[   0.872969] [I] boot voltage threshold=3400mV
+[   0.873083] [I] bootloader message:bootonce-bootloader
+[   0.873561] [I] fastboot enter reason: reboot bootloader
+[   0.873610] [W] power on source: 20
+starting app pixel_charger
+[   0.881752] [E] dsim0 wait phy pll stable
+[   0.902941] [I] Succeeded to read panel product id : 0x22a8a00a
+[   0.903020] [E] is_compatible is not defined!
+[   0.903059] [I] panel_rev: 0x1000
+[   0.908244] [I] use panel google-cm4 for dsim0
+[   0.908282] [I] dsim_probe -: dsim0 driver(cmd mode) has been probed.
+[   0.908331] [I] dsim_probe dsim1+
+[   0.908363] [I] using data lane count(4)
+[   0.908429] [E] dsim1 wait phy pll stable
+[   0.959530] [E] timeout!! wait for DSIM interrupt (0x40300000)
+[   0.959622] [E] MIPI DSIM (id=6) read Timeout! 0x4
+[   0.959662] [E] dsim fail to get panel operation
+[   0.959735] [E] dsim has error.
+[   0.959762] [E] dsim_probe -: dsim1 probe failed.
+[   0.959798] [I] dsim1 probe was failed
+[   0.959834] [I] dsim_init -: set dsim0 driver as primary.
+[   0.971074] [E] dsim0 wait phy pll stable
+[   0.990245] [I] dpp_probe +
+[   0.990269] [I] dpp-0's attr is (0x004d0047)
+[   0.990304] [I] dpp(0) init resources.
+[   0.990362] [I] dpp_probe -: dpp0 is probed successfully
+[   0.990410] [I] decon-int: max win6, command mode, hw trigger
+[   0.990457] [I] single dsi mode
+[   0.990496] [I] [decon0] d_path(0xB1) DSCC DSC_ENC1 DSC_ENC0 OFIFO.0
+[   0.990610] [I] [decon0] sel(0x0) OFIFO.0 - dsim0 - google-cm4
+[   0.990657] [I] Display 1st window(5) xres(1280) yres(2856) win_start_pos(0) win_end_pos(b2704ff)
+[   1.043004] [I] port connected
+[   1.057637] [I] TCPC BC1.2, type: 2 val:2
+[   1.125945] [I] decon0 registered successfully
+[   1.161303] [I] version: g5400c-260317-260429-B-15308590
+USB Pipe3 Initialization...
+[dwc3_dptx] CR write failed to 0x31c5
+[dwc3_dptx] CR write failed to 0x32c5
+[dwc3_dptx] CR write failed to 0x402d
+[dwc3_dptx] CR write failed to 0x412d
+[dwc3_dptx] CR write failed to 0x422d
+[dwc3_dptx] CR write failed to 0x432d
+[dwc3_dptx] CR write failed to 0x2021
+[dwc3_dptx] CR write failed to 0x2024
+[dwc3_dptx] CR write failed to 0x2027
+[dwc3_dptx] CR write failed to 0x202a
+[dwc3_dptx] CR write failed to 0x202d
+[dwc3_dptx] CR write failed to 0x2030
+[dwc3_dptx] CR write failed to 0x2033
+[dwc3_dptx] CR write failed to 0x2036
+[dwc3_dptx] CR write failed to 0x2022
+[dwc3_dptx] CR write failed to 0x2025
+[dwc3_dptx] CR write failed to 0x2028
+[dwc3_dptx] CR write failed to 0x202b
+[dwc3_dptx] CR write failed to 0x202e
+[dwc3_dptx] CR write failed to 0x2031
+[dwc3_dptx] CR write failed to 0x2034
+[dwc3_dptx] CR write failed to 0x2037
+[dwc3_dptx] PMA version:0x4604
+[dwc3_dptx] PCS ID:0x6790
+[dwc3_dptx] Firmware ID:0x6044, 0x04b3
+[   1.236347] [I] TCPC BC1.2, type: 2 val:2
+[   1.509108] [I] TCPC BC1.2, type: 2 val:2
+[   1.521773] [I] new high-speed device found
+[   1.521931] [I] TCPC BC1.2, type: 2 val:2
+[   1.529536] [I] TCPC BC1.2, type: 2 val:2
+[   2.444130] [I] Accept cmd:download:0000f000
+[   2.444246] [I] Downloading. Download size is 61440 bytes
+[   2.444340] [I] DATA0000f000
+[   2.445882] [I] OKAY
+[   2.446126] [I] Accept cmd:boot
+[   2.453131] [I] OKAY
+[   2.473772] [I] TCPC BC1.2, type: 2 val:2
+[   2.474593] [I] TCPC BC1.2, type: 2 val:2
+[   2.575881] [E] avb_property(com.android.build.boot.security_patch): not found
+[   2.575997] [E] boot_spl: can't find property
+[   2.576072] [I] boot_state: 160000:20261100:20000000
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   2.579094] [I] using init_boot ramdisk
+[   2.579164] [I] using vendor_kernel_boot ramdisk
+[   2.579371] [I] kernel: addr:0xffff000090701000, size:c054
+[   2.579513] [I] kernel: total_time:1
+[   2.579576] [I] vendor kernel ramdisk copy
+[   2.579643] [I] ramdisk dst addr: 0xffff000086000000 src addr: 0xffff0000a5901000 size: 0x67591e(6773022)
+[   2.579789] [I] padding prepended: 0
+[   2.583579] [I] vendor ramdisk copy
+[   2.583641] [I] ramdisk dst addr: 0xffff00008667591e src addr: 0xffff0000a0001000 size: 0x1663ae2(23476962)
+[   2.583792] [I] padding prepended: 18
+[   2.596234] [I] ramdisk copy
+[   2.596299] [I] ramdisk dst addr: 0xffff000087cd9412 src addr: 0xffff0000a5101000 size: 0x250d04(2428164)
+[   2.596450] [I] padding prepended: 14
+[   2.597786] [I] Ramdisk load size with padding: 32678180
+[   2.597930] [I] rev: 09865.00.00
+[   2.598005] [I] rev: 09865.00.00
+[   2.598071] [I] rev: 09865.01.00
+[   2.598126] [I] rev: 09865.01.01
+[   2.598194] [I] rev: 09865.01.00
+[   2.598247] [I] rev: 09865.01.01
+[   2.598313] [I] rev: 09875.00.00
+[   2.598380] [I] rev: 09875.00.00
+[   2.598446] [I] rev: 09875.00.00
+[   2.598500] [I] rev: 09875.00.01
+[   2.598566] [I] rev: 09875.00.00
+[   2.598620] [I] rev: 09875.00.01
+[   2.598671] [I] SOC DTB: index:6
+[   2.598748] [I] DTBO match: id 0x60906, rev 0x10000
+[   2.621282] [I] dpm not merged
+[   2.623508] [I] MTE S: 0, NS: 0, tag base: 0x0
+[   2.661649] [W] power on source: 20
+[   2.661728] [I] bootmode:
+[   2.661866] [I] DDR size: 16GiB
+[   2.661915] [I] DDR Manufacturer: Samsung
+[   2.664142] [I] ro.misctrl.16kb_before=0
+[   2.664230] [I] console is disabled
+[   2.664474] [I] secure dram base 0xb6200000, size 0x9e00000
+[   2.664619] [I] secure PGTBL base 0xe0000000, size 58720256
+[   2.669841] [I] MTE S: 0, NS: 0, tag base: 0x0
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   2.686716] [I] device: /reserved-memory/debug_snapshot/log_s2d path not found (-1)
+[   2.686975] [I] device: /reserved-memory/debug_snapshot/log_array_reset path not found (-1)
+[   2.687205] [I] device: /reserved-memory/debug_snapshot/log_kevents path not found (-1)
+[   2.687455] [I] device: /reserved-memory/debug_snapshot/log_itmon path not found (-1)
+[   2.687701] [I] device: /reserved-memory/debug_snapshot/log_s2d_extract path not found (-1)
+[   2.689239] [I] device: /google,mitigation enabled ret=0
+[   2.709786] [I] ro.boot.hardware.cpu.pagesize=4096
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   2.710680] [I] panel settings after overriding: google-cm4.22a8a00a@dsim0 null@dsim1
+[   2.726198] [I] linux,initrd-start: 0x86000000, linux,initrd-end: 0x87f32125
+[   2.738971] [E] avb_property(com.android.build.microdroid-vendor.root_digest): not found
+[   2.739100] [W] failed to get microdroid vendor hashtree digest from avb property, skip appending value
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   2.741364] [W] no avf debug policy, because dpm is NULL
+[  12.813941] [I] slot data a: 0x00001e02
+[  12.814004] [I] slot data b: 0x00001000
+[  12.817654] [E] avb_property(com.android.build.boot.fingerprint): not found
+[  12.817758] [E] fingerprint property not found 
+[  12.921633] [I] shutdown complete
+[  12.921720] [I] thread stats (cpu 0): total idle time: 11655296, total busy time: 1266423
+Heap dump (using miniheap):
+	base 0xffff0000f8b93000, len 0x527000
+	free list:
+		base 0xffff0000f8d1b220, end 0xffff0000f8d3b660, len 0x20440
+		base 0xffff0000f8d3b6f0, end 0xffff0000f8d3b710, len 0x20
+		base 0xffff0000f8d783b0, end 0xffff0000f8d783d0, len 0x20
+		base 0xffff0000f8d7b510, end 0xffff0000f8d7b680, len 0x170
+		base 0xffff0000f8d7bd70, end 0xffff0000f8d7bdb0, len 0x40
+		base 0xffff0000f8d7bfd0, end 0xffff0000f8d7bff0, len 0x20
+		base 0xffff0000f8d7e7e0, end 0xffff0000f8d7e9a0, len 0x1c0
+		base 0xffff0000f8d7f850, end 0xffff0000f8d85980, len 0x6130
+		base 0xffff0000f8e07da0, end 0xffff0000f8e07dd0, len 0x30
+		base 0xffff0000f8e081a0, end 0xffff0000f8e09000, len 0xe60
+		base 0xffff0000f8e31020, end 0xffff0000f8e32000, len 0xfe0
+		base 0xffff0000f8ee03e0, end 0xffff0000f8f20240, len 0x3fe60
+		base 0xffff0000f8f30320, end 0xffff0000f90ba000, len 0x189ce0
+[  12.923026] [I] Starting Linux kernel ...
+iq
+ cgpy
+ 10.033
+34] 
+I] r
+edisH ds4
+addr: 0XfFFf00
+7591e src aDdR: 0xfdff0000a5911
+e: 0h1463a
+2(23476162	
+33210] [IU VadDiNg pr%pen`eD:
+
+Z  1
+&037604] [H]
+raLdIsk c/py
+S
+ 10.037629] 
+v`lDi
+dst addr: 0xbfdf000007Cd90!2 src )ddp2 0X&fdd0
+`401000
+ saze: 0x2%0d04 04281$$)
+Z  10.0S769
+[H] `!dDifG 0rdpanded: 14
+  10"038192]!
+H] Ramdisc
+O`d s)ze with paDting* 34678
+0.038253]
+r$v:  9860.
+2.00
+[  10. 1828
+] [I] rev2
+01825,00.00
+[  1
+.0#83
+M rev: 09865.01.00
+[  10
+030353] [I] 2ef< 09865.01.11
+Z
+ 10.
+383>9
+rev: 09065.01.00
+ 10.020418] [	] r}v
+  9(65n01&01
+S  10.038450M [H] rev: 0
+875.00.00
+[  10.
+38486
+ [IY rev: 0
+071.00.00
+[
+ 10.0#8523] [I
+ruv: 09873.00.00
+[  1
+.0385$1] YI] rdv:
+08875.00.
+1
+;  1
+583] [I] `ev: 09
+1&00,00
+z  10
+038415]
+[Q] pev: 0
+875.00.01
+[ 
+38441
+ [I] SOC DTB: ijdex:6
+[  10.038677] [I] DTBO
+h: id 0x60906, rev 0h00000
+Y  10. 54 6"] [I] dpm not mergad
+[  10.0
+5888] [IY TD
+S: 0, NS: 0( tag base: 0p0
+[  10.08210
+[I] Bontmoda
+
+[  10&002171U [I
+ DDR size:
+16EiB
+;  1P.082195] [I] DD
+ Ma.ufacttrer: Samqun
+
+tr5s4y
+det_Agmm
+n.c:
+INFO 3
+lebtad tpucty&Api v@rsiof: 3  rdqueStEd 2)
+0&092444] [I] rk.misctr,.16abWBEdOre=0
+[  
+0.092081] KIY #ol3gle is `isabled
+[
+36] [I] secu2E dram basE 0xb6200000, size 0x9!00000
+[  10.092699] [I] secure PGTBL base 0xe0000000, syze 48'2 246
+0&0!9355] [I] decon0 registered
+su{cessbu,ly
+[  10"101254] [IM MTE S:
+0, NS8
+0, paG bace: 0x0
+[  10
+1036
+[AY deviaa: /2eserted%aemori/deb5gSr*apsnot
+hog_s2d pqt@ nit `muNd  %1)
+  10.10q848] [I]
+Device* /reser`edeefr
+ebudNslapshot/lo&_arR@y_rese4 pat` .Gv f'und (,1	
+4004] 
+I] ddthae: /reqezved-Eemmrx/$dbu'
+sjaPs`ot/ln'^Ke
+ents
+padH
+ngt fo5nP (%1)
+R  1 .Q0405
+] YI] dev`ce: /reserved
+meigpy/`ebugWshApShit/,nC_`tmon path Not dkund (-1)
+ 10.1043
+1] ZI] d%vkce4 /Rd
+ervEd-lemobx/dEbSgN3n
+pqho4/lo
+Vq2d^expraep pa@h .gt Bo5nd (-0)
+Y  
+5] SI] devicez 'foogle,midig
+Tion eLabla` 2et=0
+Y  1
+63] [H] bo.Coop.ha2dware.cPu$pa'dsize=4096
+trurTy_dev_#omm+n.c: INFO selected tr5spy api
+version: 3 (rEqufsteD 3)
+tRust9]deV[
+ommol,c: INDO seleCt%` tru3ty api versiNn
+ 3 (req5dsded 2!
+[ 8
+0607] ZI]
+0anDD seTti,gs@aftEr o6er2id)ng: google-bm
+&2"a(`&0a@$b)m0 nuLl@@sam1
+[
+ 10.135662M 
+I]0Dinup,inaTpd-qtart: 0x86000000  linux,initrd-ejd: 0x83f#2125
+ 10.10T4
+] avb_propErpi(#gE.a.d
+sid,
+eild.m)#rO$r.ad-TenDoR.@okt_diges,): nnt foun`
+[ 
+10.144747] 
+W] faiLed to"get miCpn ro)d v%nd
+r `arh4pee
+digdst from avb pbopert8, skip appendiNg@value
+drusty_dEv_colmmN.c
+FO seLectdd 4rustx !pi verqikn: 
+ (requested 3)
+Y  10.145988M [W] n
+  vf debuf @oLIcy,(becaure d`m 
+s LULD
+[  2p.216
+66] [I](s,ot `a4a `
+ 0x0
+001e02
+[  20.2
+6597\ [I
+ Slmt0d`t! b: 6x
+000!000b[ (2
+.2168"9\ SE] aRB_prOperpy(com
+andRoid.b5iLd,boot.fingbr
+rint): jot Found
+Y  20.217880] [D
+ fi.gdrprin4 propArty ,ot gound 
+S  20.302436] SI] shutd/wn boepl%Te
+ 20.302002M [@M t read stats 
+ap4  (: t
+l idle time
+ 102#3510$ potal
+busA tima: 
+00692(
+eAp dum0 
+usi.g Oinihea`)*
+bace 0xbffb0
+00f8p83000, d%n(0p6cc000
+	freu list8
+		base 0xfbff000
+ba4460
+ end  xfffb000
+f8B`4480$ ,en 
+p00
+		base 0xf`ff0 00f8bba9$0, and  xffbf
+0f8bba9!0, len 0x50
+		base 0xFfff0000f8`bb
+20, dfd
+0xff
+f0000f8b`b680, l%j 0X
+		`aSe80xfffF0000d(bB"
+20, ef@ 0xf&f`000 f8b1
+4a0,
+hej 0P17480
+	b!s`  x
+fbf$
+00f0d1b
+20, end 0xfF
+00f8d3bv60, la^ 0x204
+`ase 0xbffF0000f8d#"6f0, end 
+xffF
+0000`8d1`710$ len 0x
+		baqe 0xffff0000f(df5b70,
+` 0pffff0000&
+df4bA0, Len  x10
+	
+base 0xffff0
+00b8e0
+ end 
+x&ffB0P 0b8e05d
+ hen 0x30
+bas% 
+xbDff0000f(e46130, en@ 
+h&fDf0
+00f8e56"80, len80x1
+0
+		"!se 0pfFff00 0f8e5"
+ end 08bfff00(0&8e46,3 ,
+,%n  x3 
+		base 0xfdff0 00d8eD8a=0
+ e.D 0xfff&0000d0%D8B40
+ lel 0x"0
+	
+baCe 0xffFd0000f8e@8`c
+ xfdff00 
+925f0 0,
+440
+Y  " .203401] SH] Qtaptin_ Linmx k%pJEh ..
+--- end of bootloader log (17043 bytes copied) ---
+
+--- watchdog ---
+wdt: reading cluster-0 watchdog @ 0x10060000
+wdt: WTCON=0x0001af39 WTDAT=0x0000ffaf WTCNT=0x0000dc12: RUNNING, reset on expiry ON, irq off
+wdt: counts at 1090 Hz (if the input clock is 24576000 Hz): period 60050 ms, 51686 ms left
+
+--- touch screen (read-only) ---
+touch: ACPM initdata: 8 plugins, ipc_channels at 0x8f20, 41 channels, 16 for the AP
+touch: ACPM channel 2: id 2, queue 5 x 16 bytes, AP polls 1; to APM front 4 rear 4 (at 0x3c2ec), from APM front 4 rear 4
+touch: S2MPG14 chip id 0x10 (the bootloader read 0x10)
+touch: LDO4M  (TS_AVDD 3.3 V)  CTRL 0x3c: off
+touch: LDO25M (TSP_DVDD 1.8 V) CTRL 0x2c: off
+touch: reset pin 1: function 0, level 0, pull 1 (CON 0x00002200 DAT 0x0000000c)
+touch: interrupt pin 0: function 0, level 0, pull 1 (CON 0x00000000 DAT 0x00000000)
+touch: powering the chip: reset held low, LDO4M then LDO25M on
+touch: LDO4M  CTRL now 0xfc: ON
+touch: LDO25M CTRL now 0xec: ON
+touch: interrupt (powered, in reset) pin 0: function 0, level 1, pull 0 (CON 0x00000000 DAT 0x00000001)
+touch: interrupt line stayed high for 3 s after reset: no sign of the chip
+touch: interrupt (after) pin 0: function 0, level 1, pull 0 (CON 0x00000000 DAT 0x00000001)
+touch: reset (after) pin 1: function 1, level 1, pull 0 (CON 0x00002210 DAT 0x0000000e)
+touch: USI mode register 0x00000000 (SW_CONF 0; 2 = SPI)
+touch: CMU_HSI0 +0x30cc QCH USI2         0x00000002 (ENABLE 0 CLOCK_REQ 1)
+touch: CMU_HSI0 +0x101c MUX  USI2          0x00000000
+touch: CMU_HSI0 +0x181c DIV  USI2          0x00000000
+touch: CMU_HSI0 +0x2120 GATE USI2          0x00200000 (?)
+touch:   set to manual, on: 0x00300000
+touch: CMU_HSI0 +0x20fc GATE USI2 IPCLK    0x00200000 (?)
+touch:   set to manual, on: 0x00300000
+touch: CMU_HSI0 +0x2100 GATE USI2 PCLK     0x00200000 (?)
+touch:   set to manual, on: 0x00300000
+touch: CMU_HSI0 +0x20bc GATE USI2 RSTNSYNC 0x00200000 (?)
+touch:   set to manual, on: 0x00300000
+touch: USI mode register after writing SPI: 0x00000002
+touch: SPI after set-up: USI_CON 0x00000000 USI_OPTION 0x00000003 MODE_CFG 0x1ff80000 (want 0x1ff80000) CH_CFG 0x00000000 STATUS 0x00000000
+touch: tcm: DIV USI2 now 0x00000003
+touch: tcm: after reset the interrupt line went LOW after 0 ms
+touch: tcm: startup read, 4 bytes (filler 00): 4 of 4 bytes
+touch: tcm: startup read, 4 bytes (filler 00): a5 10 18 00
+touch:   v1 continuation (A5 03 payload 5A): a5 03 01 01 53 33 39 30 38 47 41 31 42 30 2d 31 35 2e 30 00 3a a3 43 00 00 04 5a
+touch:   identify: version 1, mode 1, part S3908GA1B0-15.0, build 4432698, max write 1024
+touch: tcm: touch report config: 128 bytes
+touch: tcm: config: 10 08 1b 38 1e 08 17 08 18 08 04 01 06 04 07 04 08 10 09 10 0a 10 0b 08 0c 08 d2 08 d3 08 d1 08 03 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+touch: tcm: reading reports for 90 s (touch the screen now)
+touch: tcm:     0 ms: report 0xc2, 2 bytes
+touch: tcm:    86 ms: report 0xc2, 2 bytes
+touch: tcm: 13377 ms: 1 objects  [0 class 1 x 8366 y 20080 z 12 w 3x5]
+touch: tcm: 13394 ms: 2 objects  [0 class 1 x 8366 y 20080 z 30 w 5x8]  [1 class 1 x 5128 y 21408 z 27 w 5x6]
+touch: tcm: 13495 ms: 2 objects  [0 class 1 x 8569 y 19358 z 34 w 9x8]  [1 class 1 x 5309 y 20111 z 32 w 8x7]
+touch: tcm: 13524 ms: 3 objects  [0 class 1 x 8819 y 18824 z 36 w 8x7]  [1 class 1 x 5500 y 19493 z 37 w 9x9]  [2 class 1 x 4319 y 23577 z 15 w 4x5]
+touch: tcm: 13624 ms: 3 objects  [0 class 1 x 9525 y 17077 z 37 w 9x9]  [1 class 1 x 6016 y 17277 z 39 w 8x8]  [2 class 1 x 4231 y 21321 z 17 w 6x5]
+touch: tcm: 13725 ms: 3 objects  [0 class 1 x 9688 y 15030 z 35 w 9x6]  [1 class 1 x 6091 y 14877 z 41 w 9x8]  [2 class 1 x 3806 y 19089 z 22 w 5x4]
+touch: tcm: 13825 ms: 3 objects  [0 class 1 x 9463 y 12952 z 36 w 8x8]  [1 class 1 x 5863 y 12521 z 39 w 8x7]  [2 class 1 x 3275 y 16883 z 23 w 9x6]
+touch: tcm: 13926 ms: 3 objects  [0 class 1 x 9216 y 10599 z 36 w 7x9]  [1 class 1 x 5644 y 10024 z 32 w 9x8]  [2 class 1 x 2838 y 14374 z 27 w 6x5]
+touch: tcm: 14026 ms: 3 objects  [0 class 1 x 6863 y 10458 z 36 w 9x5]  [1 class 1 x 3488 y 10230 z 17 w 8x6]  [2 class 1 x 1266 y 14808 z 15 w 6x7]
+touch: tcm: 14118 ms: 2 objects  [0 class 1 x 5725 y 11786 z 34 w 9x6]  [1 class 1 x 2547 y 12161 z 6 w 8x9]
+touch: tcm: 14122 ms: 1 objects  [0 class 1 x 5706 y 11864 z 33 w 9x5]
+touch: tcm: 14147 ms: 2 objects  [0 class 1 x 5666 y 12239 z 31 w 9x9]  [1 class 1 x 3853 y 23061 z 16 w 9x6]
+touch: tcm: 14202 ms: 3 objects  [0 class 1 x 5722 y 12646 z 38 w 8x7]  [1 class 1 x 3856 y 23061 z 23 w 5x6]  [2 class 1 x 1406 y 18230 z 15 w 7x9]
+touch: tcm: 14219 ms: 4 objects  [0 class 1 x 5734 y 12702 z 39 w 8x7]  [1 class 1 x 3869 y 23049 z 23 w 5x7]  [2 class 1 x 1406 y 18230 z 17 w 7x9]  [3 class 1 x 9947 y 13027 z 17 w 5x5]
+touch: tcm: 14319 ms: 5 objects  [0 class 1 x 5819 y 12636 z 44 w 8x6]  [1 class 1 x 4038 y 22730 z 25 w 5x10]  [2 class 1 x 1388 y 17549 z 21 w 5x5]  [3 class 1 x 9947 y 13027 z 26 w 5x8]  [4 class 1 x 2866 y 12683 z 14 w 5x6]
+touch: tcm: 14420 ms: 5 objects  [0 class 1 x 5647 y 11564 z 49 w 9x9]  [1 class 1 x 3806 y 22877 z 25 w 8x6]  [2 class 1 x 950 y 16196 z 26 w 6x9]  [3 class 1 x 10419 y 11555 z 27 w 5x8]  [4 class 1 x 2494 y 11449 z 24 w 7x9]
+touch: tcm: 14520 ms: 5 objects  [0 class 1 x 6881 y 10480 z 50 w 10x8]  [1 class 1 x 3741 y 23024 z 27 w 5x7]  [2 class 1 x 1550 y 14939 z 30 w 6x6]  [3 class 1 x 11856 y 11018 z 20 w 6x9]  [4 class 1 x 3697 y 10289 z 35 w 9x9]
+touch: tcm: 14621 ms: 5 objects  [0 class 1 x 8069 y 12055 z 44 w 9x8]  [1 class 1 x 4925 y 23161 z 22 w 5x8]  [2 class 1 x 2547 y 16649 z 26 w 7x5]  [3 class 1 x 12350 y 12868 z 12 w 6x6]  [4 class 1 x 4959 y 12252 z 26 w 8x9]
+touch: tcm: 14721 ms: 5 objects  [0 class 1 x 7709 y 14893 z 43 w 8x8]  [1 class 1 x 5625 y 23361 z 19 w 5x6]  [2 class 1 x 2822 y 19411 z 23 w 5x9]  [3 class 1 x 11378 y 15749 z 5 w 9x6]  [4 class 1 x 4647 y 15393 z 24 w 8x8]
+touch: tcm: 14763 ms: 4 objects  [0 class 1 x 7731 y 15783 z 43 w 9x7]  [1 class 1 x 5941 y 23455 z 16 w 7x5]  [2 class 1 x 2966 y 20180 z 20 w 7x8]  [4 class 1 x 4681 y 16352 z 25 w 9x9]
+touch: tcm: 14863 ms: 4 objects  [0 class 1 x 9381 y 16227 z 41 w 8x9]  [1 class 1 x 6575 y 23480 z 20 w 5x6]  [2 class 1 x 4116 y 19849 z 10 w 5x6]  [4 class 1 x 6091 y 16227 z 30 w 9x8]
+touch: tcm: 14964 ms: 4 objects  [0 class 1 x 10353 y 13896 z 44 w 9x10]  [1 class 1 x 6388 y 23308 z 25 w 4x9]  [2 class 1 x 4672 y 17324 z 25 w 6x6]  [4 class 1 x 7131 y 13193 z 29 w 9x8]
+touch: tcm: 15064 ms: 4 objects  [0 class 1 x 9541 y 11283 z 48 w 9x8]  [1 class 1 x 4844 y 23058 z 28 w 5x9]  [2 class 1 x 3581 y 14983 z 31 w 9x5]  [4 class 1 x 6344 y 10333 z 29 w 7x5]
+touch: tcm: 15081 ms: 5 objects  [0 class 1 x 9297 y 10911 z 49 w 9x8]  [1 class 1 x 4575 y 23024 z 31 w 6x9]  [2 class 1 x 3331 y 14718 z 31 w 7x9]  [3 class 1 x 12456 y 12249 z 6 w 9x6]  [4 class 1 x 6103 y 9980 z 27 w 7x8]
+touch: tcm: 15135 ms: 4 objects  [0 class 1 x 8666 y 10055 z 52 w 10x8]  [1 class 1 x 3934 y 22958 z 32 w 5x8]  [2 class 1 x 2556 y 14046 z 34 w 8x6]  [4 class 1 x 5394 y 9152 z 31 w 7x7]
+touch: tcm: 15194 ms: 5 objects  [0 class 1 x 7541 y 9143 z 53 w 10x9]  [1 class 1 x 3331 y 23080 z 30 w 7x9]  [2 class 1 x 1438 y 13643 z 30 w 8x9]  [3 class 1 x 11194 y 10786 z 12 w 9x6]  [4 class 1 x 4097 y 8518 z 20 w 6x5]
+touch: tcm: 15274 ms: 4 objects  [0 class 1 x 7072 y 7677 z 56 w 9x9]  [1 class 1 x 2897 y 23074 z 31 w 5x7]  [2 class 1 x 878 y 12386 z 33 w 8x9]  [4 class 1 x 3772 y 7099 z 25 w 8x5]
+touch: tcm: 15324 ms: 3 objects  [0 class 1 x 8278 y 6746 z 40 w 9x6]  [1 class 1 x 2719 y 22714 z 20 w 6x9]  [2 class 1 x 1663 y 11505 z 21 w 5x6]
+touch: tcm: 15344 ms: 2 objects  [0 class 1 x 8600 y 6696 z 9 w 9x8]  [2 class 1 x 2031 y 11433 z 4 w 10x7]
+touch: tcm: 15348 ms: 1 objects  [0 class 1 x 8600 y 6696 z 4 w 9x7]
+touch: tcm: 15352 ms: 0 objects
+touch: tcm: 15453 ms: 1 objects  [0 class 1 x 3834 y 21502 z 15 w 4x9]
+touch: tcm: 15482 ms: 2 objects  [0 class 1 x 3834 y 21502 z 27 w 9x9]  [1 class 1 x 3253 y 12058 z 31 w 9x7]
+touch: tcm: 15499 ms: 3 objects  [0 class 1 x 3834 y 21502 z 27 w 8x9]  [1 class 1 x 3253 y 12058 z 25 w 8x6]  [2 class 1 x 9891 y 7471 z 28 w 8x5]
+touch: tcm: 15508 ms: 4 objects  [0 class 1 x 3834 y 21502 z 24 w 7x9]  [1 class 1 x 3253 y 12058 z 25 w 8x5]  [2 class 1 x 9891 y 7471 z 18 w 9x6]  [3 class 1 x 6178 y 7474 z 21 w 8x6]
+touch: tcm: 15520 ms: 2 objects  [0 class 1 x 3834 y 21502 z 17 w 6x10]  [1 class 1 x 3253 y 12058 z 20 w 8x5]
+touch: tcm: 15536 ms: 1 objects  [1 class 1 x 3241 y 12255 z 8 w 9x10]
+touch: tcm: 15544 ms: 0 objects
+touch: tcm: 15616 ms: 1 objects  [0 class 1 x 9206 y 9036 z 12 w 4x5]
+touch: tcm: 15650 ms: 2 objects  [0 class 1 x 9206 y 9036 z 39 w 7x7]  [1 class 1 x 5841 y 8855 z 25 w 6x9]
+touch: tcm: 15654 ms: 4 objects  [0 class 1 x 9206 y 9036 z 40 w 7x8]  [1 class 1 x 5841 y 8855 z 23 w 6x9]  [2 class 1 x 2978 y 13468 z 24 w 7x9]  [3 class 1 x 3763 y 22305 z 23 w 5x9]
+touch: tcm: 15696 ms: 3 objects  [0 class 1 x 9206 y 9036 z 36 w 6x7]  [1 class 1 x 5841 y 8855 z 6 w 9x9]  [2 class 1 x 2978 y 13468 z 9 w 9x6]
+touch: tcm: 15700 ms: 2 objects  [0 class 1 x 9206 y 9036 z 33 w 6x7]  [2 class 1 x 2978 y 13468 z 5 w 8x7]
+touch: tcm: 15704 ms: 1 objects  [0 class 1 x 9206 y 9036 z 30 w 6x8]
+touch: tcm: 15733 ms: 0 objects
+touch: tcm: 15804 ms: 1 objects  [0 class 1 x 8863 y 10855 z 20 w 7x5]
+touch: tcm: 15817 ms: 2 objects  [0 class 1 x 8863 y 10855 z 39 w 8x7]  [1 class 1 x 2925 y 15533 z 32 w 7x5]
+touch: tcm: 15826 ms: 3 objects  [0 class 1 x 8863 y 10855 z 43 w 8x8]  [1 class 1 x 2925 y 15533 z 29 w 8x5]  [2 class 1 x 5581 y 10905 z 37 w 9x8]
+touch: tcm: 15834 ms: 4 objects  [0 class 1 x 8863 y 10855 z 43 w 8x8]  [1 class 1 x 2925 y 15533 z 29 w 8x5]  [2 class 1 x 5581 y 10905 z 34 w 8x9]  [3 class 1 x 4406 y 23346 z 21 w 4x7]
+touch: tcm: 15935 ms: 4 objects  [0 class 1 x 9550 y 12121 z 29 w 8x7]  [1 class 1 x 3747 y 16658 z 23 w 8x5]  [2 class 1 x 6409 y 12336 z 19 w 9x9]  [3 class 1 x 5066 y 23536 z 17 w 5x6]
+touch: tcm: 16035 ms: 4 objects  [0 class 1 x 10422 y 13743 z 35 w 8x8]  [1 class 1 x 4363 y 18336 z 22 w 6x5]  [2 class 1 x 6953 y 13933 z 12 w 9x10]  [3 class 1 x 6059 y 24233 z 16 w 9x7]
+touch: tcm: 16056 ms: 3 objects  [0 class 1 x 10581 y 14121 z 30 w 6x7]  [1 class 1 x 4578 y 18718 z 17 w 9x9]  [3 class 1 x 6269 y 24414 z 17 w 5x9]
+touch: tcm: 16114 ms: 4 objects  [0 class 1 x 10753 y 15011 z 35 w 7x6]  [1 class 1 x 4969 y 19646 z 17 w 6x7]  [2 class 1 x 7266 y 15527 z 19 w 8x8]  [3 class 1 x 6647 y 25008 z 19 w 4x8]
+touch: tcm: 16215 ms: 4 objects  [0 class 1 x 10366 y 16361 z 37 w 9x9]  [1 class 1 x 4869 y 21046 z 18 w 5x7]  [2 class 1 x 6891 y 16724 z 23 w 7x5]  [3 class 1 x 6866 y 25952 z 19 w 6x8]
+touch: tcm: 16315 ms: 4 objects  [0 class 1 x 11819 y 16064 z 21 w 8x7]  [1 class 1 x 6147 y 20355 z 13 w 8x8]  [2 class 1 x 8669 y 15971 z 14 w 8x7]  [3 class 1 x 7288 y 26199 z 16 w 5x8]
+touch: tcm: 16416 ms: 4 objects  [0 class 1 x 12409 y 14364 z 17 w 8x5]  [1 class 1 x 6541 y 18352 z 18 w 8x5]  [2 class 1 x 9181 y 14286 z 32 w 8x5]  [3 class 1 x 6706 y 26027 z 15 w 8x6]
+touch: tcm: 16512 ms: 3 objects  [0 class 1 x 12781 y 11855 z 2 w 8x5]  [2 class 1 x 9781 y 11480 z 24 w 6x9]  [3 class 1 x 6616 y 23908 z 22 w 5x5]
+touch: tcm: 16516 ms: 2 objects  [2 class 1 x 9838 y 11321 z 24 w 6x6]  [3 class 1 x 6638 y 23777 z 22 w 4x7]
+touch: tcm: 16616 ms: 2 objects  [2 class 1 x 10097 y 7946 z 8 w 7x6]  [3 class 1 x 6525 y 20730 z 22 w 9x6]
+touch: tcm: 16637 ms: 3 objects  [0 class 1 x 6997 y 11530 z 17 w 5x9]  [2 class 1 x 10072 y 7208 z 13 w 6x6]  [3 class 1 x 6369 y 20077 z 24 w 7x7]
+touch: tcm: 16688 ms: 4 objects  [0 class 1 x 6609 y 9705 z 15 w 7x6]  [1 class 1 x 12675 y 5843 z 8 w 7x9]  [2 class 1 x 9650 y 5499 z 22 w 9x5]  [3 class 1 x 6091 y 18352 z 26 w 5x7]
+touch: tcm: 16759 ms: 3 objects  [0 class 1 x 6584 y 6764 z 15 w 5x9]  [2 class 1 x 9709 y 2652 z 20 w 7x8]  [3 class 1 x 5941 y 15783 z 28 w 5x9]
+touch: tcm: 16859 ms: 3 objects  [0 class 1 x 7322 y 4418 z 17 w 5x5]  [2 class 1 x 10263 y 521 z 17 w 9x6]  [3 class 1 x 6425 y 13346 z 22 w 7x6]
+touch: tcm: 16960 ms: 3 objects  [0 class 1 x 6813 y 5655 z 19 w 5x6]  [2 class 1 x 9578 y 1505 z 33 w 7x5]  [3 class 1 x 6409 y 14068 z 19 w 9x9]
+touch: tcm: 16976 ms: 4 objects  [0 class 1 x 6481 y 6374 z 20 w 7x5]  [1 class 1 x 12799 y 2533 z 12 w 7x7]  [2 class 1 x 9213 y 2193 z 34 w 8x5]  [3 class 1 x 6316 y 14633 z 20 w 7x9]
+touch: tcm: 17077 ms: 4 objects  [0 class 1 x 4353 y 11983 z 21 w 6x6]  [1 class 1 x 9859 y 7427 z 27 w 9x9]  [2 class 1 x 6709 y 7386 z 33 w 9x9]  [3 class 1 x 5616 y 19411 z 24 w 9x9]
+touch: tcm: 17177 ms: 4 objects  [0 class 1 x 2922 y 17727 z 19 w 5x8]  [1 class 1 x 7772 y 12461 z 37 w 6x7]  [2 class 1 x 4444 y 13011 z 35 w 7x9]  [3 class 1 x 5497 y 24336 z 23 w 8x9]
+touch: tcm: 17278 ms: 4 objects  [0 class 1 x 2291 y 21746 z 15 w 7x6]  [1 class 1 x 6394 y 15889 z 38 w 9x6]  [2 class 1 x 3144 y 16802 z 36 w 8x6]  [3 class 1 x 5716 y 26714 z 21 w 5x8]
+touch: tcm: 17328 ms: 3 objects  [1 class 1 x 6306 y 16124 z 36 w 9x7]  [2 class 1 x 3047 y 17055 z 35 w 8x6]  [3 class 1 x 5903 y 26830 z 19 w 5x5]
+touch: tcm: 17428 ms: 3 objects  [1 class 1 x 6556 y 12921 z 15 w 8x7]  [2 class 1 x 3094 y 13746 z 15 w 9x8]  [3 class 1 x 5544 y 24464 z 18 w 7x9]
+touch: tcm: 17453 ms: 2 objects  [1 class 1 x 6478 y 11658 z 6 w 10x9]  [3 class 1 x 5313 y 23346 z 19 w 4x6]
+touch: tcm: 17491 ms: 3 objects  [0 class 1 x 3050 y 10527 z 27 w 8x5]  [1 class 1 x 6494 y 9805 z 21 w 7x7]  [3 class 1 x 5009 y 21696 z 23 w 7x6]
+touch: tcm: 17500 ms: 4 objects  [0 class 1 x 3047 y 10064 z 27 w 8x9]  [1 class 1 x 6528 y 9393 z 24 w 7x5]  [2 class 1 x 1419 y 15083 z 17 w 7x6]  [3 class 1 x 4953 y 21380 z 23 w 8x7]
+touch: tcm: 17600 ms: 4 objects  [0 class 1 x 2788 y 6111 z 30 w 5x8]  [1 class 1 x 6350 y 5696 z 23 w 8x5]  [2 class 1 x 981 y 10924 z 17 w 6x6]  [3 class 1 x 4119 y 17971 z 22 w 9x10]
+touch: tcm: 17701 ms: 4 objects  [0 class 1 x 2534 y 2768 z 29 w 8x8]  [1 class 1 x 6250 y 2546 z 23 w 6x6]  [2 class 1 x 622 y 7586 z 16 w 6x8]  [3 class 1 x 3684 y 14958 z 24 w 5x8]
+touch: tcm: 17801 ms: 4 objects  [0 class 1 x 2741 y 1024 z 35 w 7x6]  [1 class 1 x 6481 y 789 z 19 w 7x12]  [2 class 1 x 731 y 5861 z 21 w 6x8]  [3 class 1 x 3656 y 13439 z 26 w 7x6]
+touch: tcm: 17901 ms: 4 objects  [0 class 1 x 3069 y 1905 z 36 w 8x9]  [1 class 1 x 7013 y 1705 z 32 w 7x7]  [2 class 1 x 1247 y 6789 z 23 w 5x8]  [3 class 1 x 4441 y 14133 z 28 w 7x9]
+touch: tcm: 18002 ms: 4 objects  [0 class 1 x 2928 y 6811 z 43 w 8x8]  [1 class 1 x 6725 y 6424 z 43 w 8x8]  [2 class 1 x 1513 y 11733 z 24 w 8x5]  [3 class 1 x 5013 y 18736 z 24 w 5x9]
+touch: tcm: 18102 ms: 4 objects  [0 class 1 x 3363 y 11902 z 46 w 8x7]  [1 class 1 x 7144 y 11436 z 48 w 9x10]  [2 class 1 x 2153 y 16783 z 25 w 7x6]  [3 class 1 x 6128 y 23418 z 24 w 8x9]
+touch: tcm: 18203 ms: 4 objects  [0 class 1 x 3666 y 16111 z 45 w 8x9]  [1 class 1 x 7466 y 15439 z 47 w 8x9]  [2 class 1 x 2916 y 20921 z 22 w 6x8]  [3 class 1 x 7159 y 26589 z 17 w 7x8]
+touch: tcm: 18253 ms: 3 objects  [0 class 1 x 3747 y 17833 z 44 w 8x9]  [1 class 1 x 7575 y 16905 z 48 w 8x9]  [2 class 1 x 3341 y 22568 z 19 w 5x8]
+touch: tcm: 18315 ms: 2 objects  [0 class 1 x 3769 y 19121 z 39 w 8x7]  [1 class 1 x 7541 y 18011 z 41 w 7x9]
+touch: tcm: 18395 ms: 1 objects  [1 class 1 x 7600 y 17696 z 6 w 8x9]
+touch: tcm: 18407 ms: 0 objects
+touch: tcm: 18728 ms: 1 objects  [0 class 1 x 9200 y 11499 z 8 w 4x7]
+touch: tcm: 18782 ms: 3 objects  [0 class 1 x 9200 y 11499 z 15 w 8x8]  [1 class 1 x 9413 y 61 z 13 w 5x9]  [2 class 1 x 7188 y 3952 z 13 w 7x4]
+touch: tcm: 18812 ms: 2 objects  [1 class 1 x 9247 y 523 z 37 w 9x9]  [2 class 1 x 6875 y 4805 z 13 w 4x5]
+touch: tcm: 18816 ms: 3 objects  [1 class 1 x 9194 y 656 z 37 w 9x9]  [2 class 1 x 6828 y 4911 z 13 w 5x6]  [3 class 1 x 12478 y 786 z 19 w 5x6]
+touch: tcm: 18916 ms: 3 objects  [1 class 1 x 6784 y 5643 z 39 w 8x9]  [2 class 1 x 5031 y 10189 z 13 w 9x5]  [3 class 1 x 10403 y 5486 z 36 w 7x6]
+touch: tcm: 19017 ms: 3 objects  [1 class 1 x 4219 y 12571 z 40 w 9x6]  [2 class 1 x 3069 y 17380 z 12 w 5x5]  [3 class 1 x 7869 y 11868 z 43 w 7x8]
+touch: tcm: 19092 ms: 2 objects  [1 class 1 x 2972 y 17546 z 41 w 7x8]  [3 class 1 x 6541 y 16458 z 46 w 9x8]
+touch: tcm: 19192 ms: 2 objects  [1 class 1 x 3041 y 22602 z 18 w 9x8]  [3 class 1 x 6344 y 21014 z 35 w 9x9]
+touch: tcm: 19208 ms: 1 objects  [3 class 1 x 6441 y 21618 z 22 w 8x6]
+touch: tcm: 19225 ms: 0 objects
+touch: tcm: 20126 ms: 1 objects  [0 class 1 x 11959 y 23399 z 24 w 10x4]
+touch: tcm: 20168 ms: 2 objects  [0 class 1 x 9531 y 23052 z 38 w 6x9]  [1 class 1 x 6825 y 25164 z 20 w 7x4]
+touch: tcm: 20269 ms: 2 objects  [0 class 1 x 7019 y 21193 z 43 w 8x9]  [1 class 1 x 4038 y 23193 z 40 w 9x6]
+touch: tcm: 20369 ms: 2 objects  [0 class 1 x 8678 y 16580 z 34 w 8x6]  [1 class 1 x 4828 y 17396 z 37 w 8x7]
+touch: tcm: 20428 ms: 3 objects  [0 class 1 x 9103 y 15846 z 37 w 9x9]  [1 class 1 x 4991 y 16521 z 39 w 8x9]  [2 class 1 x 3672 y 21374 z 20 w 5x7]
+touch: tcm: 20528 ms: 3 objects  [0 class 1 x 6319 y 17146 z 49 w 8x7]  [1 class 1 x 2403 y 17905 z 40 w 7x7]  [2 class 1 x 1450 y 23080 z 25 w 5x8]
+touch: tcm: 20628 ms: 3 objects  [0 class 1 x 7328 y 15036 z 48 w 9x8]  [1 class 1 x 3441 y 15168 z 42 w 8x7]  [2 class 1 x 1709 y 20514 z 32 w 6x8]
+touch: tcm: 20729 ms: 3 objects  [0 class 1 x 10400 y 12827 z 46 w 8x9]  [1 class 1 x 6216 y 12533 z 48 w 9x8]  [2 class 1 x 3350 y 17652 z 32 w 6x9]
+touch: tcm: 20788 ms: 4 objects  [0 class 1 x 10797 y 13218 z 42 w 7x8]  [1 class 1 x 6706 y 13086 z 37 w 7x9]  [2 class 1 x 3803 y 18258 z 29 w 7x5]  [3 class 1 x 5519 y 26864 z 9 w 8x6]
+touch: tcm: 20851 ms: 3 objects  [0 class 1 x 9334 y 14871 z 42 w 9x9]  [1 class 1 x 5366 y 15124 z 31 w 8x5]  [2 class 1 x 3172 y 20421 z 27 w 5x8]
+touch: tcm: 20951 ms: 3 objects  [0 class 1 x 7391 y 15549 z 51 w 9x7]  [1 class 1 x 3350 y 16049 z 33 w 9x9]  [2 class 1 x 1994 y 21418 z 33 w 8x6]
+touch: tcm: 20968 ms: 4 objects  [0 class 1 x 7325 y 15496 z 51 w 10x9]  [1 class 1 x 3278 y 15730 z 29 w 8x7]  [2 class 1 x 1891 y 21164 z 29 w 6x9]  [3 class 1 x 4275 y 27830 z 13 w 4x5]
+touch: tcm: 21068 ms: 4 objects  [0 class 1 x 9675 y 12393 z 52 w 9x9]  [1 class 1 x 5666 y 12058 z 37 w 6x7]  [2 class 1 x 3622 y 16939 z 33 w 8x8]  [3 class 1 x 4041 y 26799 z 30 w 8x8]
+touch: tcm: 21168 ms: 4 objects  [0 class 1 x 10441 y 11499 z 46 w 9x8]  [1 class 1 x 6247 y 11474 z 24 w 5x9]  [2 class 1 x 3741 y 16686 z 27 w 5x5]  [3 class 1 x 3663 y 26336 z 33 w 6x8]
+touch: tcm: 21269 ms: 4 objects  [0 class 1 x 7881 y 15618 z 40 w 7x9]  [1 class 1 x 4266 y 16055 z 18 w 9x5]  [2 class 1 x 2922 y 21068 z 18 w 4x9]  [3 class 1 x 3831 y 26486 z 26 w 7x5]
+touch: tcm: 21370 ms: 4 objects  [0 class 1 x 7213 y 17280 z 46 w 10x8]  [1 class 1 x 3481 y 18077 z 31 w 6x8]  [2 class 1 x 2656 y 23074 z 21 w 4x5]  [3 class 1 x 4788 y 27143 z 24 w 5x5]
+touch: tcm: 21457 ms: 3 objects  [0 class 1 x 7291 y 19552 z 38 w 9x9]  [1 class 1 x 3525 y 20821 z 33 w 6x6]  [3 class 1 x 5672 y 28175 z 5 w 6x6]
+touch: tcm: 21470 ms: 2 objects  [0 class 1 x 7241 y 19905 z 40 w 9x6]  [1 class 1 x 3469 y 21239 z 35 w 7x8]
+touch: tcm: 21570 ms: 2 objects  [0 class 1 x 6566 y 21583 z 15 w 8x6]  [1 class 1 x 2856 y 23593 z 37 w 7x9]
+touch: tcm: 21670 ms: 2 objects  [0 class 1 x 5419 y 21633 z 30 w 5x6]  [1 class 1 x 1928 y 23652 z 38 w 7x9]
+touch: tcm: 21771 ms: 2 objects  [0 class 1 x 5550 y 19336 z 41 w 9x8]  [1 class 1 x 2006 y 20705 z 35 w 6x6]
+touch: tcm: 21872 ms: 2 objects  [0 class 1 x 5675 y 18455 z 45 w 8x8]  [1 class 1 x 2041 y 19408 z 38 w 8x9]
+touch: tcm: 21876 ms: 3 objects  [0 class 1 x 5741 y 18383 z 45 w 8x7]  [1 class 1 x 2088 y 19333 z 39 w 9x8]  [2 class 1 x 3359 y 28451 z 12 w 4x8]
+touch: tcm: 21905 ms: 4 objects  [0 class 1 x 6588 y 17755 z 45 w 8x9]  [1 class 1 x 2734 y 18683 z 38 w 9x9]  [2 class 1 x 4059 y 27968 z 30 w 6x8]  [3 class 1 x 2922 y 23474 z 15 w 9x7]
+touch: tcm: 21989 ms: 3 objects  [1 class 1 x 6497 y 15952 z 38 w 7x7]  [2 class 1 x 7103 y 25208 z 21 w 6x8]  [3 class 1 x 5750 y 20461 z 10 w 6x7]
+touch: tcm: 22089 ms: 3 objects  [1 class 1 x 8906 y 14214 z 47 w 9x7]  [2 class 1 x 8981 y 23071 z 20 w 8x6]  [3 class 1 x 7600 y 18227 z 7 w 7x6]
+touch: tcm: 22102 ms: 2 objects  [1 class 1 x 8916 y 14108 z 47 w 10x7]  [2 class 1 x 8944 y 22980 z 19 w 8x5]
+touch: tcm: 22168 ms: 3 objects  [0 class 1 x 9450 y 13296 z 11 w 6x7]  [1 class 1 x 6094 y 13674 z 46 w 9x8]  [2 class 1 x 6753 y 22802 z 21 w 9x7]
+touch: tcm: 22202 ms: 4 objects  [0 class 1 x 8163 y 13283 z 36 w 6x7]  [1 class 1 x 4356 y 13564 z 47 w 9x9]  [2 class 1 x 5441 y 23130 z 25 w 7x8]  [3 class 1 x 2425 y 17971 z 10 w 8x5]
+touch: tcm: 22286 ms: 3 objects  [0 class 1 x 6513 y 12664 z 44 w 9x7]  [1 class 1 x 2625 y 13127 z 52 w 10x9]  [2 class 1 x 4375 y 22964 z 22 w 5x6]
+touch: tcm: 22349 ms: 4 objects  [0 class 1 x 6984 y 11971 z 41 w 8x9]  [1 class 1 x 2706 y 12699 z 53 w 9x9]  [2 class 1 x 4916 y 22424 z 22 w 5x9]  [3 class 1 x 2013 y 16546 z 10 w 6x8]
+touch: tcm: 22395 ms: 3 objects  [0 class 1 x 9069 y 11552 z 31 w 8x5]  [1 class 1 x 4600 y 12149 z 49 w 9x9]  [2 class 1 x 6141 y 21952 z 19 w 7x6]
+touch: tcm: 22449 ms: 2 objects  [1 class 1 x 7756 y 11664 z 48 w 9x7]  [2 class 1 x 8006 y 21371 z 19 w 5x6]
+touch: tcm: 22532 ms: 1 objects  [1 class 1 x 11322 y 10389 z 45 w 9x8]
+touch: tcm: 22632 ms: 1 objects  [1 class 1 x 10931 y 6874 z 50 w 9x7]
+touch: tcm: 22699 ms: 2 objects  [0 class 1 x 8753 y 14889 z 11 w 9x8]  [1 class 1 x 9500 y 3964 z 53 w 10x9]
+touch: tcm: 22746 ms: 3 objects  [0 class 1 x 8250 y 14214 z 13 w 9x8]  [1 class 1 x 8753 y 2655 z 52 w 9x9]  [2 class 1 x 12769 y 2133 z 7 w 8x5]
+touch: tcm: 22834 ms: 2 objects  [1 class 1 x 7363 y 933 z 35 w 12x10]  [2 class 1 x 11303 y 886 z 9 w 5x6]
+touch: tcm: 22846 ms: 3 objects  [0 class 1 x 4859 y 4880 z 9 w 8x7]  [1 class 1 x 7125 y 799 z 33 w 12x10]  [2 class 1 x 11028 y 730 z 6 w 5x6]
+touch: tcm: 22871 ms: 2 objects  [1 class 1 x 6575 y 689 z 35 w 12x10]  [2 class 1 x 10641 y 677 z 9 w 8x6]
+touch: tcm: 22963 ms: 3 objects  [0 class 1 x 3853 y 6758 z 14 w 8x7]  [1 class 1 x 5369 y 2343 z 54 w 10x9]  [2 class 1 x 9591 y 2127 z 19 w 9x5]
+touch: tcm: 23001 ms: 2 objects  [0 class 1 x 4116 y 8549 z 14 w 5x4]  [1 class 1 x 5591 y 4071 z 59 w 9x10]
+touch: tcm: 23064 ms: 1 objects  [1 class 1 x 6188 y 7805 z 62 w 10x10]
+touch: tcm: 23164 ms: 1 objects  [1 class 1 x 6763 y 16089 z 61 w 10x10]
+touch: tcm: 23272 ms: 0 objects
+touch: tcm: 24455 ms: 1 objects  [0 class 1 x 8338 y 11727 z 11 w 3x5]
+touch: tcm: 24472 ms: 2 objects  [0 class 1 x 8338 y 11727 z 38 w 9x7]  [1 class 1 x 4447 y 12714 z 40 w 7x8]
+touch: tcm: 24572 ms: 2 objects  [0 class 1 x 6956 y 15886 z 44 w 7x7]  [1 class 1 x 3203 y 16843 z 42 w 9x8]
+touch: tcm: 24672 ms: 2 objects  [0 class 1 x 7244 y 18614 z 47 w 8x7]  [1 class 1 x 3738 y 19546 z 45 w 9x7]
+touch: tcm: 24773 ms: 2 objects  [0 class 1 x 11350 y 18502 z 41 w 8x8]  [1 class 1 x 7450 y 19018 z 45 w 9x8]
+touch: tcm: 24873 ms: 2 objects  [0 class 1 x 10841 y 19480 z 42 w 9x8]  [1 class 1 x 6613 y 20568 z 41 w 8x8]
+touch: tcm: 24974 ms: 2 objects  [0 class 1 x 6288 y 20339 z 50 w 8x9]  [1 class 1 x 2688 y 22083 z 45 w 10x8]
+touch: tcm: 25074 ms: 2 objects  [0 class 1 x 5769 y 16508 z 50 w 9x8]  [1 class 1 x 1978 y 17724 z 50 w 8x9]
+touch: tcm: 25174 ms: 2 objects  [0 class 1 x 7631 y 13364 z 41 w 9x6]  [1 class 1 x 3591 y 13899 z 46 w 10x9]
+touch: tcm: 25275 ms: 2 objects  [0 class 1 x 11384 y 12596 z 31 w 7x6]  [1 class 1 x 7381 y 12489 z 40 w 9x6]
+touch: tcm: 25316 ms: 1 objects  [1 class 1 x 9028 y 11571 z 35 w 8x8]
+touch: tcm: 25384 ms: 2 objects  [0 class 1 x 12799 y 10074 z 16 w 7x4]  [1 class 1 x 9441 y 9774 z 45 w 8x9]
+touch: tcm: 25484 ms: 2 objects  [0 class 1 x 8034 y 8605 z 46 w 8x9]  [1 class 1 x 3978 y 9149 z 43 w 9x8]
+touch: tcm: 25585 ms: 2 objects  [0 class 1 x 3584 y 11286 z 47 w 8x8]  [1 class 1 x 75 y 12511 z 12 w 9x8]
+touch: tcm: 25685 ms: 2 objects  [0 class 1 x 8394 y 12930 z 30 w 8x5]  [1 class 1 x 4353 y 13505 z 27 w 9x9]
+touch: tcm: 25785 ms: 2 objects  [0 class 1 x 7872 y 15596 z 42 w 9x9]  [1 class 1 x 3341 y 16333 z 40 w 7x9]
+touch: tcm: 25886 ms: 2 objects  [0 class 1 x 4653 y 17696 z 46 w 9x9]  [1 class 1 x 1069 y 18908 z 44 w 8x7]
+touch: tcm: 25986 ms: 2 objects  [0 class 1 x 10816 y 15602 z 36 w 9x6]  [1 class 1 x 6522 y 15539 z 43 w 8x6]
+touch: tcm: 26086 ms: 2 objects  [0 class 1 x 7963 y 18718 z 47 w 8x10]  [1 class 1 x 4356 y 19430 z 45 w 9x9]
+touch: tcm: 26187 ms: 2 objects  [0 class 1 x 6384 y 20324 z 48 w 8x9]  [1 class 1 x 3034 y 21964 z 44 w 8x10]
+touch: tcm: 26287 ms: 2 objects  [0 class 1 x 6594 y 21464 z 47 w 8x8]  [1 class 1 x 3416 y 23118 z 42 w 8x7]
+touch: tcm: 26388 ms: 2 objects  [0 class 1 x 9516 y 21786 z 46 w 8x8]  [1 class 1 x 6303 y 22961 z 37 w 7x6]
+touch: tcm: 26488 ms: 2 objects  [0 class 1 x 10128 y 20718 z 41 w 9x6]  [1 class 1 x 6319 y 21408 z 34 w 6x6]
+touch: tcm: 26588 ms: 2 objects  [0 class 1 x 6788 y 18949 z 56 w 10x8]  [1 class 1 x 3191 y 19805 z 44 w 7x8]
+touch: tcm: 26664 ms: 1 objects  [0 class 1 x 5759 y 17811 z 48 w 10x9]
+touch: tcm: 26705 ms: 0 objects
+touch: tcm: 26818 ms: 1 objects  [0 class 1 x 4866 y 16064 z 15 w 7x6]
+touch: tcm: 26844 ms: 2 objects  [0 class 1 x 4866 y 16064 z 49 w 9x9]  [1 class 1 x 491 y 22439 z 16 w 11x9]
+touch: tcm: 26852 ms: 4 objects  [0 class 1 x 4866 y 16064 z 57 w 9x9]  [1 class 1 x 491 y 22439 z 13 w 11x7]  [2 class 1 x 1419 y 16686 z 29 w 8x9]  [3 class 1 x 10206 y 16458 z 16 w 6x5]
+touch: tcm: 26873 ms: 3 objects  [0 class 1 x 4866 y 16064 z 57 w 9x10]  [1 class 1 x 491 y 22439 z 7 w 11x5]  [3 class 1 x 10206 y 16458 z 8 w 8x9]
+touch: tcm: 26881 ms: 1 objects  [0 class 1 x 4866 y 16064 z 56 w 10x10]
+touch: tcm: 26918 ms: 0 objects
+touch: tcm: 27032 ms: 1 objects  [0 class 1 x 5184 y 13936 z 28 w 5x4]
+touch: tcm: 27036 ms: 2 objects  [0 class 1 x 5184 y 13936 z 51 w 9x7]  [1 class 1 x 2378 y 27208 z 10 w 9x5]
+touch: tcm: 27049 ms: 3 objects  [0 class 1 x 5184 y 13936 z 44 w 8x7]  [1 class 1 x 2378 y 27208 z 20 w 8x6]  [2 class 1 x 1431 y 14199 z 24 w 8x8]
+touch: tcm: 27053 ms: 4 objects  [0 class 1 x 5184 y 13936 z 48 w 8x7]  [1 class 1 x 2378 y 27208 z 20 w 8x7]  [2 class 1 x 1431 y 14199 z 39 w 9x8]  [3 class 1 x 10819 y 14455 z 14 w 4x6]
+touch: tcm: 27078 ms: 3 objects  [0 class 1 x 5184 y 13936 z 54 w 9x8]  [1 class 1 x 2378 y 27208 z 24 w 5x9]  [3 class 1 x 10819 y 14455 z 14 w 7x9]
+touch: tcm: 27082 ms: 4 objects  [0 class 1 x 5184 y 13936 z 52 w 9x8]  [1 class 1 x 2378 y 27208 z 23 w 4x8]  [3 class 1 x 10819 y 14455 z 12 w 8x9]  [4 class 1 x 84 y 19789 z 6 w 6x7]
+touch: tcm: 27095 ms: 3 objects  [0 class 1 x 5184 y 13936 z 46 w 8x9]  [1 class 1 x 2416 y 26986 z 25 w 4x5]  [4 class 1 x 84 y 19789 z 6 w 6x4]
+touch: tcm: 27115 ms: 2 objects  [0 class 1 x 5278 y 13824 z 33 w 9x6]  [1 class 1 x 2503 y 26533 z 21 w 5x8]
+touch: tcm: 27187 ms: 3 objects  [0 class 1 x 6272 y 12424 z 45 w 9x8]  [1 class 1 x 3247 y 25239 z 31 w 6x8]  [2 class 1 x 675 y 17858 z 17 w 9x7]
+touch: tcm: 27212 ms: 4 objects  [0 class 1 x 6650 y 11930 z 48 w 9x7]  [1 class 1 x 3459 y 24858 z 34 w 5x8]  [2 class 1 x 841 y 17583 z 24 w 9x5]  [3 class 1 x 3081 y 11671 z 25 w 6x5]
+touch: tcm: 27313 ms: 4 objects  [0 class 1 x 8663 y 9674 z 45 w 8x8]  [1 class 1 x 4231 y 22918 z 37 w 5x9]  [2 class 1 x 2513 y 14614 z 25 w 5x8]  [3 class 1 x 4881 y 9533 z 34 w 6x6]
+touch: tcm: 27413 ms: 4 objects  [0 class 1 x 10647 y 6977 z 40 w 8x7]  [1 class 1 x 5019 y 20061 z 37 w 6x8]  [2 class 1 x 4122 y 11255 z 27 w 5x6]  [3 class 1 x 6781 y 6621 z 38 w 8x8]
+touch: tcm: 27513 ms: 4 objects  [0 class 1 x 12256 y 4221 z 16 w 8x9]  [1 class 1 x 6178 y 16905 z 36 w 9x9]  [2 class 1 x 5756 y 7971 z 29 w 5x5]  [3 class 1 x 8506 y 3658 z 40 w 9x8]
+touch: tcm: 27572 ms: 3 objects  [1 class 1 x 6700 y 15502 z 37 w 5x10]  [2 class 1 x 6428 y 6568 z 28 w 7x8]  [3 class 1 x 9294 y 2271 z 40 w 9x6]
+touch: tcm: 27673 ms: 3 objects  [1 class 1 x 7106 y 13596 z 35 w 9x8]  [2 class 1 x 7131 y 4633 z 29 w 9x5]  [3 class 1 x 9953 y 675 z 27 w 8x8]
+touch: tcm: 27773 ms: 3 objects  [1 class 1 x 6928 y 12846 z 36 w 5x9]  [2 class 1 x 6806 y 3818 z 28 w 9x7]  [3 class 1 x 9659 y 207 z 13 w 7x8]
+touch: tcm: 27807 ms: 4 objects  [0 class 1 x 11816 y 380 z 12 w 8x4]  [1 class 1 x 6681 y 12708 z 33 w 9x9]  [2 class 1 x 5941 y 3899 z 29 w 9x8]  [3 class 1 x 8869 y 143 z 15 w 6x8]
+touch: tcm: 27907 ms: 4 objects  [0 class 1 x 8794 y 1193 z 47 w 7x9]  [1 class 1 x 4869 y 13771 z 31 w 5x8]  [2 class 1 x 2888 y 5808 z 29 w 8x8]  [3 class 1 x 5263 y 1330 z 44 w 8x8]
+touch: tcm: 28008 ms: 4 objects  [0 class 1 x 6584 y 2827 z 51 w 9x9]  [1 class 1 x 3459 y 15599 z 33 w 8x10]  [2 class 1 x 906 y 8199 z 28 w 6x8]  [3 class 1 x 2813 y 3508 z 44 w 8x10]
+touch: tcm: 28108 ms: 4 objects  [0 class 1 x 7153 y 5043 z 49 w 8x9]  [1 class 1 x 4234 y 17024 z 38 w 8x9]  [2 class 1 x 1269 y 10396 z 34 w 9x5]  [3 class 1 x 3450 y 5693 z 45 w 8x8]
+touch: tcm: 28208 ms: 4 objects  [0 class 1 x 9375 y 7127 z 47 w 9x7]  [1 class 1 x 5916 y 18749 z 36 w 6x10]  [2 class 1 x 3084 y 12349 z 31 w 9x9]  [3 class 1 x 5584 y 7630 z 44 w 9x8]
+touch: tcm: 28309 ms: 4 objects  [0 class 1 x 8191 y 11649 z 46 w 9x8]  [1 class 1 x 5775 y 23202 z 34 w 7x7]  [2 class 1 x 2394 y 17433 z 35 w 9x6]  [3 class 1 x 4453 y 12443 z 40 w 7x8]
+touch: tcm: 28409 ms: 4 objects  [0 class 1 x 10934 y 13068 z 44 w 8x6]  [1 class 1 x 7763 y 24089 z 28 w 8x9]  [2 class 1 x 4744 y 18239 z 34 w 6x8]  [3 class 1 x 7203 y 13430 z 42 w 7x8]
+touch: tcm: 28510 ms: 4 objects  [0 class 1 x 11056 y 16211 z 42 w 7x9]  [1 class 1 x 8509 y 26186 z 17 w 5x5]  [2 class 1 x 5353 y 21483 z 31 w 5x6]  [3 class 1 x 7416 y 16699 z 35 w 9x6]
+touch: tcm: 28610 ms: 4 objects  [0 class 1 x 11678 y 17814 z 33 w 8x6]  [1 class 1 x 9288 y 27189 z 12 w 9x7]  [2 class 1 x 6609 y 22705 z 27 w 7x5]  [3 class 1 x 8303 y 18133 z 39 w 9x7]
+touch: tcm: 28635 ms: 3 objects  [1 class 1 x 9881 y 27080 z 14 w 6x8]  [2 class 1 x 7453 y 22439 z 24 w 7x9]  [3 class 1 x 9378 y 17964 z 39 w 8x6]
+touch: tcm: 28731 ms: 2 objects  [2 class 1 x 8125 y 24583 z 18 w 8x5]  [3 class 1 x 9653 y 20071 z 38 w 9x8]
+touch: tcm: 28748 ms: 3 objects  [0 class 1 x 12713 y 20843 z 8 w 8x6]  [2 class 1 x 8075 y 25108 z 13 w 8x9]  [3 class 1 x 9469 y 20624 z 41 w 8x6]
+touch: tcm: 28769 ms: 2 objects  [0 class 1 x 12713 y 20843 z 17 w 8x7]  [3 class 1 x 9269 y 21358 z 42 w 7x7]
+touch: tcm: 28794 ms: 1 objects  [3 class 1 x 9231 y 22068 z 40 w 7x8]
+touch: tcm: 28886 ms: 2 objects  [0 class 1 x 12478 y 21064 z 12 w 8x4]  [3 class 1 x 9081 y 22449 z 40 w 9x9]
+touch: tcm: 28978 ms: 3 objects  [0 class 1 x 9791 y 20543 z 41 w 8x7]  [1 class 1 x 5563 y 26321 z 10 w 8x8]  [3 class 1 x 6413 y 21855 z 44 w 7x8]
+touch: tcm: 29079 ms: 3 objects  [0 class 1 x 7281 y 18968 z 47 w 9x8]  [1 class 1 x 3575 y 25174 z 20 w 8x8]  [3 class 1 x 3953 y 20346 z 49 w 8x10]
+touch: tcm: 29096 ms: 4 objects  [0 class 1 x 7097 y 18518 z 50 w 9x9]  [1 class 1 x 3250 y 24589 z 24 w 7x5]  [2 class 1 x 6394 y 28247 z 8 w 9x5]  [3 class 1 x 3766 y 19743 z 49 w 7x9]
+touch: tcm: 29196 ms: 4 objects  [0 class 1 x 8741 y 14036 z 30 w 7x8]  [1 class 1 x 3334 y 19380 z 29 w 6x7]  [2 class 1 x 6513 y 23955 z 23 w 8x5]  [3 class 1 x 5106 y 14502 z 29 w 6x6]
+touch: tcm: 29296 ms: 4 objects  [0 class 1 x 10731 y 9936 z 44 w 7x9]  [1 class 1 x 4563 y 14324 z 25 w 6x4]  [2 class 1 x 6747 y 20205 z 27 w 6x8]  [3 class 1 x 7172 y 9802 z 38 w 9x9]
+touch: tcm: 29397 ms: 4 objects  [0 class 1 x 7481 y 8405 z 48 w 8x8]  [1 class 1 x 1631 y 14033 z 24 w 6x9]  [2 class 1 x 4322 y 19939 z 30 w 9x8]  [3 class 1 x 3791 y 9146 z 37 w 9x8]
+touch: tcm: 29497 ms: 4 objects  [0 class 1 x 5809 y 7524 z 54 w 9x9]  [1 class 1 x 997 y 12808 z 29 w 6x5]  [2 class 1 x 3769 y 18764 z 32 w 9x9]  [3 class 1 x 2553 y 8005 z 44 w 8x8]
+touch: tcm: 29597 ms: 4 objects  [0 class 1 x 11356 y 2277 z 44 w 8x6]  [1 class 1 x 4853 y 6661 z 29 w 5x9]  [2 class 1 x 6734 y 13324 z 31 w 5x9]  [3 class 1 x 7797 y 2233 z 38 w 9x6]
+touch: tcm: 29698 ms: 4 objects  [0 class 1 x 8956 y 2396 z 50 w 9x7]  [1 class 1 x 2638 y 7324 z 32 w 7x7]  [2 class 1 x 5228 y 13858 z 29 w 9x9]  [3 class 1 x 5288 y 2808 z 34 w 8x9]
+touch: tcm: 29798 ms: 4 objects  [0 class 1 x 6222 y 3239 z 59 w 9x10]  [1 class 1 x 847 y 8646 z 30 w 7x5]  [2 class 1 x 3559 y 15243 z 38 w 5x9]  [3 class 1 x 2794 y 3871 z 47 w 8x8]
+touch: tcm: 29899 ms: 4 objects  [0 class 1 x 9475 y 380 z 16 w 7x10]  [1 class 1 x 3091 y 4377 z 35 w 9x8]  [2 class 1 x 4866 y 11864 z 33 w 6x9]  [3 class 1 x 5725 y 274 z 13 w 7x10]
+touch: tcm: 29999 ms: 4 objects  [0 class 1 x 6334 y 730 z 40 w 11x10]  [1 class 1 x 791 y 6008 z 22 w 8x9]  [2 class 1 x 3544 y 13143 z 37 w 9x10]  [3 class 1 x 2728 y 1405 z 44 w 9x8]
+touch: tcm: 30100 ms: 4 objects  [0 class 1 x 6206 y 560 z 25 w 11x10]  [1 class 1 x 997 y 5249 z 39 w 8x8]  [2 class 1 x 3431 y 13083 z 49 w 6x11]  [3 class 1 x 2663 y 1033 z 46 w 9x10]
+touch: tcm: 30200 ms: 4 objects  [0 class 1 x 6756 y 1530 z 40 w 9x6]  [1 class 1 x 719 y 7311 z 23 w 6x9]  [2 class 1 x 3672 y 14114 z 42 w 6x11]  [3 class 1 x 2459 y 2646 z 40 w 7x9]
+touch: tcm: 30301 ms: 4 objects  [0 class 1 x 5553 y 4193 z 59 w 9x9]  [1 class 1 x 453 y 10099 z 33 w 6x6]  [2 class 1 x 3491 y 16830 z 49 w 8x11]  [3 class 1 x 1778 y 5418 z 56 w 9x10]
+touch: tcm: 30401 ms: 4 objects  [0 class 1 x 8553 y 4421 z 46 w 9x8]  [1 class 1 x 2444 y 9693 z 32 w 9x8]  [2 class 1 x 5066 y 16536 z 38 w 5x10]  [3 class 1 x 4475 y 5227 z 44 w 8x8]
+touch: tcm: 30501 ms: 4 objects  [0 class 1 x 6941 y 8930 z 55 w 9x9]  [1 class 1 x 1650 y 14877 z 38 w 7x8]  [2 class 1 x 5056 y 21180 z 44 w 6x11]  [3 class 1 x 3153 y 9980 z 53 w 9x9]
+touch: tcm: 30602 ms: 4 objects  [0 class 1 x 11709 y 8899 z 33 w 9x6]  [1 class 1 x 5741 y 13818 z 33 w 6x5]  [2 class 1 x 7978 y 20636 z 33 w 5x10]  [3 class 1 x 7738 y 9361 z 46 w 9x9]
+touch: tcm: 30702 ms: 4 objects  [0 class 1 x 10691 y 12574 z 52 w 9x8]  [1 class 1 x 4972 y 18243 z 41 w 8x6]  [2 class 1 x 8119 y 24389 z 31 w 7x9]  [3 class 1 x 6713 y 13514 z 50 w 8x8]
+touch: tcm: 30782 ms: 3 objects  [1 class 1 x 7291 y 18386 z 36 w 7x8]  [2 class 1 x 9625 y 24602 z 28 w 5x7]  [3 class 1 x 9175 y 13921 z 48 w 10x8]
+touch: tcm: 30882 ms: 3 objects  [1 class 1 x 8009 y 21071 z 28 w 6x9]  [2 class 1 x 10484 y 25905 z 17 w 8x9]  [3 class 1 x 9409 y 16605 z 39 w 7x6]
+touch: tcm: 30890 ms: 4 objects  [0 class 1 x 12706 y 16536 z 6 w 9x8]  [1 class 1 x 7813 y 21443 z 31 w 5x5]  [2 class 1 x 10391 y 26127 z 16 w 7x7]  [3 class 1 x 9147 y 17014 z 41 w 9x9]
+touch: tcm: 30991 ms: 4 objects  [0 class 1 x 11647 y 17827 z 36 w 6x7]  [1 class 1 x 7353 y 23093 z 29 w 6x8]  [2 class 1 x 10041 y 26936 z 17 w 5x7]  [3 class 1 x 8322 y 18714 z 48 w 9x7]
+touch: tcm: 31074 ms: 3 objects  [0 class 1 x 12372 y 18746 z 26 w 6x8]  [2 class 1 x 10291 y 27189 z 10 w 7x4]  [3 class 1 x 9016 y 19889 z 33 w 9x6]
+touch: tcm: 31116 ms: 2 objects  [0 class 1 x 11306 y 20255 z 42 w 9x9]  [3 class 1 x 8147 y 21536 z 38 w 9x6]
+touch: tcm: 31154 ms: 3 objects  [0 class 1 x 11163 y 20564 z 46 w 9x9]  [1 class 1 x 9538 y 28220 z 9 w 7x6]  [3 class 1 x 7931 y 21886 z 44 w 8x8]
+touch: tcm: 31254 ms: 3 objects  [0 class 1 x 11528 y 20755 z 45 w 8x7]  [1 class 1 x 9538 y 28220 z 8 w 6x6]  [3 class 1 x 8100 y 21930 z 33 w 7x9]
+touch: tcm: 31279 ms: 2 objects  [0 class 1 x 11569 y 21427 z 45 w 8x7]  [3 class 1 x 8034 y 22821 z 26 w 9x8]
+touch: tcm: 31379 ms: 2 objects  [0 class 1 x 11344 y 23911 z 49 w 8x7]  [3 class 1 x 7863 y 24633 z 6 w 9x6]
+touch: tcm: 31388 ms: 1 objects  [0 class 1 x 11400 y 24046 z 47 w 8x8]
+touch: tcm: 31450 ms: 0 objects
+touch: tcm: 31534 ms: 1 objects  [0 class 1 x 12738 y 26936 z 8 w 8x5]
+touch: tcm: 31730 ms: 1 objects  [0 class 1 x 12706 y 26939 z 23 w 8x9]
+touch: tcm: 31831 ms: 1 objects  [0 class 1 x 10706 y 26611 z 44 w 8x7]
+touch: tcm: 31931 ms: 1 objects  [0 class 1 x 8869 y 25639 z 52 w 9x9]
+touch: tcm: 32032 ms: 1 objects  [0 class 1 x 7522 y 24705 z 52 w 8x10]
+touch: tcm: 32057 ms: 2 objects  [0 class 1 x 7338 y 24533 z 52 w 9x8]  [1 class 1 x 4131 y 25771 z 14 w 8x7]
+touch: tcm: 32157 ms: 2 objects  [0 class 1 x 6806 y 23489 z 50 w 8x9]  [1 class 1 x 3531 y 25002 z 31 w 6x9]
+touch: tcm: 32258 ms: 2 objects  [0 class 1 x 6775 y 21930 z 54 w 9x9]  [1 class 1 x 3531 y 23046 z 43 w 6x7]
+touch: tcm: 32358 ms: 2 objects  [0 class 1 x 8513 y 20124 z 50 w 9x9]  [1 class 1 x 5269 y 20652 z 42 w 9x7]
+touch: tcm: 32404 ms: 3 objects  [0 class 1 x 9616 y 19171 z 51 w 8x8]  [1 class 1 x 6200 y 19536 z 47 w 9x9]  [2 class 1 x 5400 y 23611 z 10 w 7x5]
+touch: tcm: 32505 ms: 3 objects  [0 class 1 x 11591 y 17611 z 43 w 8x8]  [1 class 1 x 8256 y 17443 z 47 w 9x7]  [2 class 1 x 6613 y 22043 z 24 w 5x7]
+touch: tcm: 32555 ms: 2 objects  [1 class 1 x 9472 y 16274 z 44 w 9x9]  [2 class 1 x 7291 y 20849 z 27 w 5x6]
+touch: tcm: 32626 ms: 3 objects  [0 class 1 x 9028 y 25296 z 11 w 4x6]  [1 class 1 x 10431 y 14714 z 43 w 9x9]  [2 class 1 x 7725 y 19221 z 29 w 6x6]
+touch: tcm: 32697 ms: 4 objects  [0 class 1 x 8703 y 25099 z 25 w 5x8]  [1 class 1 x 9956 y 13705 z 39 w 9x9]  [2 class 1 x 7188 y 18339 z 28 w 5x7]  [3 class 1 x 12691 y 13539 z 7 w 8x8]
+touch: tcm: 32798 ms: 4 objects  [0 class 1 x 6925 y 24964 z 24 w 6x5]  [1 class 1 x 6663 y 13989 z 36 w 8x8]  [2 class 1 x 4366 y 18874 z 24 w 9x9]  [3 class 1 x 10003 y 13705 z 45 w 9x7]
+touch: tcm: 32898 ms: 4 objects  [0 class 1 x 6578 y 25283 z 24 w 7x9]  [1 class 1 x 5369 y 15268 z 36 w 8x6]  [2 class 1 x 3322 y 20511 z 32 w 8x8]  [3 class 1 x 8803 y 14552 z 47 w 10x8]
+touch: tcm: 32999 ms: 4 objects  [0 class 1 x 7016 y 25152 z 26 w 7x7]  [1 class 1 x 7066 y 15424 z 33 w 7x10]  [2 class 1 x 4856 y 20314 z 27 w 5x9]  [3 class 1 x 10494 y 14936 z 41 w 7x6]
+touch: tcm: 33082 ms: 3 objects  [0 class 1 x 7341 y 24730 z 26 w 7x8]  [2 class 1 x 5125 y 19449 z 23 w 9x7]  [3 class 1 x 10825 y 14233 z 39 w 8x6]
+touch: tcm: 33178 ms: 4 objects  [0 class 1 x 7038 y 24668 z 24 w 5x9]  [1 class 1 x 5016 y 14599 z 23 w 9x5]  [2 class 1 x 3550 y 19743 z 16 w 9x9]  [3 class 1 x 8947 y 13977 z 44 w 9x7]
+touch: tcm: 33212 ms: 3 objects  [0 class 1 x 6803 y 24708 z 24 w 7x9]  [1 class 1 x 5016 y 14599 z 23 w 6x6]  [3 class 1 x 8628 y 14074 z 41 w 7x8]
+touch: tcm: 33312 ms: 3 objects  [0 class 1 x 6419 y 24827 z 25 w 8x6]  [1 class 1 x 3759 y 15252 z 8 w 7x8]  [3 class 1 x 7491 y 14458 z 14 w 10x7]
+touch: tcm: 33320 ms: 2 objects  [0 class 1 x 6406 y 24839 z 25 w 8x6]  [3 class 1 x 7459 y 14474 z 6 w 10x9]
+touch: tcm: 33325 ms: 1 objects  [0 class 1 x 6400 y 24846 z 25 w 8x6]
+touch: tcm: 33412 ms: 2 objects  [0 class 1 x 6381 y 24889 z 24 w 8x8]  [1 class 1 x 7972 y 14136 z 42 w 9x8]
+touch: tcm: 33421 ms: 3 objects  [0 class 1 x 6388 y 24889 z 24 w 8x8]  [1 class 1 x 7972 y 14136 z 44 w 9x8]  [2 class 1 x 4231 y 15074 z 33 w 8x9]
+touch: tcm: 33467 ms: 4 objects  [0 class 1 x 6422 y 24877 z 24 w 7x8]  [1 class 1 x 7972 y 14136 z 38 w 9x8]  [2 class 1 x 4231 y 15074 z 25 w 7x9]  [3 class 1 x 2288 y 20180 z 23 w 9x5]
+touch: tcm: 33530 ms: 3 objects  [0 class 1 x 6453 y 24877 z 19 w 9x7]  [1 class 1 x 7972 y 14136 z 30 w 7x8]  [2 class 1 x 4231 y 15074 z 24 w 9x8]
+touch: tcm: 33630 ms: 3 objects  [0 class 1 x 6231 y 24927 z 27 w 6x8]  [1 class 1 x 7972 y 14136 z 42 w 7x6]  [2 class 1 x 4231 y 15074 z 34 w 9x6]
+touch: tcm: 33659 ms: 4 objects  [0 class 1 x 6188 y 24908 z 27 w 5x9]  [1 class 1 x 7972 y 14133 z 40 w 7x8]  [2 class 1 x 4231 y 15074 z 36 w 9x6]  [3 class 1 x 1866 y 19611 z 24 w 5x5]
+touch: tcm: 33718 ms: 3 objects  [0 class 1 x 6028 y 24743 z 28 w 6x7]  [1 class 1 x 8116 y 12886 z 14 w 9x8]  [3 class 1 x 1866 y 19580 z 35 w 6x9]
+touch: tcm: 33764 ms: 4 objects  [0 class 1 x 5722 y 24371 z 30 w 8x9]  [1 class 1 x 8019 y 12339 z 34 w 6x8]  [2 class 1 x 3828 y 13018 z 27 w 6x7]  [3 class 1 x 1666 y 18689 z 26 w 8x9]
+touch: tcm: 33801 ms: 3 objects  [0 class 1 x 5341 y 24068 z 31 w 7x9]  [1 class 1 x 7297 y 11949 z 34 w 6x9]  [2 class 1 x 3784 y 13002 z 29 w 9x9]
+touch: tcm: 33861 ms: 4 objects  [0 class 1 x 4719 y 23627 z 31 w 5x8]  [1 class 1 x 6300 y 11571 z 35 w 6x6]  [2 class 1 x 2794 y 12468 z 31 w 8x6]  [3 class 1 x 588 y 17571 z 18 w 6x9]
+touch: tcm: 33928 ms: 5 objects  [0 class 1 x 4166 y 23139 z 33 w 8x7]  [1 class 1 x 5509 y 11080 z 50 w 8x8]  [2 class 1 x 2178 y 11899 z 30 w 6x6]  [3 class 1 x 575 y 17558 z 11 w 6x5]  [4 class 1 x 10294 y 11739 z 19 w 5x5]
+touch: tcm: 33969 ms: 4 objects  [0 class 1 x 3763 y 22789 z 33 w 6x9]  [1 class 1 x 4856 y 10780 z 50 w 9x7]  [2 class 1 x 1594 y 11502 z 23 w 5x8]  [4 class 1 x 9519 y 11511 z 21 w 5x5]
+touch: tcm: 34069 ms: 4 objects  [0 class 1 x 2981 y 22061 z 35 w 6x9]  [1 class 1 x 3966 y 10161 z 54 w 9x8]  [2 class 1 x 888 y 10518 z 16 w 6x8]  [4 class 1 x 8703 y 10702 z 36 w 8x9]
+touch: tcm: 34170 ms: 4 objects  [0 class 1 x 2797 y 20868 z 38 w 6x9]  [1 class 1 x 4216 y 8902 z 53 w 9x9]  [2 class 1 x 1216 y 9011 z 20 w 8x9]  [4 class 1 x 9113 y 9708 z 35 w 8x8]
+touch: tcm: 34208 ms: 5 objects  [0 class 1 x 2972 y 20458 z 41 w 9x10]  [1 class 1 x 4725 y 8386 z 54 w 9x9]  [2 class 1 x 1678 y 8468 z 25 w 5x6]  [3 class 1 x 106 y 13174 z 9 w 6x5]  [4 class 1 x 9684 y 9280 z 34 w 6x6]
+touch: tcm: 34308 ms: 5 objects  [0 class 1 x 3594 y 19846 z 39 w 9x9]  [1 class 1 x 6166 y 7830 z 52 w 9x10]  [2 class 1 x 3025 y 7858 z 33 w 8x9]  [3 class 1 x 972 y 12868 z 28 w 5x9]  [4 class 1 x 10647 y 9371 z 26 w 6x7]
+touch: tcm: 34409 ms: 5 objects  [0 class 1 x 4391 y 20505 z 36 w 6x10]  [1 class 1 x 7247 y 8955 z 48 w 9x9]  [2 class 1 x 4028 y 9133 z 35 w 9x9]  [3 class 1 x 1891 y 13764 z 29 w 5x8]  [4 class 1 x 11291 y 11268 z 14 w 9x6]
+touch: tcm: 34509 ms: 5 objects  [0 class 1 x 4288 y 21814 z 35 w 8x9]  [1 class 1 x 6603 y 10505 z 47 w 9x7]  [2 class 1 x 3209 y 10939 z 35 w 6x7]  [3 class 1 x 1506 y 15536 z 32 w 6x9]  [4 class 1 x 10313 y 12764 z 16 w 5x6]
+touch: tcm: 34610 ms: 5 objects  [0 class 1 x 4138 y 22068 z 34 w 7x8]  [1 class 1 x 5900 y 10955 z 44 w 7x9]  [2 class 1 x 2681 y 11414 z 43 w 8x7]  [3 class 1 x 1072 y 16061 z 30 w 6x7]  [4 class 1 x 9856 y 12980 z 20 w 5x8]
+touch: tcm: 34710 ms: 5 objects  [0 class 1 x 4581 y 21974 z 36 w 8x8]  [1 class 1 x 7413 y 10755 z 46 w 8x8]  [2 class 1 x 4094 y 10905 z 39 w 6x9]  [3 class 1 x 2103 y 15586 z 30 w 9x6]  [4 class 1 x 11491 y 12696 z 15 w 6x7]
+touch: tcm: 34810 ms: 5 objects  [0 class 1 x 5213 y 23152 z 27 w 5x7]  [1 class 1 x 7684 y 12864 z 47 w 8x8]  [2 class 1 x 4125 y 13402 z 31 w 9x6]  [3 class 1 x 2238 y 18277 z 31 w 7x5]  [4 class 1 x 11322 y 14980 z 12 w 9x7]
+touch: tcm: 34911 ms: 5 objects  [0 class 1 x 5188 y 24055 z 28 w 6x6]  [1 class 1 x 7003 y 14152 z 50 w 8x9]  [2 class 1 x 3356 y 14886 z 31 w 8x9]  [3 class 1 x 2006 y 19636 z 32 w 7x9]  [4 class 1 x 10631 y 16043 z 14 w 10x8]
+touch: tcm: 34974 ms: 4 objects  [0 class 1 x 4816 y 24239 z 29 w 6x6]  [1 class 1 x 6375 y 14236 z 52 w 8x9]  [2 class 1 x 2638 y 14883 z 34 w 9x6]  [3 class 1 x 1609 y 19643 z 32 w 6x5]
+touch: tcm: 35074 ms: 4 objects  [0 class 1 x 4297 y 24118 z 39 w 8x9]  [1 class 1 x 5706 y 12902 z 51 w 9x9]  [2 class 1 x 2131 y 12952 z 37 w 8x8]  [3 class 1 x 928 y 17930 z 33 w 6x9]
+touch: tcm: 35082 ms: 5 objects  [0 class 1 x 4259 y 24064 z 39 w 8x9]  [1 class 1 x 5722 y 12711 z 51 w 9x8]  [2 class 1 x 2163 y 12743 z 37 w 8x6]  [3 class 1 x 922 y 17721 z 33 w 6x7]  [4 class 1 x 10741 y 13258 z 9 w 5x6]
+touch: tcm: 35183 ms: 5 objects  [0 class 1 x 3844 y 23039 z 43 w 7x9]  [1 class 1 x 5766 y 10868 z 56 w 9x9]  [2 class 1 x 2266 y 10693 z 30 w 9x9]  [3 class 1 x 825 y 15924 z 32 w 6x6]  [4 class 1 x 10703 y 12089 z 27 w 5x7]
+touch: tcm: 35283 ms: 5 objects  [0 class 1 x 3772 y 21736 z 43 w 8x9]  [1 class 1 x 5678 y 9646 z 57 w 9x9]  [2 class 1 x 2188 y 9464 z 30 w 8x6]  [3 class 1 x 744 y 14686 z 29 w 6x9]  [4 class 1 x 10641 y 10774 z 28 w 5x8]
+touch: tcm: 35384 ms: 5 objects  [0 class 1 x 3866 y 20555 z 42 w 8x10]  [1 class 1 x 5756 y 8486 z 55 w 9x9]  [2 class 1 x 2234 y 8283 z 33 w 8x9]  [3 class 1 x 744 y 13468 z 30 w 6x6]  [4 class 1 x 10678 y 9518 z 32 w 6x6]
+touch: tcm: 35484 ms: 5 objects  [0 class 1 x 3588 y 19446 z 44 w 8x10]  [1 class 1 x 5506 y 7252 z 57 w 9x9]  [2 class 1 x 1881 y 7218 z 33 w 9x7]  [3 class 1 x 372 y 12330 z 16 w 6x8]  [4 class 1 x 10497 y 8246 z 35 w 9x10]
+touch: tcm: 35568 ms: 4 objects  [0 class 1 x 3181 y 18805 z 41 w 7x10]  [1 class 1 x 4991 y 6611 z 63 w 10x9]  [2 class 1 x 1125 y 6758 z 33 w 7x7]  [4 class 1 x 9725 y 7558 z 37 w 8x6]
+touch: tcm: 35668 ms: 4 objects  [0 class 1 x 2838 y 18643 z 41 w 7x10]  [1 class 1 x 4138 y 6424 z 63 w 10x9]  [2 class 1 x 244 y 6877 z 13 w 7x8]  [4 class 1 x 8806 y 7505 z 39 w 8x6]
+touch: tcm: 35764 ms: 5 objects  [0 class 1 x 3206 y 17664 z 41 w 7x9]  [1 class 1 x 4419 y 5936 z 57 w 10x9]  [2 class 1 x 791 y 6043 z 46 w 7x9]  [3 class 1 x 113 y 10227 z 8 w 6x8]  [4 class 1 x 9738 y 6746 z 33 w 6x7]
+touch: tcm: 35865 ms: 5 objects  [0 class 1 x 4066 y 16764 z 41 w 6x10]  [1 class 1 x 6181 y 4911 z 58 w 10x9]  [2 class 1 x 2434 y 4880 z 50 w 8x9]  [3 class 1 x 925 y 9564 z 33 w 6x8]  [4 class 1 x 11172 y 6249 z 29 w 5x9]
+touch: tcm: 35965 ms: 5 objects  [0 class 1 x 4463 y 17443 z 40 w 6x10]  [1 class 1 x 6859 y 5464 z 57 w 9x8]  [2 class 1 x 2913 y 5811 z 46 w 7x9]  [3 class 1 x 1428 y 10352 z 35 w 7x5]  [4 class 1 x 11338 y 7352 z 29 w 9x7]
+touch: tcm: 36066 ms: 5 objects  [0 class 1 x 3969 y 18796 z 43 w 8x10]  [1 class 1 x 5778 y 7143 z 60 w 10x9]  [2 class 1 x 1619 y 7796 z 42 w 8x8]  [3 class 1 x 538 y 12230 z 19 w 7x8]  [4 class 1 x 10122 y 8661 z 38 w 8x8]
+touch: tcm: 36167 ms: 5 objects  [0 class 1 x 3841 y 18989 z 41 w 9x10]  [1 class 1 x 5375 y 7402 z 59 w 10x9]  [2 class 1 x 1403 y 7930 z 49 w 9x8]  [3 class 1 x 316 y 12380 z 29 w 7x8]  [4 class 1 x 10022 y 8661 z 38 w 9x8]
+touch: tcm: 36267 ms: 5 objects  [0 class 1 x 4400 y 18580 z 40 w 8x10]  [1 class 1 x 6588 y 7258 z 59 w 10x9]  [2 class 1 x 2997 y 7214 z 48 w 9x8]  [3 class 1 x 1378 y 11621 z 35 w 9x9]  [4 class 1 x 11488 y 8389 z 37 w 7x9]
+touch: tcm: 36368 ms: 5 objects  [0 class 1 x 4272 y 20383 z 39 w 7x11]  [1 class 1 x 6338 y 9071 z 59 w 9x10]  [2 class 1 x 2231 y 9852 z 40 w 7x9]  [3 class 1 x 894 y 14349 z 30 w 7x6]  [4 class 1 x 10888 y 10236 z 35 w 8x6]
+touch: tcm: 36472 ms: 5 objects  [0 class 1 x 4216 y 20868 z 39 w 5x10]  [1 class 1 x 5322 y 9833 z 63 w 10x9]  [2 class 1 x 1441 y 10496 z 41 w 8x9]  [3 class 1 x 431 y 14989 z 20 w 7x6]  [4 class 1 x 10038 y 10593 z 40 w 7x10]
+touch: tcm: 36572 ms: 5 objects  [0 class 1 x 4222 y 19705 z 40 w 6x11]  [1 class 1 x 4806 y 8755 z 59 w 9x9]  [2 class 1 x 1300 y 8743 z 39 w 8x7]  [3 class 1 x 141 y 13393 z 18 w 7x6]  [4 class 1 x 10353 y 8958 z 40 w 9x9]
+touch: tcm: 36673 ms: 5 objects  [0 class 1 x 4703 y 18202 z 42 w 7x11]  [1 class 1 x 6653 y 6661 z 56 w 9x9]  [2 class 1 x 2897 y 6608 z 46 w 9x10]  [3 class 1 x 1144 y 11196 z 37 w 8x6]  [4 class 1 x 11944 y 7508 z 22 w 7x7]
+touch: tcm: 36773 ms: 5 objects  [0 class 1 x 4934 y 16861 z 40 w 6x10]  [1 class 1 x 7366 y 5439 z 55 w 9x8]  [2 class 1 x 3538 y 5221 z 36 w 9x8]  [3 class 1 x 1609 y 9689 z 37 w 8x8]  [4 class 1 x 12222 y 6508 z 33 w 7x8]
+touch: tcm: 36827 ms: 4 objects  [0 class 1 x 3434 y 16071 z 39 w 7x10]  [1 class 1 x 5809 y 4333 z 58 w 10x8]  [2 class 1 x 1481 y 4443 z 29 w 6x6]  [4 class 1 x 10672 y 5402 z 41 w 8x7]
+touch: tcm: 36928 ms: 4 objects  [0 class 1 x 2222 y 16308 z 45 w 6x11]  [1 class 1 x 4169 y 4214 z 63 w 10x9]  [2 class 1 x 125 y 4739 z 10 w 6x7]  [4 class 1 x 9291 y 5002 z 49 w 9x7]
+touch: tcm: 37028 ms: 4 objects  [0 class 1 x 2641 y 17227 z 39 w 7x10]  [1 class 1 x 4306 y 5777 z 53 w 9x8]  [2 class 1 x 831 y 6158 z 25 w 6x9]  [4 class 1 x 9634 y 6405 z 41 w 7x6]
+touch: tcm: 37079 ms: 5 objects  [0 class 1 x 3275 y 17411 z 41 w 5x10]  [1 class 1 x 5566 y 6089 z 53 w 8x9]  [2 class 1 x 1956 y 6180 z 33 w 9x8]  [3 class 1 x 703 y 10693 z 19 w 8x4]  [4 class 1 x 10822 y 6877 z 31 w 9x8]
+touch: tcm: 37166 ms: 4 objects  [0 class 1 x 4044 y 17568 z 35 w 5x10]  [1 class 1 x 6741 y 6268 z 43 w 9x9]  [3 class 1 x 1272 y 10964 z 21 w 9x9]  [4 class 1 x 11641 y 7239 z 8 w 6x7]
+touch: tcm: 37187 ms: 3 objects  [0 class 1 x 4169 y 17649 z 35 w 5x9]  [1 class 1 x 6931 y 6368 z 37 w 9x7]  [3 class 1 x 1438 y 11055 z 10 w 8x8]
+touch: tcm: 37200 ms: 2 objects  [0 class 1 x 4244 y 17718 z 36 w 5x9]  [1 class 1 x 7044 y 6443 z 30 w 8x6]
+touch: tcm: 37245 ms: 1 objects  [0 class 1 x 4538 y 18155 z 17 w 9x12]
+touch: tcm: 37274 ms: 0 objects
+touch: tcm: 37316 ms: 1 objects  [0 class 1 x 4941 y 19274 z 13 w 7x11]
+touch: tcm: 37346 ms: 2 objects  [0 class 1 x 4941 y 19274 z 32 w 8x9]  [1 class 1 x 2369 y 12868 z 33 w 9x6]
+touch: tcm: 37350 ms: 3 objects  [0 class 1 x 4941 y 19274 z 34 w 8x9]  [1 class 1 x 2369 y 12868 z 31 w 9x7]  [2 class 1 x 8225 y 8199 z 43 w 7x6]
+touch: tcm: 37363 ms: 4 objects  [0 class 1 x 4941 y 19274 z 35 w 8x9]  [1 class 1 x 2369 y 12868 z 30 w 8x6]  [2 class 1 x 8225 y 8199 z 49 w 9x7]  [3 class 1 x 4250 y 8364 z 38 w 7x7]
+touch: tcm: 37413 ms: 2 objects  [0 class 1 x 4934 y 19302 z 8 w 10x12]  [2 class 1 x 8225 y 8202 z 12 w 10x10]
+touch: tcm: 37417 ms: 1 objects  [2 class 1 x 8225 y 8202 z 9 w 10x9]
+touch: tcm: 37425 ms: 0 objects
+touch: tcm: 37480 ms: 1 objects  [0 class 1 x 8278 y 9399 z 13 w 6x9]
+touch: tcm: 37509 ms: 2 objects  [0 class 1 x 8278 y 9399 z 42 w 7x9]  [1 class 1 x 4534 y 9721 z 39 w 7x7]
+touch: tcm: 37522 ms: 3 objects  [0 class 1 x 8278 y 9399 z 46 w 7x9]  [1 class 1 x 4534 y 9721 z 41 w 7x7]  [2 class 1 x 2413 y 14227 z 29 w 9x9]
+touch: tcm: 37526 ms: 4 objects  [0 class 1 x 8278 y 9399 z 47 w 8x9]  [1 class 1 x 4534 y 9721 z 42 w 7x7]  [2 class 1 x 2413 y 14227 z 24 w 9x9]  [3 class 1 x 4888 y 20474 z 32 w 6x9]
+touch: tcm: 37627 ms: 4 objects  [0 class 1 x 9644 y 9468 z 35 w 6x7]  [1 class 1 x 5713 y 9693 z 31 w 6x8]  [2 class 1 x 3347 y 14205 z 25 w 5x9]  [3 class 1 x 5113 y 20455 z 29 w 9x9]
+touch: tcm: 37718 ms: 3 objects  [0 class 1 x 11259 y 9739 z 37 w 6x7]  [1 class 1 x 7334 y 9686 z 35 w 6x6]  [2 class 1 x 4975 y 14189 z 22 w 5x7]
+touch: tcm: 37818 ms: 3 objects  [0 class 1 x 9303 y 12289 z 41 w 9x9]  [1 class 1 x 5400 y 12549 z 33 w 7x6]  [2 class 1 x 3447 y 17071 z 20 w 7x9]
+touch: tcm: 37919 ms: 3 objects  [0 class 1 x 7031 y 14114 z 46 w 7x9]  [1 class 1 x 3253 y 14724 z 36 w 9x8]  [2 class 1 x 1838 y 19339 z 23 w 7x5]
+touch: tcm: 38019 ms: 3 objects  [0 class 1 x 9588 y 14243 z 38 w 6x9]  [1 class 1 x 5881 y 14299 z 30 w 8x8]  [2 class 1 x 4013 y 18777 z 24 w 5x5]
+touch: tcm: 38120 ms: 3 objects  [0 class 1 x 11491 y 14749 z 40 w 7x9]  [1 class 1 x 7959 y 14633 z 34 w 9x9]  [2 class 1 x 5991 y 19133 z 24 w 5x5]
+touch: tcm: 38220 ms: 3 objects  [0 class 1 x 8394 y 17505 z 45 w 9x7]  [1 class 1 x 4947 y 17855 z 31 w 6x9]  [2 class 1 x 3822 y 22249 z 26 w 6x5]
+touch: tcm: 38300 ms: 4 objects  [0 class 1 x 7366 y 18121 z 48 w 9x9]  [1 class 1 x 3963 y 18680 z 38 w 8x7]  [2 class 1 x 3034 y 23146 z 28 w 6x6]  [3 class 1 x 6916 y 26646 z 6 w 4x4]
+touch: tcm: 38346 ms: 3 objects  [0 class 1 x 8306 y 17933 z 41 w 9x6]  [1 class 1 x 4744 y 18433 z 32 w 6x9]  [2 class 1 x 3619 y 22974 z 25 w 9x5]
+touch: tcm: 38446 ms: 3 objects  [0 class 1 x 10616 y 18186 z 43 w 8x7]  [1 class 1 x 6859 y 18739 z 29 w 6x9]  [2 class 1 x 5541 y 23352 z 21 w 7x8]
+touch: tcm: 38547 ms: 3 objects  [0 class 1 x 8800 y 20136 z 47 w 7x7]  [1 class 1 x 4994 y 21077 z 33 w 8x8]  [2 class 1 x 4303 y 25630 z 21 w 8x4]
+touch: tcm: 38622 ms: 2 objects  [0 class 1 x 7909 y 20364 z 51 w 8x7]  [1 class 1 x 4113 y 21355 z 39 w 8x7]
+touch: tcm: 38722 ms: 2 objects  [0 class 1 x 7478 y 19202 z 48 w 8x8]  [1 class 1 x 4034 y 19527 z 43 w 7x10]
+touch: tcm: 38752 ms: 3 objects  [0 class 1 x 8234 y 18424 z 49 w 9x8]  [1 class 1 x 4606 y 18777 z 44 w 9x9]  [2 class 1 x 3447 y 22983 z 12 w 5x8]
+touch: tcm: 38852 ms: 3 objects  [0 class 1 x 9953 y 17668 z 44 w 8x8]  [1 class 1 x 5991 y 17989 z 39 w 7x8]  [2 class 1 x 4381 y 22780 z 23 w 5x6]
+touch: tcm: 38952 ms: 3 objects  [0 class 1 x 8081 y 18833 z 43 w 7x8]  [1 class 1 x 4044 y 19758 z 34 w 6x10]  [2 class 1 x 3059 y 24499 z 21 w 5x8]
+touch: tcm: 39053 ms: 3 objects  [0 class 1 x 7153 y 18583 z 50 w 9x9]  [1 class 1 x 3384 y 19268 z 40 w 7x8]  [2 class 1 x 2331 y 24143 z 26 w 9x7]
+touch: tcm: 39153 ms: 3 objects  [0 class 1 x 9294 y 17033 z 46 w 9x6]  [1 class 1 x 5544 y 17424 z 35 w 7x9]  [2 class 1 x 3797 y 22302 z 23 w 8x9]
+touch: tcm: 39254 ms: 3 objects  [0 class 1 x 9663 y 17946 z 49 w 9x10]  [1 class 1 x 5725 y 18749 z 38 w 9x10]  [2 class 1 x 4363 y 23552 z 21 w 5x9]
+touch: tcm: 39354 ms: 3 objects  [0 class 1 x 8003 y 18871 z 48 w 8x9]  [1 class 1 x 4228 y 19936 z 43 w 9x9]  [2 class 1 x 3588 y 24702 z 28 w 8x6]
+touch: tcm: 39454 ms: 3 objects  [0 class 1 x 7656 y 18593 z 48 w 9x9]  [1 class 1 x 4103 y 19139 z 46 w 8x7]  [2 class 1 x 3191 y 23980 z 26 w 8x5]
+touch: tcm: 39555 ms: 3 objects  [0 class 1 x 9556 y 17508 z 46 w 7x9]  [1 class 1 x 5831 y 17952 z 40 w 8x7]  [2 class 1 x 4375 y 22761 z 23 w 8x5]
+touch: tcm: 39655 ms: 3 objects  [0 class 1 x 9631 y 18368 z 37 w 6x6]  [1 class 1 x 5856 y 19180 z 34 w 9x6]  [2 class 1 x 4753 y 24030 z 20 w 5x5]
+touch: tcm: 39756 ms: 3 objects  [0 class 1 x 8247 y 19152 z 38 w 9x9]  [1 class 1 x 4675 y 20064 z 34 w 6x8]  [2 class 1 x 3959 y 24902 z 21 w 5x5]
+touch: tcm: 39802 ms: 2 objects  [0 class 1 x 8175 y 19130 z 14 w 10x9]  [2 class 1 x 3859 y 24874 z 6 w 6x9]
+touch: tcm: 39806 ms: 1 objects  [0 class 1 x 8169 y 19121 z 11 w 10x9]
+touch: tcm: 39822 ms: 0 objects
+touch: tcm: 40144 ms: 1 objects  [0 class 1 x 8847 y 18152 z 17 w 7x7]
+touch: tcm: 40161 ms: 2 objects  [0 class 1 x 8847 y 18152 z 39 w 8x7]  [1 class 1 x 4259 y 23733 z 28 w 6x5]
+touch: tcm: 40169 ms: 3 objects  [0 class 1 x 8847 y 18152 z 43 w 8x7]  [1 class 1 x 4259 y 23733 z 26 w 6x5]  [2 class 1 x 5172 y 18580 z 37 w 7x8]
+touch: tcm: 40270 ms: 3 objects  [0 class 1 x 9563 y 17914 z 38 w 8x7]  [1 class 1 x 4494 y 23252 z 22 w 5x8]  [2 class 1 x 5663 y 18433 z 31 w 7x9]
+touch: tcm: 40371 ms: 3 objects  [0 class 1 x 8816 y 18474 z 33 w 5x5]  [1 class 1 x 4013 y 24021 z 22 w 4x5]  [2 class 1 x 4963 y 19058 z 30 w 8x6]
+touch: tcm: 40471 ms: 3 objects  [0 class 1 x 8306 y 18699 z 43 w 7x6]  [1 class 1 x 3603 y 24308 z 22 w 4x6]  [2 class 1 x 4569 y 19396 z 34 w 7x8]
+touch: tcm: 40571 ms: 3 objects  [0 class 1 x 9531 y 17902 z 40 w 7x7]  [1 class 1 x 4328 y 23152 z 19 w 7x8]  [2 class 1 x 5875 y 18199 z 28 w 7x6]
+touch: tcm: 40671 ms: 3 objects  [0 class 1 x 9522 y 18274 z 28 w 5x5]  [1 class 1 x 4466 y 23896 z 18 w 5x4]  [2 class 1 x 5575 y 19055 z 24 w 5x5]
+touch: tcm: 40772 ms: 3 objects  [0 class 1 x 8131 y 19068 z 45 w 9x9]  [1 class 1 x 3569 y 24802 z 25 w 7x6]  [2 class 1 x 4372 y 19930 z 33 w 8x9]
+touch: tcm: 40873 ms: 3 objects  [0 class 1 x 8638 y 18099 z 44 w 8x7]  [1 class 1 x 3803 y 23399 z 25 w 9x9]  [2 class 1 x 5056 y 18452 z 34 w 8x7]
+touch: tcm: 40973 ms: 3 objects  [0 class 1 x 10284 y 17311 z 32 w 9x9]  [1 class 1 x 4975 y 22605 z 24 w 5x7]  [2 class 1 x 6456 y 17727 z 27 w 8x6]
+touch: tcm: 41073 ms: 3 objects  [0 class 1 x 8472 y 18768 z 31 w 8x6]  [1 class 1 x 4106 y 24411 z 18 w 4x8]  [2 class 1 x 4925 y 19564 z 33 w 7x7]
+touch: tcm: 41174 ms: 3 objects  [0 class 1 x 7888 y 18161 z 29 w 9x5]  [1 class 1 x 3325 y 24324 z 27 w 9x8]  [2 class 1 x 4275 y 19158 z 32 w 6x6]
+touch: tcm: 41274 ms: 3 objects  [0 class 1 x 9666 y 16527 z 42 w 7x7]  [1 class 1 x 4225 y 22096 z 29 w 7x5]  [2 class 1 x 6059 y 17021 z 37 w 10x8]
+touch: tcm: 41374 ms: 3 objects  [0 class 1 x 9750 y 17668 z 29 w 6x6]  [1 class 1 x 4881 y 23396 z 23 w 7x8]  [2 class 1 x 5988 y 18502 z 26 w 9x6]
+touch: tcm: 41446 ms: 2 objects  [0 class 1 x 8850 y 18271 z 45 w 8x9]  [2 class 1 x 5188 y 19089 z 41 w 8x10]
+touch: tcm: 41492 ms: 3 objects  [0 class 1 x 8719 y 18246 z 44 w 8x7]  [1 class 1 x 3716 y 23261 z 9 w 6x7]  [2 class 1 x 5038 y 18958 z 43 w 9x7]
+touch: tcm: 41592 ms: 3 objects  [0 class 1 x 9241 y 17168 z 42 w 9x7]  [1 class 1 x 4106 y 22396 z 27 w 5x8]  [2 class 1 x 5534 y 17589 z 39 w 8x8]
+touch: tcm: 41693 ms: 3 objects  [0 class 1 x 9678 y 17068 z 35 w 8x8]  [1 class 1 x 4481 y 22427 z 27 w 6x5]  [2 class 1 x 5969 y 17589 z 36 w 6x6]
+touch: tcm: 41793 ms: 3 objects  [0 class 1 x 9419 y 17677 z 39 w 6x6]  [1 class 1 x 4469 y 23152 z 27 w 5x5]  [2 class 1 x 5663 y 18386 z 38 w 9x7]
+touch: tcm: 41893 ms: 3 objects  [0 class 1 x 9103 y 17333 z 28 w 6x6]  [1 class 1 x 4197 y 22833 z 25 w 9x7]  [2 class 1 x 5459 y 17983 z 39 w 8x8]
+touch: tcm: 41931 ms: 2 objects  [1 class 1 x 3966 y 22043 z 26 w 8x7]  [2 class 1 x 5375 y 17155 z 38 w 8x9]
+touch: tcm: 42031 ms: 2 objects  [1 class 1 x 4606 y 18311 z 23 w 8x5]  [2 class 1 x 6603 y 13802 z 47 w 8x9]
+touch: tcm: 42069 ms: 1 objects  [2 class 1 x 7681 y 12693 z 46 w 9x7]
+touch: tcm: 42114 ms: 0 objects
+touch: tcm: 42190 ms: 1 objects  [0 class 1 x 8897 y 11205 z 17 w 7x7]
+touch: tcm: 42240 ms: 0 objects
+touch: tcm: 42353 ms: 1 objects  [0 class 1 x 8363 y 13893 z 17 w 4x5]
+touch: tcm: 42453 ms: 1 objects  [0 class 1 x 8691 y 9996 z 46 w 8x10]
+touch: tcm: 42554 ms: 1 objects  [0 class 1 x 8750 y 6589 z 52 w 8x10]
+touch: tcm: 42654 ms: 1 objects  [0 class 1 x 6128 y 8171 z 56 w 7x11]
+touch: tcm: 42754 ms: 1 objects  [0 class 1 x 3316 y 14849 z 63 w 10x11]
+touch: tcm: 42855 ms: 1 objects  [0 class 1 x 2306 y 21308 z 72 w 11x11]
+touch: tcm: 42956 ms: 1 objects  [0 class 1 x 2341 y 26083 z 72 w 11x11]
+touch: tcm: 43056 ms: 1 objects  [0 class 1 x 3019 y 27930 z 34 w 11x11]
+touch: tcm: 43156 ms: 1 objects  [0 class 1 x 4372 y 27992 z 37 w 12x11]
+touch: tcm: 43257 ms: 1 objects  [0 class 1 x 6878 y 25999 z 50 w 8x9]
+touch: tcm: 43357 ms: 1 objects  [0 class 1 x 9422 y 23902 z 51 w 8x11]
+touch: tcm: 43458 ms: 1 objects  [0 class 1 x 10891 y 23155 z 34 w 5x10]
+touch: tcm: 43558 ms: 1 objects  [0 class 1 x 11650 y 23368 z 21 w 4x6]
+touch: tcm: 43641 ms: 0 objects
+touch: tcm: 43813 ms: 1 objects  [0 class 1 x 7066 y 25533 z 18 w 6x8]
+touch: tcm: 43914 ms: 1 objects  [0 class 1 x 7125 y 24339 z 34 w 8x7]
+touch: tcm: 44014 ms: 1 objects  [0 class 1 x 9556 y 21758 z 43 w 9x10]
+touch: tcm: 44114 ms: 1 objects  [0 class 1 x 11888 y 20030 z 34 w 6x10]
+touch: tcm: 44215 ms: 1 objects  [0 class 1 x 10969 y 19068 z 38 w 5x10]
+touch: tcm: 44315 ms: 1 objects  [0 class 1 x 5453 y 19246 z 38 w 5x9]
+touch: tcm: 44415 ms: 1 objects  [0 class 1 x 1569 y 19755 z 38 w 8x9]
+touch: tcm: 44516 ms: 1 objects  [0 class 1 x 2350 y 19661 z 42 w 9x8]
+touch: tcm: 44617 ms: 1 objects  [0 class 1 x 8534 y 18189 z 38 w 9x9]
+touch: tcm: 44688 ms: 0 objects
+touch: tcm: 45781 ms: 1 objects  [0 class 1 x 8634 y 20639 z 20 w 7x8]
+touch: tcm: 45882 ms: 1 objects  [0 class 1 x 6031 y 20730 z 42 w 7x8]
+touch: tcm: 45982 ms: 1 objects  [0 class 1 x 2641 y 19961 z 45 w 8x9]
+touch: tcm: 46083 ms: 1 objects  [0 class 1 x 1003 y 18271 z 51 w 9x9]
+touch: tcm: 46183 ms: 1 objects  [0 class 1 x 1038 y 15705 z 52 w 9x9]
+touch: tcm: 46284 ms: 1 objects  [0 class 1 x 3003 y 12883 z 60 w 10x9]
+touch: tcm: 46384 ms: 1 objects  [0 class 1 x 6691 y 11414 z 54 w 9x8]
+touch: tcm: 46397 ms: 2 objects  [0 class 1 x 7259 y 11186 z 53 w 8x10]  [1 class 1 x 4109 y 11630 z 19 w 9x8]
+touch: tcm: 46497 ms: 2 objects  [0 class 1 x 10591 y 9099 z 49 w 9x10]  [1 class 1 x 7775 y 8914 z 32 w 9x7]
+touch: tcm: 46597 ms: 2 objects  [0 class 1 x 11294 y 6789 z 56 w 10x9]  [1 class 1 x 8416 y 6461 z 36 w 8x6]
+touch: tcm: 46698 ms: 2 objects  [0 class 1 x 8603 y 5508 z 54 w 9x9]  [1 class 1 x 5044 y 5796 z 42 w 9x6]
+touch: tcm: 46798 ms: 2 objects  [0 class 1 x 5303 y 7558 z 57 w 9x9]  [1 class 1 x 1694 y 8611 z 36 w 9x6]
+touch: tcm: 46899 ms: 2 objects  [0 class 1 x 5231 y 9705 z 50 w 10x8]  [1 class 1 x 1959 y 11011 z 41 w 9x8]
+touch: tcm: 46999 ms: 2 objects  [0 class 1 x 7778 y 11043 z 40 w 8x6]  [1 class 1 x 4244 y 11977 z 40 w 8x6]
+touch: tcm: 47100 ms: 2 objects  [0 class 1 x 5838 y 13580 z 50 w 9x7]  [1 class 1 x 2544 y 14711 z 43 w 10x9]
+touch: tcm: 47200 ms: 2 objects  [0 class 1 x 8034 y 14514 z 38 w 7x6]  [1 class 1 x 4659 y 15049 z 43 w 9x9]
+touch: tcm: 47301 ms: 2 objects  [0 class 1 x 8138 y 16527 z 42 w 9x7]  [1 class 1 x 4853 y 17074 z 38 w 9x9]
+touch: tcm: 47401 ms: 2 objects  [0 class 1 x 8169 y 17224 z 37 w 7x7]  [1 class 1 x 4825 y 17805 z 46 w 9x7]
+touch: tcm: 47501 ms: 2 objects  [0 class 1 x 9588 y 18189 z 31 w 8x5]  [1 class 1 x 6263 y 18639 z 43 w 9x9]
+touch: tcm: 47602 ms: 2 objects  [0 class 1 x 7741 y 19955 z 40 w 8x7]  [1 class 1 x 4534 y 21239 z 32 w 8x9]
+touch: tcm: 47702 ms: 2 objects  [0 class 1 x 5166 y 19711 z 48 w 9x8]  [1 class 1 x 2153 y 20930 z 34 w 6x8]
+touch: tcm: 47802 ms: 2 objects  [0 class 1 x 4863 y 16277 z 48 w 9x10]  [1 class 1 x 1653 y 17564 z 40 w 9x7]
+touch: tcm: 47903 ms: 2 objects  [0 class 1 x 5622 y 13471 z 44 w 8x6]  [1 class 1 x 2466 y 14118 z 42 w 8x9]
+touch: tcm: 48003 ms: 2 objects  [0 class 1 x 8569 y 9493 z 31 w 9x5]  [1 class 1 x 5088 y 9686 z 44 w 9x7]
+touch: tcm: 48104 ms: 2 objects  [0 class 1 x 9584 y 6646 z 47 w 9x9]  [1 class 1 x 6381 y 6393 z 48 w 10x6]
+touch: tcm: 48204 ms: 2 objects  [0 class 1 x 8416 y 4824 z 43 w 9x8]  [1 class 1 x 5009 y 4783 z 35 w 9x8]
+touch: tcm: 48259 ms: 3 objects  [0 class 1 x 8159 y 4608 z 47 w 9x7]  [1 class 1 x 4684 y 4433 z 42 w 9x7]  [2 class 1 x 1938 y 8771 z 13 w 4x8]
+touch: tcm: 48292 ms: 4 objects  [0 class 1 x 8188 y 4508 z 46 w 8x6]  [1 class 1 x 4769 y 4149 z 40 w 8x9]  [2 class 1 x 1938 y 8771 z 18 w 7x5]  [3 class 1 x 2631 y 17902 z 10 w 5x6]
+touch: tcm: 48393 ms: 4 objects  [0 class 1 x 9444 y 4239 z 30 w 7x8]  [1 class 1 x 5691 y 3946 z 47 w 9x7]  [2 class 1 x 2797 y 8568 z 21 w 8x8]  [3 class 1 x 3344 y 17886 z 27 w 5x8]
+touch: tcm: 48447 ms: 3 objects  [0 class 1 x 9253 y 6068 z 26 w 5x6]  [1 class 1 x 5409 y 6114 z 50 w 9x7]  [2 class 1 x 2581 y 10493 z 21 w 8x7]
+touch: tcm: 48548 ms: 3 objects  [0 class 1 x 9150 y 9380 z 47 w 8x7]  [1 class 1 x 5150 y 9449 z 47 w 9x7]  [2 class 1 x 2522 y 13808 z 27 w 5x8]
+touch: tcm: 48648 ms: 3 objects  [0 class 1 x 11363 y 11943 z 37 w 7x6]  [1 class 1 x 7588 y 11771 z 44 w 8x7]  [2 class 1 x 4403 y 15805 z 32 w 7x5]
+touch: tcm: 48748 ms: 3 objects  [0 class 1 x 11163 y 15783 z 38 w 8x6]  [1 class 1 x 7188 y 15502 z 49 w 9x10]  [2 class 1 x 4597 y 19533 z 34 w 7x9]
+touch: tcm: 48849 ms: 3 objects  [0 class 1 x 11834 y 17143 z 29 w 7x9]  [1 class 1 x 8009 y 16808 z 45 w 9x8]  [2 class 1 x 5469 y 20986 z 33 w 8x8]
+touch: tcm: 48949 ms: 3 objects  [0 class 1 x 11609 y 20177 z 36 w 7x8]  [1 class 1 x 7825 y 20136 z 38 w 8x8]  [2 class 1 x 6022 y 24321 z 25 w 6x9]
+touch: tcm: 49045 ms: 2 objects  [0 class 1 x 11853 y 22461 z 30 w 7x6]  [1 class 1 x 8041 y 22880 z 42 w 9x8]
+touch: tcm: 49145 ms: 2 objects  [0 class 1 x 12147 y 23539 z 17 w 7x9]  [1 class 1 x 8366 y 23939 z 42 w 7x7]
+touch: tcm: 49183 ms: 1 objects  [1 class 1 x 8481 y 24180 z 37 w 9x7]
+touch: tcm: 49250 ms: 0 objects
+touch: tcm: 49283 ms: 1 objects  [0 class 1 x 8925 y 23027 z 12 w 7x7]
+touch: tcm: 49338 ms: 2 objects  [0 class 1 x 8469 y 22649 z 44 w 8x9]  [1 class 1 x 7531 y 26764 z 9 w 7x3]
+touch: tcm: 49438 ms: 2 objects  [0 class 1 x 6950 y 21568 z 44 w 8x8]  [1 class 1 x 5966 y 26158 z 24 w 9x5]
+touch: tcm: 49476 ms: 3 objects  [0 class 1 x 6531 y 21093 z 46 w 9x9]  [1 class 1 x 5528 y 25768 z 26 w 5x9]  [2 class 1 x 10547 y 20324 z 19 w 9x4]
+touch: tcm: 49576 ms: 3 objects  [0 class 1 x 5625 y 20077 z 45 w 8x9]  [1 class 1 x 4450 y 24899 z 27 w 7x8]  [2 class 1 x 9903 y 19680 z 26 w 9x6]
+touch: tcm: 49677 ms: 3 objects  [0 class 1 x 4972 y 19439 z 47 w 9x9]  [1 class 1 x 3813 y 24136 z 29 w 5x8]  [2 class 1 x 9209 y 18771 z 22 w 5x5]
+touch: tcm: 49777 ms: 3 objects  [0 class 1 x 4828 y 17799 z 54 w 9x10]  [1 class 1 x 3572 y 22314 z 34 w 6x5]  [2 class 1 x 9522 y 17389 z 23 w 8x5]
+touch: tcm: 49807 ms: 2 objects  [0 class 1 x 5056 y 17146 z 53 w 9x9]  [1 class 1 x 3719 y 21655 z 34 w 8x7]
+touch: tcm: 49907 ms: 2 objects  [0 class 1 x 6297 y 14821 z 53 w 10x9]  [1 class 1 x 4631 y 19024 z 37 w 9x6]
+touch: tcm: 50007 ms: 2 objects  [0 class 1 x 7459 y 11943 z 53 w 10x8]  [1 class 1 x 5269 y 15902 z 39 w 8x6]
+touch: tcm: 50108 ms: 2 objects  [0 class 1 x 7794 y 10055 z 57 w 10x8]  [1 class 1 x 5241 y 13755 z 37 w 7x9]
+touch: tcm: 50208 ms: 2 objects  [0 class 1 x 6869 y 9952 z 57 w 10x9]  [1 class 1 x 3953 y 13661 z 33 w 6x5]
+touch: tcm: 50309 ms: 2 objects  [0 class 1 x 4338 y 12208 z 54 w 9x10]  [1 class 1 x 1822 y 16483 z 35 w 9x7]
+touch: tcm: 50409 ms: 2 objects  [0 class 1 x 4966 y 13696 z 54 w 10x9]  [1 class 1 x 2756 y 18114 z 40 w 9x8]
+touch: tcm: 50509 ms: 2 objects  [0 class 1 x 8000 y 14202 z 53 w 9x8]  [1 class 1 x 5341 y 18474 z 42 w 9x8]
+touch: tcm: 50609 ms: 2 objects  [0 class 1 x 6675 y 17605 z 52 w 9x8]  [1 class 1 x 4713 y 22377 z 40 w 8x6]
+touch: tcm: 50710 ms: 2 objects  [0 class 1 x 7097 y 16011 z 59 w 9x9]  [1 class 1 x 5163 y 20402 z 36 w 6x9]
+touch: tcm: 50811 ms: 2 objects  [0 class 1 x 10494 y 9796 z 50 w 10x9]  [1 class 1 x 7650 y 13614 z 37 w 8x6]
+touch: tcm: 50911 ms: 2 objects  [0 class 1 x 10497 y 5555 z 56 w 10x8]  [1 class 1 x 7153 y 8996 z 40 w 8x8]
+touch: tcm: 51011 ms: 2 objects  [0 class 1 x 9044 y 2089 z 54 w 10x8]  [1 class 1 x 5506 y 5599 z 41 w 7x7]
+touch: tcm: 51111 ms: 2 objects  [0 class 1 x 5203 y 1005 z 56 w 9x10]  [1 class 1 x 2250 y 4896 z 31 w 6x6]
+touch: tcm: 51212 ms: 2 objects  [0 class 1 x 2538 y 1527 z 61 w 10x10]  [1 class 1 x 347 y 5661 z 10 w 6x8]
+touch: tcm: 51221 ms: 3 objects  [0 class 1 x 2478 y 1527 z 61 w 10x10]  [1 class 1 x 316 y 5649 z 9 w 6x8]  [2 class 1 x 11744 y 13536 z 8 w 7x6]
+touch: tcm: 51249 ms: 2 objects  [0 class 1 x 2347 y 1505 z 63 w 9x11]  [2 class 1 x 11753 y 13558 z 6 w 7x9]
+touch: tcm: 51266 ms: 1 objects  [0 class 1 x 2297 y 1493 z 65 w 10x11]
+touch: tcm: 51367 ms: 1 objects  [0 class 1 x 784 y 2283 z 46 w 10x11]
+touch: tcm: 51467 ms: 1 objects  [0 class 1 x 863 y 3830 z 62 w 10x11]
+touch: tcm: 51483 ms: 2 objects  [0 class 1 x 1303 y 3883 z 66 w 10x11]  [1 class 1 x 163 y 8061 z 8 w 6x8]
+touch: tcm: 51500 ms: 1 objects  [0 class 1 x 1956 y 3893 z 66 w 10x11]
+touch: tcm: 51601 ms: 1 objects  [0 class 1 x 5741 y 5096 z 65 w 9x10]
+touch: tcm: 51701 ms: 1 objects  [0 class 1 x 4200 y 10589 z 59 w 9x9]
+touch: tcm: 51802 ms: 1 objects  [0 class 1 x 8919 y 10864 z 64 w 10x10]
+touch: tcm: 51902 ms: 1 objects  [0 class 1 x 7616 y 15439 z 58 w 9x10]
+touch: tcm: 52002 ms: 1 objects  [0 class 1 x 9719 y 16374 z 56 w 9x8]
+touch: tcm: 52103 ms: 1 objects  [0 class 1 x 9744 y 20477 z 45 w 9x9]
+touch: tcm: 52203 ms: 1 objects  [0 class 1 x 10181 y 22086 z 52 w 10x8]
+touch: tcm: 52303 ms: 1 objects  [0 class 1 x 10819 y 25999 z 37 w 8x7]
+touch: tcm: 52386 ms: 0 objects
+touch: tcm: 67066 ms: 1 objects  [0 class 1 x 4209 y 20518 z 10 w 4x4]
+touch: tcm: 67108 ms: 2 objects  [0 class 1 x 3853 y 20683 z 26 w 5x6]  [1 class 1 x 6744 y 19796 z 22 w 6x9]
+touch: tcm: 67208 ms: 2 objects  [0 class 1 x 4397 y 19627 z 32 w 6x7]  [1 class 1 x 7434 y 19002 z 21 w 5x4]
+touch: tcm: 67309 ms: 2 objects  [0 class 1 x 3497 y 20111 z 27 w 9x6]  [1 class 1 x 6922 y 19474 z 26 w 7x9]
+touch: tcm: 67409 ms: 2 objects  [0 class 1 x 2059 y 22039 z 29 w 5x8]  [1 class 1 x 5194 y 21383 z 32 w 6x9]
+touch: tcm: 67510 ms: 2 objects  [0 class 1 x 3278 y 20986 z 20 w 5x8]  [1 class 1 x 6906 y 20305 z 22 w 9x5]
+touch: tcm: 67610 ms: 2 objects  [0 class 1 x 2456 y 22543 z 25 w 7x5]  [1 class 1 x 5859 y 21808 z 38 w 10x7]
+touch: tcm: 67664 ms: 1 objects  [1 class 1 x 6175 y 21133 z 24 w 9x8]
+touch: tcm: 67698 ms: 0 objects
+touch: tcm: 67727 ms: 1 objects  [0 class 1 x 8597 y 16408 z 13 w 8x5]
+touch: tcm: 67748 ms: 2 objects  [0 class 1 x 9219 y 15589 z 21 w 7x8]  [1 class 1 x 5766 y 15130 z 25 w 8x6]
+touch: tcm: 67781 ms: 1 objects  [1 class 1 x 7197 y 12752 z 21 w 7x5]
+touch: tcm: 67806 ms: 0 objects
+touch: tcm: 67974 ms: 1 objects  [0 class 1 x 10578 y 2593 z 12 w 5x4]
+touch: tcm: 68074 ms: 1 objects  [0 class 1 x 10853 y 515 z 31 w 8x7]
+touch: tcm: 68175 ms: 1 objects  [0 class 1 x 7625 y 4233 z 36 w 8x7]
+touch: tcm: 68279 ms: 0 objects
+touch: tcm: 68429 ms: 1 objects  [0 class 1 x 1772 y 2727 z 9 w 6x5]
+touch: tcm: 68530 ms: 1 objects  [0 class 1 x 1022 y 946 z 29 w 9x7]
+touch: tcm: 68630 ms: 1 objects  [0 class 1 x 1041 y 2355 z 46 w 9x8]
+touch: tcm: 68731 ms: 1 objects  [0 class 1 x 3247 y 9080 z 41 w 9x9]
+touch: tcm: 68831 ms: 1 objects  [0 class 1 x 4400 y 18927 z 25 w 5x6]
+touch: tcm: 68886 ms: 0 objects
+touch: tcm: 69040 ms: 1 objects  [0 class 1 x 1609 y 27308 z 11 w 8x3]
+touch: tcm: 69149 ms: 1 objects  [0 class 1 x 1728 y 27152 z 36 w 6x6]
+touch: tcm: 69250 ms: 1 objects  [0 class 1 x 6550 y 20786 z 36 w 6x8]
+touch: tcm: 69300 ms: 0 objects
+touch: tcm: 69670 ms: 1 objects  [0 class 1 x 11163 y 27799 z 18 w 8x10]
+touch: tcm: 69771 ms: 1 objects  [0 class 1 x 9869 y 25724 z 43 w 8x9]
+touch: tcm: 69871 ms: 1 objects  [0 class 1 x 7622 y 22089 z 45 w 9x7]
+touch: tcm: 69972 ms: 0 objects
+[   0.000000] [I] secure payload loading took 0ms
+[   0.000000] [I] platform info binded: true
+[   0.000000] [I] platform info: 060906010000
+[   9.721569] [I] 
+welcome to lk/MP
+
+[   9.721597] [I] boot args 0x1 0x0 0x0 0x0
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   9.722210] [I] acpm locks regulators
+[   9.722265] [I] Soc Product ID: 0x09875
+[   9.722299] [I] Soc rev: A1
+[   9.722327] [I] Soc ID: 0x12b44c577850
+[   9.722362] [I] DVFS version: 2
+[   9.722393] [E] vendor magic_number must be 0xcceeddff but 0x00000000
+[   9.722445] [E] magic_number must be 0xcceeddff but 0x00000000
+[   9.722529] [I] S2MPG_M CHIPID read: 0x10
+[   9.722591] [I] S2MPG_S CHIPID read: 0x10
+[   9.722660] [I] S2MPG_M PWRONSRC read: 0x4
+[   9.722726] [I] S2MPG_M OFFSRC1 read: 0x10
+[   9.722798] [I] S2MPG_M OFFSRC2 read: 0x0
+[   9.722865] [I] S2MPG_M RTC_WTSR read: 0x7e
+[   9.722906] [I] S2MPG_M INT1: 0x30
+[   9.722935] [I] S2MPG_M INT2: 0x0
+[   9.722962] [I] S2MPG_M INT3: 0x0
+[   9.722988] [I] S2MPG_M INT4: 0x0
+[   9.723018] [I] S2MPG_M INT5: 0x0
+[   9.723078] [I] S2MPG_S OFFSRC1 read: 0x11
+[   9.723119] [I] S2MPG_S INT1: 0x83
+[   9.723147] [I] S2MPG_S INT2: 0x80
+[   9.723174] [I] S2MPG_S INT3: 0x0
+[   9.723204] [I] S2MPG_S INT4: 0x0
+[   9.723231] [I] S2MPG_S INT5: 0x0
+APC Bootmetrics:
+  BL1: MT:1 / DT:ENTRY / 96560 us
+  BL1: MT:2 / DT:LOAD  / 7360 us
+  BL1: MT:F / DT:EXIT  / 147744 us
+  PBL: MT:1 / DT:ENTRY / 147872 us
+  PBL: MT:2 / DT:LOAD  / 19592 us
+  PBL: MT:F / DT:EXIT  / 212968 us
+  BL2: MT:1 / DT:ENTRY / 214536 us
+  BL2: MT:2 / DT:LOAD  / 160 us
+  BL2: MT:3 / DT:LOAD  / 152 us
+  BL2: MT:4 / DT:CHECK / 342560 us
+  BL2: MT:5 / DT:CHECK / 2096 us
+  BL2: MT:6 / DT:LOAD  / 8967200 us
+  BL2: MT:7 / DT:CHECK / 9062536 us
+  BL2: MT:8 / DT:CHECK / 9062680 us
+  BL2: MT:9 / DT:LOAD  / 44288 us
+  BL2: MT:A / DT:LOAD  / 31632 us
+  BL2: MT:B / DT:LOAD  / 326280 us
+  BL2: MT:C / DT:LOAD  / 8 us
+  BL2: MT:F / DT:EXIT  / 9514240 us
+  PBL: MT:3 / DT:LOAD  / 81280 us
+  PBL: MT:4 / DT:LOAD  / 28160 us
+  PBL: MT:5 / DT:LOAD  / 6184 us
+  PBL: MT:6 / DT:CHECK / 9645016 us
+  PBL: MT:7 / DT:CHECK / 9645152 us
+  EL3: MT:1 / DT:ENTRY / 9647928 us
+  EL3: MT:D / DT:CHECK / 9663488 us
+  EL3: MT:E / DT:CHECK / 9710432 us
+  EL3: MT:F / DT:EXIT  / 9710472 us
+APC Breadcrumbs(v2.4):
+ stages(S): 0000404F / 0000404F
+  flags(S): 000022C0 / 000022C0
+stages(NS): 00005FFE / 00005004
+ flags(NS): 0000D400 / 0000D400
+    status: 00000000 / 00000000
+    device: 00000001 / 00000001
+   tmutrip: 00000000 / 00000000
+     reset: 00180000 / 00180000
+[   9.724230] [E] GSA Breadcrumb:
+00000000 0000000d 00000000 00000000  |................|
+00000000 00000000 00000001           |............    |
+[   9.724369] [I] SBDP initialized: chipid allowed=0, dpm_state=0x0000
+[   9.724420] [E] check header failed
+[   9.724547] [I] initializing device i2c:usi00
+[   9.724587] [I] usi00: version 2.2
+[   9.724637] [I] initializing device i2c:usi04
+[   9.724678] [I] usi04: version 2.2
+[   9.724727] [I] initializing device i2c:usi06
+[   9.724768] [I] usi06: version 2.2
+[   9.724813] [I] initializing device i2c:usi09
+[   9.724851] [I] usi09: version 2.2
+[   9.724897] [I] initializing device i2cm:i2cm0
+[   9.724939] [I] DVFS init
+[   9.727199] [I] DVFS init done
+[   9.727229] [I] UFS EVT version 0
+[   9.727272] [I] controller version 3.0 found
+[   9.727307] [I] capabilities 0x1383ff1f
+[   9.727512] [I] UFS device found
+zuma_ufs_device_init_done
+[   9.727555] [E] ufshc_notify done
+[   9.727630] [I] ufshc_power_mode_change HS gear 4
+[   9.737827] [I] ufshc: bBootLunEn 0x1
+[   9.737969] [I] UFS device SAMSUNG KLUDG4UHGC-B0E1 version 3.1
+[   9.738014] [I] Enabled LUNs found 4
+[   9.738078] [I] UFS device total size 127984992256
+[   9.738182] [I] Temp too high enabled
+[   9.738277] [I] Temp too low enabled
+[   9.741028] [I] Write Booster: available buffer=0x7 lifetime=0x2 current buffer=0x1dcb
+[   9.741118] [I] boot slot: a
+[   9.743307] [I] slot data a: 0x00001e02
+[   9.743337] [I] slot data b: 0x00001000
+[   9.744154] [I] platform info: 060906010000
+[   9.744396] [I] initializing device cs40l2x:cs40l26
+[   9.754881] [I] CS40L26 found
+[   9.756542] [I] initializing device nfc:st21nfc
+[   9.758462] [I] tcpc vendor id 56
+[   9.759368] found 77779 on usi6
+[   9.759392] bms_init init usi10 as sec_i2c
+[   9.759423] [I] initializing device i2c:usi10
+[   9.759463] [I] usi10: version 2.2
+[   9.759660] [I] FG device name 0x5100
+[   9.760168] [I] [max77779fg] SOC(99), VCELL(4400), INOW(-287), IAVG(-319)
+[   9.760907] [I] fship 0x0
+[   9.761027] [I] master disconnect reason 0x0
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   9.763855] [I] LCS state:PRODUCTION
+[   9.764135] [I] saving ddr training data
+[   9.765900] [I] no valid file
+[TMU:0] 42
+[TMU:1] 42
+[   9.807572] [I] dsim_probe dsim0+
+[   9.807610] [I] using data lane count(4)
+[   9.818812] [E] dsim0 wait phy pll stable
+[   9.845212] [I] Succeeded to read panel product id : 0x22a8a00a
+[   9.845259] [E] is_compatible is not defined!
+[   9.845295] [I] panel_rev: 0x1000
+[   9.850450] [I] use panel google-cm4 for dsim0
+[   9.850485] [I] dsim_probe -: dsim0 driver(cmd mode) has been probed.
+[   9.850533] [I] dsim_probe dsim1+
+[   9.850566] [I] using data lane count(4)
+[   9.850632] [E] dsim1 wait phy pll stable
+[   9.901590] [E] timeout!! wait for DSIM interrupt (0x40300000)
+[   9.901633] [E] MIPI DSIM (id=6) read Timeout! 0x4
+[   9.901669] [E] dsim fail to get panel operation
+[   9.901742] [E] dsim has error.
+[   9.901771] [E] dsim_probe -: dsim1 probe failed.
+[   9.901806] [I] dsim1 probe was failed
+[   9.901834] [I] dsim_init -: set dsim0 driver as primary.
+[   9.913032] [E] dsim0 wait phy pll stable
+[   9.932409] [I] dpp_probe +
+[   9.932432] [I] dpp-0's attr is (0x004d0047)
+[   9.932464] [I] dpp(0) init resources.
+[   9.932519] [I] dpp_probe -: dpp0 is probed successfully
+[   9.932561] [I] decon-int: max win6, command mode, hw trigger
+[   9.932604] [I] single dsi mode
+[   9.932635] [I] [decon0] d_path(0xB1) DSCC DSC_ENC1 DSC_ENC0 OFIFO.0
+[   9.932741] [I] [decon0] sel(0x0) OFIFO.0 - dsim0 - google-cm4
+[   9.932785] [I] Display 1st window(5) xres(1280) yres(2856) win_start_pos(0) win_end_pos(b2704ff)
+[   9.935263] [E] [   1.923617] [I] -------------------- DSS LOGS START --------------------
+[PRE] reset message: APC Watchdog Early
+[PRE] RST_STAT: 0x1 - CLUSTER0_NONCPU_WDTRESET
+[PRE] GSA_RESET_STATUS: 0x10 - GSA_INTERMEDIATE_RESET
+[PRE] Reboot reason: 0xcbea - APC Watchdog Early
+[PRE] Reboot mode: 0x0 - Normal Boot
+[   1.926086] APC Breadcrumbs(v2.4):
+ stages(S): 0000404F / 00004030
+  flags(S): 000022C0 / 000022C0
+stages(NS): 00005FFE / 00005004
+ flags(NS): 0000D400 / 0000D400
+    status: 00000000 / 00000000
+    device: 00000001 / 00000001
+   tmutrip: 00000000 / 00000000
+     reset: 00180000 / 00000001
+[   1.927414] [E] GSA Breadcrumb:
+00000000 fffd000d 00000000 00000000  |................|
+00000000 00000000 00000010           |............    |
+[   1.928945] [I] ACPM GPR DUMP - NOT AVAILABLE
+STATES_MIF|TOP - 0x27df8540 | 0xc29dd039
+
+          pd-apm - 0x317d6104	          pd-cmu - 0x10526d31	       pd-cpucl0 - 0xcba30019	       pd-cpucl1 - 0xca6b9fc	
+       pd-cpucl2 - 0x7f3fcb10	          pd-g3d - 0x1a6dfb5b	pd-embedded_cpucl0 - 0xffea0471	pd-embedded_cpucl1 - 0x2568befa	
+pd-embedded_cpucl2 - 0x1fb76194	 pd-embedded_g3d - 0xe0cfeaf	         pd-dpub - 0x891d1475	        pd-dpuf0 - 0x93fd77	
+        pd-dpuf1 - 0x6c3b866c	          pd-g2d - 0x1617d77	          pd-gdc - 0xffe31489	          pd-gse - 0xa115a8b3	
+         pd-mcsc - 0x855ecc6c	          pd-mfc - 0xac84c962	         pd-rgbp - 0xcb9cb154	          pd-tnr - 0x4115ffe7	
+         pd-yuvp - 0xf71a0180	          pd-aoc - 0x8025d95f	          pd-aur - 0xd737978f	           pd-bw - 0x230d374f	
+           pd-eh - 0xd9d10040	        pd-ispfe - 0x1a134de3	          pd-tpu - 0x55850dd0	         pd-mif0 - 0xb918a1f9	
+         pd-mif1 - 0x6feb2319	         pd-mif2 - 0xc042cd7c	         pd-mif3 - 0x97cb0620	         pd-misc - 0x1622a37f	
+        pd-nocl0 - 0xf7130025	       pd-nocl1a - 0x2912c5f5	       pd-nocl1b - 0xeeee1090	      pd-nocl2aa - 0x849c6a3b	
+      pd-nocl2ab - 0x64eb57c4	         pd-hsi0 - 0x13a23dbb	         pd-hsi1 - 0x7beb2a10	         pd-hsi2 - 0x818c36d5	
+       pd-peric0 - 0xbf3f48c5	       pd-peric1 - 0x104385eb	          pd-s2d - 0xcbfa60a2	
+
+[UP] CUR_SEQ0 - 163755322
+[DOWN] CUR_SEQ0 - DONE
+APSOC_CNT - 86837
+APSOC|MIF_CNT_SLEEP- 96861 | 29081
+APSOC|MIF_CNT_SICD - 0 | 808989753
+CURR_POWERMODE - 875574834
+CPU_STAT - cpu0:on, cpu1:off, cpu2:off, cpu3:off, cpu4:on, cpu5:off, cpu6:off, cpu7:off
+SEQ_STAT - APSOC_SEQ_down, MIF_SEQ_down, CL0_off, CL1_off, CL2_off
+[UP] CUR_SEQ0 - 163755322
+[DOWN] CUR_SEQ0 - DONE
+access_type: CUR_SEQ1 - 661170301, index: 0
+hotplug_flag - cpu0:out, cpu1:in, cpu2:out, cpu3:in, cpu4:out, cpu5:in, cpu6:out, cpu7:in, 
+MIF REF_COUNT:0
+MIF REQ_MASTER - 
+CURR_POWERMODE - 875574834
+EHLD core status
+Core0:  (No Lockup)
+Core1:  (No Lockup)
+Core2:  (No Lockup)
+Core3:  (No Lockup)
+Core4:  (No Lockup)
+Core5:  (No Lockup)
+Core6:  (No Lockup)
+Core7:  (No Lockup)
+[   1.946324] [I] ***** S2D Info Block ********************************************************
+[   1.947019] [I] S2D Magic didn't detect - s2d validity check failed!
+[   1.947424] [I] Additional information:
+[   1.947801] [I]    S2D status: Not triggered
+[   1.948125] [I] *****************************************************************************
+[   1.948630] [I] Core reg status and PC:
+[   1.948920] [I]        /- Power state  - +:On -:Off
+[   1.949257] [I]        |/- Recorded by - P:panic A:arraydump S:s2d _:none
+[   1.949683] [I]        ||/- IRQ        - O:enabled X:disabled _:n/a
+[   1.950085] [I]        |||/- FIQ       - O:enabled X:disabled _:n/a
+[   1.950486] [I] core#  ||||
+[   1.950731] [I]   0    -___ N/A
+[   1.951065] [I]   1    -___ N/A
+[   1.951402] [I]   2    -___ N/A
+[   1.951735] [I]   3    -___ N/A
+[   1.952069] [I]   4    -___ N/A
+[   1.952400] [I]   5    -___ N/A
+[   1.952734] [I]   6    -___ N/A
+[   1.953066] [I]   7    -___ N/A
+[   1.953403] PCSR iteration magic is invalid: 000000
+APC cpu contexts:
+Core0 is off
+[   1.954016] [I] Watchdog or Long Press Power Key Detected.
+[   1.954388] [I] Core[0]: Initial policy - cache flush level 0
+[   1.954799] [I] Core[1]: Initial policy - cache flush level 0
+[   1.955210] [I] Core[2]: Initial policy - cache flush level 0
+[   1.955621] [I] Core[3]: Initial policy - cache flush level 0
+[   1.956031] [I] Core[4]: Initial policy - cache flush level 0
+[   1.956441] [I] Core[5]: Initial policy - cache flush level 0
+[   1.956877] [I] Core[6]: Initial policy - cache flush level 0
+[   1.957287] [I] Core[7]: Initial policy - cache flush level 0
+[   1.957697] [I] Core[0]: Cache flush level changed => 3
+[   1.958417] [I] try to get arraydump for cores 0x1
+[   1.958893] [E] dsim0 wait phy pll stable
+[   1.959367] [I] Array dump response 0x0
+[   1.980621] [I] Succeeded to read panel product id : 0x22a8a00a
+[   1.981024] [E] is_compatible is not defined!
+[   1.981381] [I] panel_rev: 0x1000
+[   1.987028] [I] use panel google-cm4 for dsim0
+[   1.987374] [I] dsim_probe -: dsim0 driver(cmd mode) has been probed.
+[   1.987824] [I] dsim_probe dsim1+
+[   1.988139] [I] using data lane count(4)
+[   1.988623] [E] dsim1 wait phy pll stable
+[   2.039336] [E] timeout!! wait for DSIM interrupt (0x40300000)
+[   2.039825] [E] MIPI DSIM (id=6) read Timeout! 0x4
+[   2.040265] [E] dsim fail to get panel operation
+[   2.040759] [E] dsim has error.
+[   2.041036] [E] dsim_probe -: dsim1 probe failed.
+[   2.041395] [I] dsim1 probe was failed
+[   2.041697] [I] dsim_init -: set dsim0 driver as primary.
+[   2.053554] [E] dsim0 wait phy pll stable
+[   2.073192] [I] dpp_probe +
+[   2.073497] [I] dpp-0's attr is (0x004d0047)
+[   2.073914] [I] dpp(0) init resources.
+[   2.074299] [I] dpp_probe -: dpp0 is probed successfully
+[   2.074797] [I] decon-int: max win6, command mode, hw trigger
+[   2.075325] [I] single dsi mode
+[   2.075663] [I] [decon0] d_path(0xB1) DSCC DSC_ENC1 DSC_ENC0 OFIFO.0
+[   2.076273] [I] [decon0] sel(0x0) OFIFO.0 - dsim0 - google-cm4
+[   2.076772] [I] Display 1st window(5) xres(1280) yres(2856) win_start_pos(0) win_end_pos(b2704ff)
+[   2.103831] [I] port connected
+[   2.212675] [I] decon0 registered successfully
+[   2.946845] [E] Discarding ramdump file gsa_sram_key.lst flag 0
+[   2.947308] [E] fail to add gsa_sram_key.lst to ramdump sub-file, -8
+[   2.948259] [E] Invalid bl31 log reserved region: bypass
+
+[   2.948673] [E] Invalid pbl log reserved region: bypass
+
+[   2.949040] PSCI Breadcrumbs(v2.0):
+[   2.949339] Core0: 00000000 / 00000000
+[   2.949738] Core1: 00000000 / 00000000
+[   2.950138] Core2: 00000000 / 00000000
+[   2.950535] Core3: 00000000 / 00000000
+[   2.950934] Core4: 00000000 / 00000000
+[   2.951335] Core5: 00000000 / 00000000
+[   2.951734] Core6: 00000000 / 00000000
+[   2.952133] Core7: 00000000 / 00000000
+[   2.952534] WDT FIQ info:
+[   2.952795] core# type    raw-magic   elr
+[   2.953152]     0-7   N/A
+[   2.953479] [I] linux debug info is not valid
+[   2.953797] [E] cdd_param is out of boundary
+[   2.954189] [I] Last AVB: avb_ret=OK
+[   2.954503] [I] Last AVB: avb_veritymode=<unknown>
+[   2.954872] [I] Last AVB: avb_error_parts=
+RAMDUMP_MSG.txt:
+  reset message: APC Watchdog Early
+  UUID: 0d0bea42-fdbc-d44d-939f-b207adc004ec
+  last kernel version: N/A
+  aosp kernel version: N/A
+  build: caiman
+  RST_STAT: 0x1 - CLUSTER0_NONCPU_WDTRESET
+  GSA_RESET_STATUS: 0x10 - GSA_INTERMEDIATE_RESET
+  Reboot reason: 0xcbea - APC Watchdog Early
+  Reboot mode: 0x0 - Normal Boot
+[   2.957956] [I] -------------------- DSS LOGS END --------------------
+
+Reboot Info:
+  RST_STAT: 0x180000 - PIN_RESET | PO_RESET
+  GSA_RESET_STATUS: 0x1 - GSA_PINRESET
+  Reboot reason: 0xcbea - APC Watchdog Early
+  Reboot mode: 0x0 - Normal Boot
+[   9.959535] [E] failed to get eUSB revision -62
+[   9.959570] [I] Set EUSB Ref clock auto
+[   9.959807] [I] port connected
+[   9.960192] [I] LK build date: Apr 14 2026, time: 06:16:15
+[   9.960235] [I] BL version: ripcurrentpro-17.0-15199480
+[   9.960275] [I] BL type: official build
+starting app pixel_loader
+[   9.960859] [I] sota: empty signature.
+[   9.960891] [I] ABL start time (METRICS_BL3): 9710ms
+[   9.960932] [I] AB Decision: active slot boot ok
+[   9.960969] [I] AB Decisions: 00000000
+[   9.961203] [I] TCPC BC1.2, type: 2 val:2
+[   9.961418] [I] boot voltage threshold=3400mV
+[   9.961604] [I] bootloader message:
+[   9.961929] [I] TCPC BC1.2, type: 2 val:2
+[   9.962120] [I] boot voltage threshold=3400mV
+[   9.979126] [E] avb_property(com.android.build.system.os_version): not found
+[   9.979179] [E] system.os_version: can't find property
+[   9.979221] [E] avb_property(com.android.build.system.security_patch): not found
+[   9.979274] [E] system_spl: can't find property
+[   9.979313] [E] avb_property(com.android.build.boot.security_patch): not found
+[   9.979365] [E] boot_spl: can't find property
+[   9.979400] [I] boot_state: 000000:20000000:20000000
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   9.980615] [I] using init_boot ramdisk
+[   9.980648] [I] using vendor_kernel_boot ramdisk
+[   9.980726] [I] kernel: addr:0xffff0000a0011000, size:fdbf49
+[  10.017556] [I] kernel: total_time:37
+[  10.017618] [I] vendor kernel ramdisk copy
+[  10.017651] [I] ramdisk dst addr: 0xffff000086000000 src addr: 0xffff0000a9931000 size: 0x67591e(6773022)
+[  10.017722] [I] padding prepended: 0
+[  10.019023] [I] vendor ramdisk copy
+[  10.019051] [I] ramdisk dst addr: 0xffff00008667591e src addr: 0xffff0000a5931000 size: 0x1663ae2(23476962)
+[  10.019128] [I] padding prepended: 18
+[  10.023407] [I] ramdisk copy
+[  10.023432] [I] ramdisk dst addr: 0xffff000087cd9412 src addr: 0xffff0000a4011000 size: 0x250d04(2428164)
+[  10.023511] [I] padding prepended: 14
+[  10.024003] [I] Ramdisk load size with padding: 32678180
+[  10.024062] [I] rev: 09865.00.00
+[  10.024099] [I] rev: 09865.00.00
+[  10.024135] [I] rev: 09865.01.00
+[  10.024164] [I] rev: 09865.01.01
+[  10.024198] [I] rev: 09865.01.00
+[  10.024227] [I] rev: 09865.01.01
+[  10.024262] [I] rev: 09875.00.00
+[  10.024295] [I] rev: 09875.00.00
+[  10.024331] [I] rev: 09875.00.00
+[  10.024360] [I] rev: 09875.00.01
+[  10.024395] [I] rev: 09875.00.00
+[  10.024424] [I] rev: 09875.00.01
+[  10.024450] [I] SOC DTB: index:6
+[  10.024485] [I] DTBO match: id 0x60906, rev 0x10000
+[  10.040175] [I] dpm not merged
+[  10.041703] [I] MTE S: 0, NS: 0, tag base: 0x0
+[  10.067667] [I] bootmode:
+[  10.067708] [I] DDR size: 16GiB
+[  10.067734] [I] DDR Manufacturer: Samsung
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[  10.077962] [I] ro.misctrl.16kb_before=0
+[  10.078003] [I] console is disabled
+[  10.078115] [I] secure dram base 0xb6200000, size 0x9e00000
+[  10.078174] [I] secure PGTBL base 0xe0000000, size 58720256
+[  10.085243] [I] decon0 registered successfully
+[  10.086337] [I] MTE S: 0, NS: 0, tag base: 0x0
+[  10.088814] [I] device: /reserved-memory/debug_snapshot/log_s2d path not found (-1)
+[  10.088949] [I] device: /reserved-memory/debug_snapshot/log_array_reset path not found (-1)
+[  10.089087] [I] device: /reserved-memory/debug_snapshot/log_kevents path not found (-1)
+[  10.089241] [I] device: /reserved-memory/debug_snapshot/log_itmon path not found (-1)
+[  10.089375] [I] device: /reserved-memory/debug_snapshot/log_s2d_extract path not found (-1)
+[  10.090486] [I] device: /google,mitigation enabled ret=0
+[  10.105786] [I] ro.boot.hardware.cpu.pagesize=4096
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[  10.106244] [I] panel settings after overriding: google-cm4.22a8a00a@dsim0 null@dsim1
+[  10.121312] [I] linux,initrd-start: 0x86000000, linux,initrd-end: 0x87f32125
+[  10.130165] [E] avb_property(com.android.build.microdroid-vendor.root_digest): not found
+[  10.130229] [W] failed to get microdroid vendor hashtree digest from avb property, skip appending value
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[  10.131490] [W] no avf debug policy, because dpm is NULL
+[  20.199834] [I] slot data a: 0x00001e02
+[  20.199866] [I] slot data b: 0x00001000
+[  20.201100] [E] avb_property(com.android.build.boot.fingerprint): not found
+[  20.201151] [E] fingerprint property not found 
+[  20.287732] [I] shutdown complete

@@ -539,3 +539,28 @@ conventional TouchComm and still has to be checked against syna_touch.ko's parse
 
 Nobody touched the screen in the 20 s window. The only messages were two vendor reports 0xc2.
 The next run needs a finger on the screen to get report 0x11.
+
+## Touch reports decoded (runs touch9/touch10, 2026-11-17)
+
+No AOC needed: power (LDO4M then LDO25M), USI2 SPI with CMU_HSI0 DIV USI2 (+0x181c) = 3, reset, TouchComm v1.
+Report config (0x25) lists {entity, bits} pairs; with it, report 0x11 is:
+
+| bytes | field |
+|---|---|
+| 0 | gesture id (0x10) |
+| 1-7 | gesture data (0x1b, 56 bits) |
+| 8 | entity 0x1e |
+| 9 | NSM state (0x17) |
+| 10 | active object count (0x18) |
+| then per object, 12 bytes (0x04 foreach-active-object .. 0x03 end) | |
+| +0 | index (low 4 bits, 0x06), class (high 4 bits, 0x07; 1 = finger) |
+| +1..+2 | X, u16 LE (0x08) |
+| +3..+4 | Y, u16 LE (0x09) |
+| +5..+6 | Z / pressure, u16 LE (0x0a) |
+| +7, +8 | x width, y width (0x0b, 0x0c) |
+| +9..+11 | vendor 0xd2, 0xd3, 0xd1 |
+
+Measured ranges: X 75-12799, Y 61-28451, so the touch grid is 10x the 1280x2856 panel (X 0-12799, Y 0-28559).
+Up to 5 fingers seen at once, indices stable while a finger stays down. Reports arrive every ~1.5 ms while touched;
+the IRQ line (low) says a message is waiting. Logs: docs/probe-log-touch9.txt, docs/probe-log-touch10.txt.
+Next: an XNU driver (power, divider, reset, v1 read on IRQ, this parser, scale /10).
