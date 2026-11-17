@@ -96,6 +96,8 @@ again stops at RUN_COMPUTE (0x1000a0) with EP_CURRENT 0, and the firmware never 
 (SHADER_READY 0 throughout).
 
 Run gpu20: the same with `REQ_RESOURCE compute` first in the compute block: done in 64 us.
+Run gpu21: with PROBE_DVFS=2 the GPU clock (ACPM DVFS domain 7) goes 150 -> 580 MHz (read back), and the
+same dispatch takes 34 us; firmware boot 1.4 ms instead of 3.5-4.6.
 
 ## Next
 
