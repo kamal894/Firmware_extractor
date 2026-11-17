@@ -438,6 +438,201 @@ static void gpu_service(void)
 		kick_csg_in[3] = kick_csg_out[3];
 }
 
+#if PROBE_GPU >= 6
+/*
+ * Step 6 (PROBE_GPU=6): the first triangle, from Mesa's panvk CSF draw path for v11 (docs/mali-triangle.md):
+ * RUN_IDVS with malloc enabled (the position shader probe/gpu_tri_pos.asm writes screen positions (8,8)
+ * (56,8) (32,56) through table 61), FINISH_TILING, then RUN_FRAGMENT over a 64x64 linear RGBA8 render
+ * target cleared to green; the fragment shader (gpu_tri_frag.asm) writes opaque red through the blend
+ * descriptor. One 1 MiB tiler heap chunk given in advance, no HEAP_SET: a guess that no out-of-memory
+ * event comes for one triangle. Words assembled with Mesa's Valhall assembler.
+ */
+#define TRI_DESC_VA	0x00600000u	/* tiler context +0, framebuffer +0x100 (RT +0x180), blend +0x200, ZSD
+					   +0x240, position SPD +0x280, fragment SPD +0x2a0, tiler heap +0x2c0 */
+#define TRI_GEOM_VA	0x00601000u	/* geometry buffer, 64 KiB */
+#define TRI_CODE_VA	0x00700000u	/* position shader +0, fragment shader +0x100 */
+#define TRI_FB_VA	0x00800000u	/* 64 x 64 x 4 */
+#define TRI_HEAP_VA	0x01000000u	/* one tiler heap chunk, 1 MiB */
+#define TRI_HEAP_SIZE	0x100000u
+
+static u64 tri_desc, tri_geom, tri_code, tri_fb, tri_heap;
+
+static const u64 tri_pos_shader[13] = {
+	0x0110c041000000c0ULL,
+	0x0110c141000000c0ULL,
+	0x0110c642600000c0ULL,
+	0x0110c742000000c0ULL,
+	0x0110c800000001c0ULL,
+	0x0110c900000002c0ULL,
+	0x0150c0000006083cULL,
+	0x0150c0000007093cULL,
+	0x0150c1000106093cULL,
+	0x0110c23f000000c0ULL,
+	0x0091c300000000d0ULL,
+	0x085e840400000d3bULL,
+	0x7861400839000044ULL,
+};
+static const u64 tri_frag_shader[6] = {
+	0x0091c000000000d0ULL,
+	0x0091c100000000c0ULL,
+	0x0091c200000000c0ULL,
+	0x0091c300000000d0ULL,
+	0x687dbc0200ead03cULL,
+	0x787f4008323c00f0ULL,
+};
+
+/* AS1 pages for the triangle, mapped before AS1 goes live */
+static int triangle_map(void)
+{
+	tri_desc = page_alloc(1);
+	tri_geom = page_alloc(16);
+	tri_code = page_alloc(1);
+	tri_fb = page_alloc(4);
+	tri_heap = page_alloc(TRI_HEAP_SIZE / 0x1000);
+	if (!tri_desc || !tri_geom || !tri_code || !tri_fb || !tri_heap)
+		return -1;
+	return map_pages(TRI_DESC_VA, tri_desc, 0x1000, 0x40000003) || map_pages(TRI_GEOM_VA, tri_geom, 0x10000, 0x40000003) ||
+	       map_pages(TRI_CODE_VA, tri_code, 0x1000, 0x40000005) || map_pages(TRI_FB_VA, tri_fb, 0x4000, 0x40000003) ||
+	       map_pages(TRI_HEAP_VA, tri_heap, TRI_HEAP_SIZE, 0x40000003);
+}
+
+/* the descriptors, and the draw's commands at ring[n..]; the new length */
+static u32 triangle_prepare(u64 *ring, u32 n)
+{
+	u32 *d = (u32 *)(uptr)tri_desc, *tc = d, *fbd = d + 0x100 / 4, *rt = d + 0x180 / 4, *bl = d + 0x200 / 4;
+	u32 *zsd = d + 0x240 / 4, *spd_pos = d + 0x280 / 4, *spd_frag = d + 0x2a0 / 4, *heap = d + 0x2c0 / 4;
+	volatile u32 *fb = (volatile u32 *)(uptr)tri_fb;
+	u32 i;
+
+	memcpy((void *)(uptr)tri_code, tri_pos_shader, sizeof(tri_pos_shader));
+	memcpy((void *)(uptr)(tri_code + 0x100), tri_frag_shader, sizeof(tri_frag_shader));
+	for (i = 0; i < 64 * 64; i++)
+		fb[i] = 0xdeadbeef;
+
+	/* tiler heap: buffer (9) of type tiler heap (2); one chunk, its 64-byte header zero */
+	heap[0] = 9 | (2u << 4);
+	heap[1] = TRI_HEAP_SIZE;
+	heap[2] = TRI_HEAP_VA;
+	heap[4] = TRI_HEAP_VA + 64;
+	heap[6] = TRI_HEAP_VA + TRI_HEAP_SIZE;
+	/* tiler context: hierarchy mask 0xff (TILER_FEATURES 0x809), 64 x 64, one layer, heap, geometry buffer */
+	tc[2] = 0xff;
+	tc[3] = 63 | (63u << 16);
+	tc[4] = 0;
+	tc[6] = TRI_DESC_VA + 0x2c0;
+	tc[8] = TRI_GEOM_VA | (0x10000 >> 12);
+	/* framebuffer parameters, then one RGB render target */
+	fbd[8] = 63 | (63u << 16);
+	fbd[9] = 0;
+	fbd[10] = 63 | (63u << 16);
+	fbd[11] = (2u << 6) | (8u << 9) | (1u << 24);	/* tie-break -180 in 0 out, tile 16x16, 1 KiB colour */
+	fbd[14] = TRI_DESC_VA;					/* the tiler context */
+	rt[0] = 1u << 26;					/* internal R8G8B8A8 */
+	/* write, RGBA8, linear, dither, RGBA; clean tile write (bit 31): tiles with no primitive get the clear colour
+	 * too (run gpu23: those were never written) */
+	rt[1] = 1 | (19u << 3) | (2u << 8) | (1u << 15) | (0x688u << 16) | (1u << 31);
+	rt[8] = TRI_FB_VA;
+	rt[10] = 64 * 4;
+	rt[11] = 64 * 64 * 4;
+	rt[12] = 0xff00ff00;					/* clear: green, alpha 1 */
+	/* blend: enabled, replace, opaque RGBA8 */
+	bl[0] = 1u << 9;
+	bl[1] = 0xf0122122;
+	bl[2] = 1 | (3u << 3);
+	bl[3] = 237u << 12;
+	/* depth/stencil: tests "always", no writes */
+	zsd[0] = 7 | (7u << 4) | (7u << 16);
+	zsd[4] = 7u << 29;
+	/* shader programs: type 8; position stage vertex (3) preloading r59, r60; fragment stage 2 preloading r60 */
+	spd_pos[0] = 8 | (3u << 4);
+	spd_pos[1] = (1u << 11) | (1u << 12);
+	spd_pos[2] = TRI_CODE_VA;
+	spd_frag[0] = 8 | (2u << 4);
+	spd_frag[1] = 1u << 12;
+	spd_frag[2] = TRI_CODE_VA + 0x100;
+	dsb_sy();
+
+	ring[n++] = (0x22ULL << 56) | 0xe;			/* REQ_RESOURCE fragment, tiler, IDVS */
+	ring[n++] = cs_move48(0, 0);				/* vertex SRT */
+	ring[n++] = cs_move48(4, 0);				/* fragment SRT */
+	ring[n++] = cs_move48(8, 0);				/* vertex FAU */
+	ring[n++] = cs_move48(12, 0);				/* fragment FAU */
+	ring[n++] = cs_move48(16, TRI_DESC_VA + 0x280);	/* position SPD */
+	ring[n++] = cs_move48(18, 0);				/* varying SPD: none */
+	ring[n++] = cs_move48(20, TRI_DESC_VA + 0x2a0);	/* fragment SPD */
+	ring[n++] = cs_move48(24, DESC_VA + 0x40);		/* TSD (step 5's: no storage) */
+	ring[n++] = cs_move32(32, 0);
+	ring[n++] = cs_move32(33, 3);				/* three vertices */
+	ring[n++] = cs_move32(34, 1);				/* one instance */
+	ring[n++] = cs_move32(35, 0);
+	ring[n++] = cs_move32(36, 0);
+	ring[n++] = cs_move32(37, 0);
+	ring[n++] = cs_move32(38, 0);				/* DCD2 */
+	ring[n++] = cs_move32(39, 0);
+	ring[n++] = cs_move48(40, TRI_DESC_VA);			/* tiler context */
+	ring[n++] = cs_move32(42, 0);				/* scissor min */
+	ring[n++] = cs_move32(43, 63 | (63u << 16));		/* scissor max */
+	ring[n++] = cs_move32(44, 0);				/* depth clamp 0.0 */
+	ring[n++] = cs_move32(45, 0x3f800000);			/* .. 1.0 */
+	ring[n++] = cs_move48(46, 0);				/* no occlusion query */
+	ring[n++] = cs_move32(48, 0);				/* no varyings */
+	ring[n++] = cs_move48(50, (TRI_DESC_VA + 0x200) | 1);	/* one blend descriptor */
+	ring[n++] = cs_move48(52, TRI_DESC_VA + 0x240);		/* ZSD */
+	ring[n++] = cs_move48(54, 0);
+	ring[n++] = cs_move32(56, 8 | (3u << 16) | (1u << 22));	/* triangles, depth cull, basic position FIFO */
+	ring[n++] = cs_move32(57, 0);				/* DCD0 */
+	ring[n++] = cs_move32(58, 0xffff | (1u << 16));		/* DCD1: sample mask, RT 0 */
+	ring[n++] = cs_move32(60, 0x3f800000);			/* point size */
+	ring[n++] = cs_move32(61, 0);				/* TILER_FLAGS2 */
+	ring[n++] = (0x06ULL << 56) | (1ULL << 33) | (1ULL << 38);	/* RUN_IDVS, malloc, fragment SRT select */
+	ring[n++] = 0x09ULL << 56;				/* FINISH_TILING */
+	ring[n++] = (0x03ULL << 56) | (0xffffULL << 16);	/* WAIT all */
+	ring[n++] = cs_move48(40, TRI_DESC_VA + 0x100 + 1);	/* FBD pointer: type bit, one RT */
+	ring[n++] = cs_move32(42, 0);				/* bounding box min */
+	ring[n++] = cs_move32(43, 63 | (63u << 16));		/* .. max */
+	ring[n++] = 0x07ULL << 56;				/* RUN_FRAGMENT, Z order */
+	ring[n++] = (0x03ULL << 56) | (0xffffULL << 16);	/* WAIT all */
+	while (n % 8)
+		ring[n++] = 0;
+	dsb_sy();
+	return n;
+}
+
+static void gpu_first_triangle(volatile u64 *q_out, volatile u32 *cs_out)
+{
+	volatile u32 *fb = (volatile u32 *)(uptr)tri_fb;
+	u64 start = timer_ticks();
+	u32 red = 0, green = 0, other = 0, i;
+
+	/* (run gpu22 counted while the last tiles were still being written: wait for the last pixel too) */
+	while ((fb[32 * 64 + 32] == 0xdeadbeef || fb[63 * 64 + 63] == 0xdeadbeef) && timer_ticks() - start < timer_freq())
+		gpu_service();
+	for (i = 0; i < 64 * 64; i++) {
+		if (fb[i] == 0xff0000ff)
+			red++;
+		else if (fb[i] == 0xff00ff00)
+			green++;
+		else
+			other++;
+	}
+	pr("gpu: triangle: centre 0x%08x corner 0x%08x after %llu us; %u red, %u green, %u other pixels%s; extract %llu\n",
+	   fb[32 * 64 + 32], fb[0], (timer_ticks() - start) * 1000000 / timer_freq(), red, green, other,
+	   red > 500 && green > 500 ? ": THE GPU DREW A TRIANGLE" : "", q_out[0]);
+	for (i = 0; i < 64; i += 4) {
+		u32 x;
+
+		pr("gpu:   row %2u:", i);
+		for (x = 0; x < 64; x += 2)
+			pr("%c", fb[i * 64 + x] == 0xff0000ff ? '#' : fb[i * 64 + x] == 0xff00ff00 ? '.' : '?');
+		pr("\n");
+	}
+	pr("gpu: triangle CS0 out +0x40..: %08x %08x %08x %08x %08x %08x %08x %08x fault 0x%08x fatal 0x%08x\n", cs_out[16],
+	   cs_out[17], cs_out[18], cs_out[19], cs_out[20], cs_out[21], cs_out[22], cs_out[23], cs_out[32], cs_out[33]);
+	gpu_faults("after the triangle");
+	log_flush();
+}
+#endif
+
 static void gpu_first_compute(u64 *ring, volatile u64 *q_in, volatile u64 *q_out, volatile u32 *cs_out)
 {
 	volatile u32 *buf = (volatile u32 *)(uptr)target_page;
@@ -556,6 +751,12 @@ static void gpu_first_job(u64 shared_pa)
 		return;
 	}
 #endif
+#if PROBE_GPU >= 6
+	if (triangle_map()) {
+		root = saved_root;
+		return;
+	}
+#endif
 	root = saved_root;
 	job_root = as1_root;
 	target_page = target_pa;
@@ -592,7 +793,11 @@ static void gpu_first_job(u64 shared_pa)
 	cs_in[1] = 1 | (1u << 8);
 #if PROBE_GPU >= 5
 	/* program_cs(): ack IRQ mask, START with the idle options (bits 8, 10, 12), and step 5's work queued already */
+#if PROBE_GPU >= 6
+	q_in[0] = (u64)triangle_prepare(ring, compute_prepare(ring)) * 8;
+#else
 	q_in[0] = (u64)compute_prepare(ring) * 8;
+#endif
 	cs_in[3] = ~0u;
 	cs_in[0] = (cs_in[0] & ~0x1507u) | 0x1501;
 #else
@@ -664,6 +869,9 @@ static void gpu_first_job(u64 shared_pa)
 	kick_glb_out = glb_out;
 	if (*target == 0x89abcdef)
 		gpu_first_compute(ring, q_in, q_out, cs_out);
+#if PROBE_GPU >= 6
+	gpu_first_triangle(q_out, cs_out);
+#endif
 #endif
 }
 #endif
