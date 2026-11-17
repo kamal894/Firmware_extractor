@@ -73,6 +73,13 @@ bit 5, acked) the snapshot is: CS0 command pointer 0x1000a0 = the RUN_COMPUTE, C
 RUN_COMPUTE for shader endpoints the firmware does not grant. Open: what grants them in r54p3 (GLB
 requests not made yet: progress/poweroff/idle timers, shader-core host/firmware handshake).
 
+Runs gpu17-18, with the Pixel kbase GPL source (android.googlesource.com kernel/google-modules/gpu,
+android-gs-caimito-6.1-android16, copied to ~/caiman-work/kbase-src/tree): gpu17 kbase's hctl order
+(timers and an empty ALLOC_EN, host powers cores, ALLOC_EN again); gpu18 the firmware-managed order
+(global_init: ack mask, ALLOC_EN, power-off timer 19, progress timer, one request; host leaves cores off).
+Both: all requests acked, the same stall at RUN_COMPUTE with no endpoints; in gpu18 nobody powers the
+cores. Our CSG programming matches program_csg_slot() field for field (EP_REQ at +0x34 for arch < 14.8.4).
+
 ## Next
 
 6. Simple jobs (a fill, a copy), then a triangle; then a Metal back end (HackiOS's hakios-metal, for

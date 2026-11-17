@@ -476,11 +476,29 @@ static void gpu_first_job(u64 shared_pa)
 	cs_out = sh(shared_pa, cs_ctl[2]);
 
 #if PROBE_GPU >= 5
-	/* the tiler and shader cores, now that the firmware runs (run gpu14: it does not power them itself) */
-	if (gpu_block_on("tiler", TILER_PWRON, TILER_READY, TILER_PWRTRANS, gpu_rd(TILER_PRESENT)) ||
-	    gpu_block_on("shader cores", SHADER_PWRON, SHADER_READY, SHADER_PWRTRANS, gpu_rd(SHADER_PRESENT)))
+	/*
+	 * kbase r54p3 global_init() (Pixel's GPL source, csf/mali_kbase_csf_firmware.c): with the default
+	 * power policy the firmware powers the shader cores itself (firmware_hctl_core_pwr false), so the host
+	 * leaves them off (run gpu14 had no timers set and nothing came on). The ack IRQ mask, the
+	 * allocation mask with the power-off timer (GLB_PWROFF_TIMER +0x14: 800 us of the system timestamp,
+	 * >>10, i.e. 19; GLB_PWROFF_TIMER_CONFIG +0x88 no-modifier 0) and the progress timer (+0x10), all
+	 * requested together (bits 1, 2, 3) with one bell.
+	 */
+	glb_in[1] = ~0u;
+	glb_in[6] = (u32)shaders;
+	glb_in[7] = (u32)(shaders >> 32);
+	glb_in[5] = 19;
+	glb_in[0x88 / 4] = 0;
+	glb_in[4] = 0x100000;
+	dsb_sy();
+	toggle(&glb_in[0], glb_out[0], (1u << 1) | (1u << 2) | (1u << 3));
+	dsb_sy();
+	gpu_wr(DOORBELL(0), 1);
+	if (wait_bits(&glb_in[0], &glb_out[0], (1u << 1) | (1u << 2) | (1u << 3), "GLB global_init requests"))
 		return;
-#endif
+	pr("gpu: GLB global_init done (ALLOC_EN 0x%llx, power-off timer 19, progress timer); SHADER_READY 0x%08x\n",
+	   shaders, gpu_rd(SHADER_READY));
+#else
 	/* global: the shader cores the firmware may use (GLB_ALLOC_EN, request bit 2) */
 	glb_in[6] = (u32)shaders;
 	glb_in[7] = (u32)(shaders >> 32);
@@ -491,6 +509,7 @@ static void gpu_first_job(u64 shared_pa)
 	if (wait_bits(&glb_in[0], &glb_out[0], 1u << 2, "GLB ALLOC_EN"))
 		return;
 	pr("gpu: GLB_ALLOC_EN 0x%llx acknowledged\n", shaders);
+#endif
 
 	/* AS1: the job's own tables */
 	as1_root = page_alloc(1);
