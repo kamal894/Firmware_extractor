@@ -425,6 +425,56 @@ static const u8 aoc_touch_on[][2] = {
 	{ 106, 0x00 }, { 62, 0x08 }, { 72, 0x2a }, { 73, 0x2a }, { 74, 0x2a }, { 75, 0x2a },
 };
 
+/*
+ * The same switch also drives three AOC GPIOs (pads 87 and 105 once, the first time; one more on
+ * every "on"), all function 0 outputs in Android. The AOC's GPIO block (blk_aoc + gpio-base
+ * 0x1c00000; its driver: 32 pins per bank at 12-byte strides, +0 output level, +4 output enable,
+ * inputs at +0x50 + 4 * bank). Which object is which pad is not read out of the firmware yet: drive
+ * all three high, as an output each is anyway.
+ */
+#define AOC_GPIO	0x18c00000ULL
+static const u8 aoc_touch_out[] = { 87, 105, 106 };
+
+static void aoc_gpio_dump(const char *when)
+{
+	u32 b;
+	int ok;
+
+	pr("touch: AOC GPIO %s:", when);
+	for (b = 0; b < 4; b++) {
+		u32 out = safe_rd32(AOC_GPIO + 12 * b, &ok);
+
+		if (!ok) {
+			pr(" (read aborted)\n");
+			return;
+		}
+		pr(" [%u] out %08x oe %08x +8 %08x in %08x", b, out, rd32(AOC_GPIO + 12 * b + 4),
+		   rd32(AOC_GPIO + 12 * b + 8), rd32(AOC_GPIO + 0x50 + 4 * b));
+	}
+	pr("\n");
+}
+
+static void aoc_touch_gpios(void)
+{
+	u32 i;
+	int ok;
+
+	aoc_gpio_dump("before");
+	safe_rd32(AOC_GPIO, &ok);
+	if (!ok)
+		return;
+	for (i = 0; i < sizeof(aoc_touch_out); i++) {
+		u64 bank = AOC_GPIO + 12 * (aoc_touch_out[i] >> 5);
+		u32 bit = 1u << (aoc_touch_out[i] & 31);
+
+		wr32(bank, rd32(bank) | bit);
+		wr32(bank + 4, rd32(bank + 4) | bit);
+	}
+	delay_us(20000);
+	aoc_gpio_dump("after driving 87, 105, 106 high");
+	pin("interrupt (AOC GPIOs high)", PIN_IRQ_BANK, PIN_IRQ);
+}
+
 static int aoc_touch_pads(void)
 {
 	u32 i, v;
@@ -442,6 +492,7 @@ static int aoc_touch_pads(void)
 		pr("touch: AOC pad %3u: 0x%08x -> 0x%02x, reads 0x%08x\n", aoc_touch_on[i][0], v, aoc_touch_on[i][1],
 		   rd32(a));
 	}
+	aoc_touch_gpios();
 	log_flush();
 	return 0;
 }

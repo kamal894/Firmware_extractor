@@ -275,3 +275,20 @@ on function 2 itself.
 - **`PROBE_TOUCH=2` now writes the "on" table** after `spi_init` and before the reads.
   - It reads each pad first with `safe_rd32`, and stops if the AOC block does not answer.
   - The image is `probe/out/touch11/probe-boot.img` (not run yet: the phone was off USB).
+
+### Run 2026-11-16 (`out/touch12`, log `docs/probe-log-touch12.txt`)
+
+- **Pad CSRs.** The CSR words at 0x18408000 answer, and the writes take. Before the writes the pads
+  read 0x69 (pads 62 and 106) and 0x79 (72-75), the hardware's reset values with the AOC off.
+- **The AOC's GPIO block at 0x18c00000** has the layout we guessed. Out and enable are 0 at reset.
+  The inputs read `017e0000 0080060a 000001e0`. Setting out and enable for pads 87, 105 and 106
+  takes: bank 2 bit 23, bank 3 bits 9 and 10.
+- **The interrupt line.** The touch chip's interrupt (AP gpn0-0) was high for 3 s after reset. It
+  went **low** after the AOC pad writes. This could be the chip asking to be read (its identify
+  report), or just a pad change on the AOC side.
+- **SPI.** Still 0 bytes received in normal mode, while loopback gives 16 of 16. The clock that
+  comes back from the pads still does not reach the controller.
+- **Possible cause.** In Android the pads stay on function 2 while the screen dozes and the AOC
+  owns the bus (step 2d), so function 2 may mean only "the touch SPI bus". If so, the choice
+  between the AP's USI2 and the AOC's own SPI master is made somewhere else (the AOC's "Change bus
+  owner to AP/AOC", core 0x78xxxxxx, file 0x77e46), and that is not found yet.
