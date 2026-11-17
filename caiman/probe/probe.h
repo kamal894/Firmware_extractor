@@ -145,7 +145,16 @@ void display_probe(void);
 void ufs_probe(void);
 void touch_probe(void);
 void dvfs_probe(void);
-void gpu_probe(void);		/* gpu.c, PROBE_GPU */		/* dvfs.c, PROBE_DVFS */
+void gpu_probe(void);		/* gpu.c, PROBE_GPU */
+/* gpu.c (PROBE_GPU >= 4): the GPU as the probe leaves it, for XNU's /chosen/mali-handoff (xnu.c) */
+struct gpu_handoff {
+	u64 shared;	/* PA of the firmware's shared interface section (MCU VA 0x04000000) */
+	u64 ring;	/* PA of CS 0's ring (AS1 VA 0x100000, 4 KiB) */
+	u64 queue;	/* PA of its queue input page (output page + 0x1000) */
+	u64 target;	/* PA of the AS1 page at VA 0x200000 */
+	u64 insert;	/* the ring's INSERT so far, bytes */
+};
+extern struct gpu_handoff gpu_handoff;		/* dvfs.c, PROBE_DVFS */
 void trusty_aoc_probe(void);
 int trusty_ql_open(void);
 void trusty_ql_close(void);

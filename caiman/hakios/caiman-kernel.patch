@@ -1,3 +1,120 @@
+diff --git a/drivers/gpu/hakios.adreno.c b/drivers/gpu/hakios.adreno.c
+index 3f1f97a..bb03830 100644
+--- a/drivers/gpu/hakios.adreno.c
++++ b/drivers/gpu/hakios.adreno.c
+@@ -100,6 +100,7 @@
+ #include <sys/stat.h>
+ #include <sys/systm.h>
+ #include <vm/vm_kern.h>
++#include <pexpert/device_tree.h>
+ 
+ extern vm_offset_t ml_io_map(vm_offset_t phys_addr, vm_size_t size);
+ extern vm_offset_t ml_io_map_wcomb(vm_offset_t phys_addr, vm_size_t size);
+@@ -3753,6 +3754,92 @@ start_by_itself(void)
+  * as long as the steps and the watch after them last, nothing else writes to the log, so that
+  * its end -- all that the loader's notes keep -- is about what is being done here.
+  */
++/*
++ * boot-arg mali=1: the Pixel 9 Pro's Mali-G715, step 1 inside the kernel. The caiman loader (probe/gpu.c,
++ * PROBE_GPU=6, MALI_FW=) has powered the GPU, booted its CSF firmware, set up address spaces 0 and 1 in
++ * memory outside the kernel's (0xf0000000 up), started command stream group 0 / stream 0 and run a
++ * compute shader and a triangle on it; /chosen/mali-handoff says where: the firmware's shared interface,
++ * the stream's ring, its queue pages, and the page at AS1 VA 0x200000, with the ring's INSERT so far.
++ * Here the kernel takes that over: reads the GPU's ID and the firmware's interface version, appends a
++ * STORE of 0x105c0de5 to AS1 VA 0x200900 to the ring, rings the doorbells as the loader does, and looks
++ * for the value. Nothing else of the GPU is touched.
++ */
++#define MALI_PHYS               0x1f000000UL
++#define MALI_DOORBELL(n)        (0x80000u + (n) * 0x10000u)
++
++static void
++mali_handoff(void)
++{
++	DTEntry chosen;
++	void const *prop;
++	unsigned int size;
++	const uint64_t *h;
++	vm_offset_t regs, bell0, bell1, shared, ring_va, queue_va, target_va;
++	volatile uint32_t *glb_in, *glb_out, *csg_in, *csg_out;
++	volatile uint64_t *ring, *q_in, *q_out;
++	volatile uint32_t *target;
++	uint64_t insert, deadline;
++	uint32_t n;
++
++	if (SecureDTLookupEntry(NULL, "/chosen", &chosen) != kSuccess ||
++	    SecureDTGetProperty(chosen, "mali-handoff", &prop, &size) != kSuccess || size != 5 * sizeof(uint64_t)) {
++		printf("mali: no /chosen/mali-handoff from the loader\n");
++		return;
++	}
++	h = prop;
++	regs = ml_io_map(MALI_PHYS, 0x4000);
++	bell0 = ml_io_map(MALI_PHYS + MALI_DOORBELL(0), PAGE_SIZE);
++	bell1 = ml_io_map(MALI_PHYS + MALI_DOORBELL(1), PAGE_SIZE);
++	shared = ml_io_map(h[0], 0x10000);
++	ring_va = ml_io_map(h[1], PAGE_SIZE);
++	queue_va = ml_io_map(h[2], 2 * PAGE_SIZE);
++	target_va = ml_io_map(h[3], PAGE_SIZE);
++	printf("mali: GPU_ID %#x, MCU_STATUS %u, SHADER_PRESENT %#x; firmware interface %#x; ring insert %llu\n",
++	    *(volatile uint32_t *)regs, *(volatile uint32_t *)(regs + 0x704), *(volatile uint32_t *)(regs + 0x100),
++	    *(volatile uint32_t *)shared, h[4]);
++
++	/* the interface pages, by the control blocks' own pointers (global +8/+0xc, CSG 0 at 0x1000 +4/+8) */
++	glb_in = (volatile uint32_t *)(shared + (*(volatile uint32_t *)(shared + 8) - 0x04000000));
++	glb_out = (volatile uint32_t *)(shared + (*(volatile uint32_t *)(shared + 0xc) - 0x04000000));
++	csg_in = (volatile uint32_t *)(shared + (*(volatile uint32_t *)(shared + 0x1004) - 0x04000000));
++	csg_out = (volatile uint32_t *)(shared + (*(volatile uint32_t *)(shared + 0x1008) - 0x04000000));
++	ring = (volatile uint64_t *)ring_va;
++	q_in = (volatile uint64_t *)queue_va;
++	q_out = (volatile uint64_t *)(queue_va + PAGE_SIZE);
++	target = (volatile uint32_t *)(target_va + 0x900);
++	*target = 0;
++
++	insert = h[4];
++	n = (uint32_t)(insert / 8);
++	if (n + 8 > PAGE_SIZE / 8) {
++		printf("mali: the ring is full\n");
++		return;
++	}
++	ring[n++] = (0x01ULL << 56) | (0ULL << 48) | 0x200900;			/* MOVE48 r0:r1 */
++	ring[n++] = (0x02ULL << 56) | (2ULL << 48) | 0x105c0de5ULL;		/* MOVE32 r2 */
++	ring[n++] = (0x1cULL << 56) | (1ULL << 32);				/* SB_SEL_OTHER 0 */
++	ring[n++] = (0x15ULL << 56) | (2ULL << 48) | (0ULL << 40) | (1ULL << 16);	/* STORE_MULTIPLE r2 -> [r0] */
++	ring[n++] = (0x03ULL << 56) | (1ULL << 16);				/* WAIT slot 0 */
++	while (n % 8) {
++		ring[n++] = 0;
++	}
++	__builtin_arm_dsb(0xf);
++	q_in[0] = (uint64_t)n * 8;
++	__builtin_arm_dsb(0xf);
++	*(volatile uint32_t *)bell1 = 1;
++	csg_in[2] = (csg_in[2] & ~1u) | ((csg_out[2] ^ 1u) & 1u);
++	glb_in[2] = (glb_in[2] & ~1u) | ((glb_out[2] ^ 1u) & 1u);
++	__builtin_arm_dsb(0xf);
++	*(volatile uint32_t *)bell0 = 1;
++	clock_interval_to_deadline(1, NSEC_PER_SEC, &deadline);
++	while (*target != 0x105c0de5 && mach_absolute_time() < deadline) {
++		delay(10);
++	}
++	printf("mali: from XNU: target %#x%s; queue extract %llu (insert %llu); GPU_IRQ %#x JOB_IRQ %#x MMU_IRQ %#x\n",
++	    *target, *target == 0x105c0de5 ? ": THE KERNEL DROVE THE GPU" : "", q_out[0], q_in[0],
++	    *(volatile uint32_t *)(regs + 0x20), *(volatile uint32_t *)(regs + 0x1000), *(volatile uint32_t *)(regs + 0x2000));
++}
++
+ void
+ hakios_adreno_init(void)
+ {
+@@ -3765,6 +3852,11 @@ hakios_adreno_init(void)
+ 	uint32_t only = 0, done = 0, failed = 0, keep = 0;
+ 	bool by_itself = false;
+ 
++	if (PE_parse_boot_argn("mali", &only, sizeof(only)) && only) {
++		mali_handoff();
++		return;
++	}
++
+ 	if (PE_parse_boot_argn("display_probe", &only, sizeof(only)) && only) {
+ 		display_probe();
+ 	}
 diff --git a/drivers/input/hakios.buttons.c b/drivers/input/hakios.buttons.c
 index 27203ee..51e621a 100644
 --- a/drivers/input/hakios.buttons.c

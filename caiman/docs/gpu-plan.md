@@ -134,9 +134,27 @@ gpu:   row 60:................................
 gpu: triangle CS0 out +0x40..: 00100200 00000000 00000000 0000000e 00000000 00000000 00000000 00000000 fault 0x00000000 fatal 0x00000000
 ```
 
+## Step 7: the GPU from inside XNU (run darwin-mali1)
+
+The loader (`LOADER=1 ... PROBE_DVFS=2 PROBE_GPU=6 MALI_FW=.../mali_csffw-r54p3.bin`: the firmware is built
+into the image by probe/gpu_fw.S, since the loader's load base + 1 MiB is XNU's payload) runs steps 1-6
+and leaves the firmware running, its memory at 0xf0000000+ outside XNU's; /chosen/mali-handoff gives the
+shared interface, ring, queue and AS1 target pages and the ring's INSERT. The kernel (`mali=1`,
+drivers/gpu/hakios.adreno.c `mali_handoff()`, in hakios/caiman-kernel.patch) maps them, appends a STORE
+and rings the bells:
+
+```
+mali: GPU_ID 0xb8a21030, MCU_STATUS 1, SHADER_PRESENT 0x1110055; firmware interface 0x2080000; ring insert 512
+mali: from XNU: target 0x105c0de5: THE KERNEL DROVE THE GPU; ...
+```
+
+iOS came up as usual afterwards.
+
 ## Next
 
-7. A triangle (fragment + tiler: REQ_RESOURCE fragment|tiler, RUN_IDVS / RUN_FRAGMENT, framebuffer
+8. A real kernel driver: own the GPU's memory (allocations, AS1 page tables) and a submission interface
+   for user space (HakiosGPU's user client), then a Metal back end for Mali.
+9. A triangle (fragment + tiler: REQ_RESOURCE fragment|tiler, RUN_IDVS / RUN_FRAGMENT, framebuffer
    descriptors), the GPU clock up from 150 MHz (ACPM DVFS domain 7), then this path inside XNU and a
    Metal back end.
 7. Simple jobs (a fill, a copy), then a triangle; then a Metal back end (HackiOS's hakios-metal, for

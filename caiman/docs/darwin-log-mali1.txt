@@ -1,0 +1,2 @@
+mali: GPU_ID 0xb8a21030, MCU_STATUS 1, SHADER_PRESENT 0x1110055; firmware interface 0x2080000; ring insert 512
+mali: from XNU: target 0x105c0de5: THE KERNEL DROVE THE GPU; queue extract 0 (insert 576); GPU_IRQ 0x600 JOB_IRQ 0x80000001 MMU_IRQ 0x20000

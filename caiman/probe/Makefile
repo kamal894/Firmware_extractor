@@ -50,6 +50,11 @@ endif
 ifdef PROBE_GPU
 CFLAGS += -DPROBE_GPU=$(PROBE_GPU)
 endif
+# MALI_FW=path/to/mali_csffw-r54p3.bin: the GPU firmware built into the image (gpu_fw.S), for LOADER=1
+ifdef MALI_FW
+CFLAGS += -DMALI_FW_EMBEDDED=1 -DMALI_FW_PATH='"$(MALI_FW)"'
+SRCS_FW := gpu_fw.S
+endif
 ifdef PROBE_DVFS
 CFLAGS += -DPROBE_DVFS=$(PROBE_DVFS)
 endif
@@ -69,6 +74,9 @@ SRCS := start.S main.c log.c uart.c timer.c fdt.c psci.c exception.c display.c w
 ifeq ($(LOADER),1)
 SRCS += xnu.c watcher.c handoff.S
 CFLAGS += -DPROBE_LOADER=1
+endif
+ifdef MALI_FW
+SRCS += $(SRCS_FW)
 endif
 OBJS := $(patsubst %,$(OUT)/%.o,$(SRCS))
 

@@ -198,6 +198,7 @@ static u64 pool = POOL_BASE, root;
 #define SHADER_VA	0x00300000u	/* step 5: the shader, in AS1 */
 #define DESC_VA		0x00400000u	/* step 5: its SPD (+0) and TSD (+0x40), in AS1 */
 static u64 q_pa, susp_pa, job_root, target_page, code_page, desc_page;
+struct gpu_handoff gpu_handoff;
 static volatile u32 *kick_csg_in, *kick_csg_out, *kick_glb_in, *kick_glb_out;
 static void gpu_first_job(u64 shared_pa);
 #endif
@@ -872,6 +873,12 @@ static void gpu_first_job(u64 shared_pa)
 #if PROBE_GPU >= 6
 	gpu_first_triangle(q_out, cs_out);
 #endif
+	/* for XNU (mali=1, drivers/gpu/hakios.adreno.c): where the running firmware's interface and our stream are */
+	gpu_handoff.shared = shared_pa;
+	gpu_handoff.ring = ring_pa;
+	gpu_handoff.queue = q_pa;
+	gpu_handoff.target = target_pa;
+	gpu_handoff.insert = q_in[0];
 #endif
 }
 #endif
@@ -882,11 +889,25 @@ static void gpu_firmware(void)
 	u64 fw_size, shared_pa = 0, start;
 	u32 off, end, sections = 0;
 
+#if MALI_FW_EMBEDDED
+	/* built into the image (gpu_fw.S, MALI_FW=): the loader's load base + 1 MiB is XNU's payload */
+	extern const u8 mali_fw_start[] __attribute__((visibility("hidden")));
+	extern const u8 mali_fw_end[] __attribute__((visibility("hidden")));
+
+	fw = mali_fw_start;
+	fw_size = (u64)(mali_fw_end - mali_fw_start);
+	(void)b;
+	if (le32(fw) != FW_MAGIC) {
+		pr("gpu: the built-in Mali firmware has no magic\n");
+		return;
+	}
+#else
 	if (memcmp(b, "GPUBLOB", 8) || le32(fw) != FW_MAGIC) {
 		pr("gpu: no Mali firmware after the probe (GPUBLOB)\n");
 		return;
 	}
 	fw_size = le32(b + 8);
+#endif
 	end = le32(fw + 16);
 	pr("gpu: firmware %llu bytes, version 0x%08x, entries to 0x%x\n", fw_size, le32(fw + 8), end);
 	s2mpu_open();

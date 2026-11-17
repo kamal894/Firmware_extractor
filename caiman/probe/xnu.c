@@ -482,6 +482,13 @@ static u32 build_adt(u64 dt_pa, u64 rd_pa, u64 rd_size, u64 res_pa, u64 res_size
 
 		dt_prop(&w, "fb-flip", flip, sizeof(flip));
 	}
+#if PROBE_GPU >= 4
+	if (gpu_handoff.shared) {
+		u64 h[5] = { gpu_handoff.shared, gpu_handoff.ring, gpu_handoff.queue, gpu_handoff.target, gpu_handoff.insert };
+
+		dt_prop(&w, "mali-handoff", h, sizeof(h));
+	}
+#endif
 	if (more_cores)		/* the cores start at EL2: through handoff.S's secondary_entry (psci_smp.c) */
 		dt_u64(&w, "secondary-entry", (u64)(uptr)secondary_entry);
 	if (boot_epoch)
