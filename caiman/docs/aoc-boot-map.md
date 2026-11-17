@@ -207,3 +207,16 @@ So on caiman, which has `gsa-enabled`, Linux does this:
 
 The AOC SysMMU, the reset trampoline and the SRAM reset bit are presumably set up by GSA. We do not
 program them. The SysMMU details in aoc-fw-load.md §C are kept only as a fallback.
+
+## 11. The last unknowns (2026-11-17)
+
+- **`disable_power_mode` / `enable_power_mode`** come from exynos-cpupm.ko, the CPU idle and power
+  mode driver. Linux keeps CPU 0 out of deep power modes while the AOC boots. Our boot never idles
+  the CPU, so there is nothing to do.
+- **Chip id** (gs-chipid.ko `gs_chipid_early_init`; chipid at 0x10000000):
+  - product id = `readl(0x10000000) & 0xfffff000`. Android sysfs (root) shows 0x09875000.
+  - type = `readl(0x10000000) & 0xff`, read at run time.
+  - revision = 0x00000001 (sysfs `revision`).
+- **Key 0x1011** is `get_random_u32()`: any value will do.
+
+This completes the fw-info block, apart from reading 0x10000000 in our boot.
