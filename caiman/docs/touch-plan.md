@@ -292,3 +292,15 @@ on function 2 itself.
   owns the bus (step 2d), so function 2 may mean only "the touch SPI bus". If so, the choice
   between the AP's USI2 and the AOC's own SPI master is made somewhere else (the AOC's "Change bus
   owner to AP/AOC", core 0x78xxxxxx, file 0x77e46), and that is not found yet.
+
+### Buttons pressed by hand (2026-11-16, 22:05, `BOOT_ARGS=buttons=2`, the self-built kernel)
+
+- **The kernel** saw every press while iOS was up. Totals: power 4, volume up 6, volume down 7.
+  Each press lasted 100-370 ms, and no bus read failed.
+- **backboardd** logged `[Button] VolumeIncrement page:0xC usage:0xE9` and
+  `VolumeDecrement ... usage:0xEA`.
+- **SpringBoard** changed the backlight with `changeSource: LockButton` (backlight-off, then on
+  again with "double-click interval").
+- **The panel** was dark at the end (0 of 3072 cells lit): the last power press locked the screen.
+
+All three keys work in iOS.
