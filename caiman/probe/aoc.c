@@ -54,8 +54,23 @@ static const u8 *find_aoc_bin(u64 *size)
 	return p;
 }
 
-/* gsa.ko gsa_send_mbox_cmd_locked(), polled. Returns the reply status, or -1 with no reply. */
+static int gsa_cmd_once(u32 cmd, const u32 *args, u32 n);
+
+/* GSA once took 10 s without answering 0x96 (run aoc5) where it usually takes 3 ms: retry. */
 static int gsa_cmd(u32 cmd, const u32 *args, u32 n)
+{
+	int ret = -1, i;
+
+	for (i = 0; i < 3 && ret < 0; i++) {
+		ret = gsa_cmd_once(cmd, args, n);
+		if (ret < 0)
+			delay_us(500000);
+	}
+	return ret;
+}
+
+/* gsa.ko gsa_send_mbox_cmd_locked(), polled. Returns the reply status, or -1 with no reply. */
+static int gsa_cmd_once(u32 cmd, const u32 *args, u32 n)
 {
 	u32 i, ms, st = 0;
 
@@ -66,7 +81,7 @@ static int gsa_cmd(u32 cmd, const u32 *args, u32 n)
 	wr32(GSA_MBOX + 0x24, 1);
 	wr32(GSA_MBOX + 0x28, rd32(GSA_MBOX + 0x28) & ~1u);
 	wr32(GSA_MBOX + 0x40, 1);
-	for (ms = 0; ms < 10000 && !((st = rd32(GSA_MBOX + 0x30)) & 1); ms++)
+	for (ms = 0; ms < 3000 && !((st = rd32(GSA_MBOX + 0x30)) & 1); ms++)
 		delay_us(1000);
 	pr("aoc: GSA 0x%x: +0x30 0x%x after %u ms; reply 0x%08x status 0x%x count %u [0x%x 0x%x]\n", cmd, st, ms,
 	   rd32(GSA_MBOX + 0x80), rd32(GSA_MBOX + 0x84), rd32(GSA_MBOX + 0x88), rd32(GSA_MBOX + 0x8c),

@@ -472,3 +472,38 @@ What happened (docs/probe-log-aoc4.txt):
 So what the AP lacked was something the running AOC turns on, not the TBN handover itself.
 Next: the Synaptics TCM read protocol (what 0xd2 and 0xf9 mean, and the reset and identify
 timing), and why the AOC does not take the TBN message.
+
+### The touch chip answers: Synaptics S3908, TouchComm v1 (run aoc7, 2026-11-17)
+
+    touch: tcm: DIV USI2 now 0x00000003
+    touch: tcm: startup read, 4 bytes (filler 00): a5 10 18 00
+    touch:   v1 continuation (A5 03 payload 5A): a5 03 01 01 53 33 39 30 38 47 41 31 42 30 2d 31 35 2e 30 00 3a a3 43 00 00 04 5a
+    touch:   identify: version 1, mode 1, part S3908GA1B0-15.0, build 4432698, max write 1024
+
+The chip is a Synaptics **S3908GA1B0**, application firmware build 4432698. It speaks **TouchComm
+v1**: A5, report code 0x10 (identify), length 0x18, then a second transaction carrying "A5 03",
+the payload and 5A (docs/syna-tcm.md).
+
+**What fixed it was the SPI clock, not the AOC.** In this run GSA did not answer 0x96 three times,
+so the AOC never started. The chip answered anyway. The one change from run aoc6, where the chip
+sent `d2 ff ff ff`, is CMU_HSI0 DIV USI2 (+0x181c) set from 0 to 3:
+- At 0, the USI ran from the 24.576 MHz oscillator undivided. The SPI clock was then about 12 MHz,
+  over the chip's 10 MHz (DT `spi-max-frequency`).
+- At 3, it runs at about 3 MHz.
+
+The earlier 0-byte stalls (STATUS 0x3c0) were also at divider 0. Runs aoc4 and aoc6 got bytes at
+divider 0 with the AOC running. Why the AOC changes that is not known.
+
+**Also in this run:**
+- The rail order is now AVDD (LDO4M) then VDD (LDO25M), as syna_touch.ko does.
+- A fresh reset: low 2 ms, then 50 ms.
+- 00 filler on reads.
+
+**GSA is unreliable at this point in our boot.** 0x96 went unanswered in runs aoc5 and aoc7, and
+worked in aoc2, aoc4 and aoc6. This is open.
+
+Next:
+1. Confirm without the AOC: PROBE_TOUCH=2 with the divider, and without the AOC pad, GPIO and sysreg
+   writes.
+2. GET_TOUCH_REPORT_CONFIG (0x25), then touch reports (code 0x11).
+3. A touch driver for XNU.

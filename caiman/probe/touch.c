@@ -169,11 +169,12 @@ static void power_on(int l4, int l25)
 	u32 lows = 0, ms;
 	int v;
 
-	pr("touch: powering the chip: reset held low, LDO25M then LDO4M on\n");
+	/* syna_touch.ko syna_spi_power_on: AVDD (LDO4M) first, then VDD (LDO25M) (docs/syna-tcm.md) */
+	pr("touch: powering the chip: reset held low, LDO4M then LDO25M on\n");
 	set_pin(PIN_IRQ_BANK, PIN_IRQ, 0, -1);			/* input */
 	set_pin(PIN_RESET_BANK, PIN_RESET, 1, 0);		/* output, low: in reset */
-	if (pmic_req(PMIC_PM, PM_L25M_CTRL, 1, (u32)(l25 & 0x3f) | 0xc0) < 0 ||
-	    pmic_req(PMIC_PM, PM_L4M_CTRL, 1, (u32)(l4 & 0x3f) | 0xc0) < 0)
+	if (pmic_req(PMIC_PM, PM_L4M_CTRL, 1, (u32)(l4 & 0x3f) | 0xc0) < 0 ||
+	    pmic_req(PMIC_PM, PM_L25M_CTRL, 1, (u32)(l25 & 0x3f) | 0xc0) < 0)
 		return;
 	v = pmic_read(PMIC_PM, PM_L4M_CTRL);
 	pr("touch: LDO4M  CTRL now 0x%02x: %s\n", v, ldo_state(v));
@@ -351,6 +352,140 @@ static u32 spi_read(u8 *buf, u32 n)
 	wr32(b + SPI_CH_CFG, rd32(b + SPI_CH_CFG) & ~(CH_RXCH_ON | CH_TXCH_ON));
 	wr32(b + SPI_SLAVE_SEL, SLAVE_SIG_INACT);
 	return got;
+}
+
+/* One transaction under chip select: n bytes out (tx, or fill when tx is NULL), n bytes in. */
+static u32 spi_xfer(const u8 *tx, u8 *rx, u32 n, u8 fill)
+{
+	const u64 b = TOUCH_SPI;
+	u64 start;
+	u32 i, sent = 0, got = 0;
+
+	spi_flush();
+	wr32(b + SPI_PACKET_CNT, n & 0xffff);
+	wr32(b + SPI_PACKET_CNT, (n & 0xffff) | PACKET_CNT_EN);
+	wr32(b + SPI_SLAVE_SEL, 0);
+	delay_us(10);
+	for (i = 0; i < n && i < 32; i++, sent++)
+		wr32(b + SPI_TX_DATA, tx ? tx[i] : fill);
+	wr32(b + SPI_CH_CFG, rd32(b + SPI_CH_CFG) | CH_RXCH_ON | CH_TXCH_ON);
+	start = timer_ticks();
+	while (got < n && timer_ticks() - start < timer_freq() / 20) {
+		u32 st = rd32(b + SPI_STATUS), lvl = RX_LVL(st);
+
+		while (lvl-- && got < n) {
+			u8 c = (u8)rd32(b + SPI_RX_DATA);
+
+			if (rx)
+				rx[got] = c;
+			got++;
+		}
+		/* keep the TX FIFO fed for transfers longer than it holds */
+		while (sent < n && TX_LVL(rd32(b + SPI_STATUS)) < 32) {
+			wr32(b + SPI_TX_DATA, tx ? tx[sent] : fill);
+			sent++;
+		}
+	}
+	wr32(b + SPI_CH_CFG, rd32(b + SPI_CH_CFG) & ~(CH_RXCH_ON | CH_TXCH_ON));
+	wr32(b + SPI_SLAVE_SEL, SLAVE_SIG_INACT);
+	return got;
+}
+
+static void hex(const char *what, const u8 *p, u32 n)
+{
+	u32 i;
+
+	pr("touch: %s:", what);
+	for (i = 0; i < n; i++)
+		pr(" %02x", p[i]);
+	pr("\n");
+}
+
+/* CRC6 of TouchComm v2 headers (docs/syna-tcm.md section 4): zero over a valid 32-bit header */
+static u32 tcm_crc6(const u8 *p, u32 bits)
+{
+	u32 c = 0xfc, i;
+
+	for (i = 0; i < bits; i++) {
+		c ^= ((p[i / 8] >> (7 - i % 8)) & 1) << 7;
+		c = ((c << 1) ^ ((c & 0x80) ? 0x0c : 0)) & 0xff;
+	}
+	return c >> 2;
+}
+
+/* A v1 message: 4-byte header read, then "A5 03" + payload + 5A in a second transaction. */
+static int tcm_v1_read(const char *what)
+{
+	u8 h[4] = { 0 }, m[64];
+	u32 len, got;
+
+	got = spi_xfer(NULL, h, 4, 0);
+	pr("touch: %s: %u of 4 bytes\n", what, got);
+	hex(what, h, 4);
+	if (h[0] != 0xa5)
+		return -1;
+	len = h[2] | (u32)h[3] << 8;
+	if (len > sizeof(m) - 3)
+		len = sizeof(m) - 3;
+	delay_us(100);
+	spi_xfer(NULL, m, len + 3, 0);
+	hex("  v1 continuation (A5 03 payload 5A)", m, len + 3);
+	if (len >= 24 && m[1] == 0x03) {
+		char part[17];
+
+		memcpy(part, m + 4, 16);
+		part[16] = 0;
+		pr("touch:   identify: version %u, mode %u, part %s, build %u, max write %u\n", m[2], m[3], part,
+		   m[20] | m[21] << 8 | m[22] << 16 | (u32)m[23] << 24, m[24] | m[25] << 8);
+	}
+	return 0;
+}
+
+/*
+ * syna_touch.ko's bring-up, polled (docs/syna-tcm.md): a fresh reset (low 2 ms, then 50 ms), then
+ * look for the startup identify report; v1 starts with A5 10, v2 is a header with a CRC6. If
+ * nothing comes, send IDENTIFY (0x02) both ways and read again.
+ */
+static void tcm_probe(void)
+{
+	static const u8 v1_identify[3] = { 0x02, 0x00, 0x00 };
+	static const u8 v2_identify[2][4] = { { 0x02, 0x00, 0x00, 0x19 }, { 0x02, 0x00, 0x00, 0x5a } };
+	u8 h[4];
+	u32 ms, i;
+
+	/*
+	 * CMU_HSI0 DIV USI2 (+0x181c) reads 0: the USI clock is the 24.576 MHz oscillator, and the SPI
+	 * clock half that, over the chip's 10 MHz (DT spi-max-frequency). Divide by 4: about 3 MHz.
+	 */
+	wr32(CMU_HSI0 + 0x181c, (rd32(CMU_HSI0 + 0x181c) & ~0xfu) | 3);
+	pr("touch: tcm: DIV USI2 now 0x%08x\n", rd32(CMU_HSI0 + 0x181c));
+	set_pin(PIN_RESET_BANK, PIN_RESET, 1, 0);
+	delay_us(2000);
+	set_pin(PIN_RESET_BANK, PIN_RESET, 1, 1);
+	for (ms = 0; ms < 1000 && ((rd32(PIN_IRQ_BANK + 4) >> PIN_IRQ) & 1); ms++)
+		delay_us(1000);
+	pr("touch: tcm: after reset the interrupt line went %s after %u ms\n",
+	   ((rd32(PIN_IRQ_BANK + 4) >> PIN_IRQ) & 1) ? "nowhere (still high)" : "LOW", ms);
+	delay_us(50000);
+
+	if (!tcm_v1_read("tcm: startup read, 4 bytes (filler 00)"))
+		return;
+	spi_xfer(NULL, h, 4, 0xff);
+	hex("tcm: startup read, 4 bytes (filler ff)", h, 4);
+
+	spi_xfer(v1_identify, NULL, 3, 0);
+	delay_us(1000);
+	if (!tcm_v1_read("tcm: after v1 IDENTIFY 02 00 00"))
+		return;
+	for (i = 0; i < 2; i++) {
+		spi_xfer(v2_identify[i], NULL, 4, 0);
+		delay_us(100);
+		spi_xfer(NULL, h, 4, 0);
+		pr("touch: tcm: after v2 IDENTIFY (seq %u): %02x %02x %02x %02x, CRC6 residue %u\n", i, h[0], h[1], h[2],
+		   h[3], tcm_crc6(h, 32));
+	}
+	pr("touch: tcm: interrupt line now %s\n", ((rd32(PIN_IRQ_BANK + 4) >> PIN_IRQ) & 1) ? "high" : "LOW");
+	log_flush();
 }
 
 /*
@@ -653,6 +788,9 @@ static void spi_identify(void)
 	aoc_regs_dump();
 	hsi0_sysreg_copy();
 	aoc_bus_to_ap();
+#if PROBE_TOUCH == 7
+	tcm_probe();
+#endif
 	/* the controller's own loopback (MODE_CFG bit 3): needs its clock, not the pins */
 	wr32(TOUCH_SPI + SPI_MODE_CFG, rd32(TOUCH_SPI + SPI_MODE_CFG) | (1u << 3));
 	got = spi_read(buf, 16);
