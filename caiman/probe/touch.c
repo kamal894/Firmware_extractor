@@ -545,12 +545,13 @@ static int tcm_v1_cmd(u8 cmd, const u8 *arg, u32 alen, u8 *rsp, u32 max)
 
 /*
  * A clean run (PROBE_TOUCH=8): identify, the touch report config (GET_TOUCH_REPORT_CONFIG 0x25),
- * then 20 s of messages, printed whole. Touch data is report 0x11.
+ * then 90 s of messages, printed whole. Touch data is report 0x11.
  */
 static void touch_clean(void)
 {
-	u8 buf[256], code;
-	u32 ms, count = 0;
+	u8 buf[256], code, last_objs = 0xff;
+	u32 ms, last_ms = 0, count = 0, reports = 0, lines = 0;
+	u64 start, now;
 	int n;
 
 	tcm_probe();
@@ -559,30 +560,50 @@ static void touch_clean(void)
 	if (n > 0)
 		hex("tcm: config", buf, (u32)n < 64 ? (u32)n : 64);
 	log_flush();
-	pr("touch: tcm: reading reports for 20 s (touch the screen now)\n");
+	pr("touch: tcm: reading reports for 90 s (touch the screen now)\n");
 	log_flush();
-	for (ms = 0; ms < 20000 && count < 200; ms++) {
+	/*
+	 * Report 0x11 with this config: 11 bytes of header (gesture id, gesture data, 0x1e,
+	 * nsm state, active object count at [10]), then per object 12 bytes: index|class<<4,
+	 * X, Y, Z (u16 LE), x width, y width, 0xd2, 0xd3, 0xd1. One line per 100 ms, and
+	 * on every change of the object count.
+	 */
+	start = timer_us();
+	while ((now = timer_us()) - start < 90000000ULL) {
 		if ((rd32(PIN_IRQ_BANK + 4) >> PIN_IRQ) & 1) {
-			delay_us(1000);
+			delay_us(500);
 			continue;
 		}
 		n = tcm_v1_msg(&code, buf, sizeof(buf));
 		if (n < 0) {
-			delay_us(1000);
+			delay_us(500);
 			continue;
 		}
 		count++;
-		pr("touch: tcm: %5u ms: report 0x%02x, %d bytes:", ms, code, n);
+		ms = (u32)((now - start) / 1000);
+		if (code != 0x11 || n < 11) {
+			pr("touch: tcm: %5u ms: report 0x%02x, %d bytes\n", ms, code, n);
+			continue;
+		}
+		reports++;
+		if (buf[10] == last_objs && ms - last_ms < 100)
+			continue;
+		last_objs = buf[10];
+		last_ms = ms;
+		pr("touch: tcm: %5u ms: %u objects", ms, buf[10]);
 		{
-			int i;
+			int p;
 
-			for (i = 0; i < n && i < 32; i++)
-				pr(" %02x", buf[i]);
+			for (p = 11; p + 12 <= n; p += 12)
+				pr("  [%u class %u x %u y %u z %u w %ux%u]", buf[p] & 15, buf[p] >> 4,
+				   buf[p + 1] | buf[p + 2] << 8, buf[p + 3] | buf[p + 4] << 8,
+				   buf[p + 5] | buf[p + 6] << 8, buf[p + 7], buf[p + 8]);
 		}
 		pr("\n");
-		if (!(count % 16))
+		if (!(++lines % 16))
 			log_flush();
 	}
+	pr("touch: tcm: %u touch reports\n", reports);
 	pr("touch: tcm: %u messages\n", count);
 	log_flush();
 }

@@ -1,0 +1,1913 @@
+[   0.000000] [I] secure payload loading took 0ms
+[   0.000000] [I] platform info binded: true
+[   0.000000] [I] platform info: 060906010000
+[   0.798956] [I] 
+welcome to lk/MP
+
+[   0.798984] [I] boot args 0x1 0x0 0x0 0x0
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   0.799621] [I] acpm locks regulators
+[   0.799675] [I] Soc Product ID: 0x09875
+[   0.799710] [I] Soc rev: A1
+[   0.799740] [I] Soc ID: 0x12b44c577850
+[   0.799772] [I] DVFS version: 2
+[   0.799834] [I] S2MPG_M CHIPID read: 0x10
+[   0.799901] [I] S2MPG_S CHIPID read: 0x10
+[   0.799969] [I] S2MPG_M PWRONSRC read: 0x20
+[   0.800036] [I] S2MPG_M OFFSRC1 read: 0x10
+[   0.800108] [I] S2MPG_M OFFSRC2 read: 0x0
+[   0.800175] [I] S2MPG_M RTC_WTSR read: 0x7e
+[   0.800216] [I] S2MPG_M INT1: 0x30
+[   0.800246] [I] S2MPG_M INT2: 0x0
+[   0.800272] [I] S2MPG_M INT3: 0x0
+[   0.800298] [I] S2MPG_M INT4: 0x0
+[   0.800328] [I] S2MPG_M INT5: 0x0
+[   0.800388] [I] S2MPG_S OFFSRC1 read: 0x11
+[   0.800427] [I] S2MPG_S INT1: 0x83
+[   0.800456] [I] S2MPG_S INT2: 0x80
+[   0.800483] [I] S2MPG_S INT3: 0x0
+[   0.800513] [I] S2MPG_S INT4: 0x0
+[   0.800540] [I] S2MPG_S INT5: 0x0
+APC Bootmetrics:
+  BL1: MT:1 / DT:ENTRY / 96664 us
+  BL1: MT:2 / DT:LOAD  / 7360 us
+  BL1: MT:F / DT:EXIT  / 147984 us
+  PBL: MT:1 / DT:ENTRY / 148112 us
+  PBL: MT:2 / DT:LOAD  / 19592 us
+  PBL: MT:F / DT:EXIT  / 213208 us
+  BL2: MT:1 / DT:ENTRY / 214776 us
+  BL2: MT:2 / DT:LOAD  / 160 us
+  BL2: MT:3 / DT:LOAD  / 152 us
+  BL2: MT:4 / DT:CHECK / 342800 us
+  BL2: MT:5 / DT:CHECK / 2096 us
+  BL2: MT:6 / DT:LOAD  / 62368 us
+  BL2: MT:7 / DT:CHECK / 157696 us
+  BL2: MT:8 / DT:CHECK / 157840 us
+  BL2: MT:9 / DT:LOAD  / 44424 us
+  BL2: MT:A / DT:LOAD  / 31624 us
+  BL2: MT:B / DT:LOAD  / 323880 us
+  BL2: MT:C / DT:LOAD  / 8 us
+  BL2: MT:F / DT:EXIT  / 607104 us
+  PBL: MT:3 / DT:LOAD  / 81256 us
+  PBL: MT:4 / DT:LOAD  / 28152 us
+  PBL: MT:5 / DT:LOAD  / 6176 us
+  PBL: MT:6 / DT:CHECK / 722872 us
+  PBL: MT:7 / DT:CHECK / 723000 us
+  EL3: MT:1 / DT:ENTRY / 725784 us
+  EL3: MT:D / DT:CHECK / 741336 us
+  EL3: MT:E / DT:CHECK / 787840 us
+  EL3: MT:F / DT:EXIT  / 787872 us
+APC Breadcrumbs(v2.4):
+ stages(S): 00000000 / 0000404F
+  flags(S): 00000000 / 000022C0
+stages(NS): 00000000 / 00005004
+ flags(NS): 00000000 / 0000D400
+    status: 00000000 / 00000000
+    device: 00000000 / 00000001
+   tmutrip: 00000000 / 00000000
+     reset: 00000000 / 00180000
+[   0.801533] [E] GSA Breadcrumb:
+00000000 0000000d 00000000 00000000  |................|
+00000000 00000000 00000001           |............    |
+[   0.801664] [I] SBDP initialized: chipid allowed=0, dpm_state=0x0000
+[   0.801715] [E] check header failed
+[   0.801841] [I] initializing device i2c:usi00
+[   0.801882] [I] usi00: version 2.2
+[   0.801930] [I] initializing device i2c:usi04
+[   0.801971] [I] usi04: version 2.2
+[   0.802016] [I] initializing device i2c:usi06
+[   0.802057] [I] usi06: version 2.2
+[   0.802102] [I] initializing device i2c:usi09
+[   0.802143] [I] usi09: version 2.2
+[   0.802193] [I] initializing device i2cm:i2cm0
+[   0.802234] [I] DVFS init
+[   0.804493] [I] DVFS init done
+[   0.804523] [I] UFS EVT version 0
+[   0.804564] [I] controller version 3.0 found
+[   0.804600] [I] capabilities 0x1383ff1f
+[   0.804806] [I] UFS device found
+zuma_ufs_device_init_done
+[   0.804849] [E] ufshc_notify done
+[   0.804928] [I] ufshc_power_mode_change HS gear 4
+[   0.815117] [I] ufshc: bBootLunEn 0x1
+[   0.815262] [I] UFS device SAMSUNG KLUDG4UHGC-B0E1 version 3.1
+[   0.815311] [I] Enabled LUNs found 4
+[   0.815370] [I] UFS device total size 127984992256
+[   0.815476] [I] Temp too high enabled
+[   0.815572] [I] Temp too low enabled
+[   0.818320] [I] Write Booster: available buffer=0x7 lifetime=0x2 current buffer=0x1dcb
+[   0.818412] [I] boot slot: a
+[   0.820591] [I] slot data a: 0x00001e02
+[   0.820622] [I] slot data b: 0x00001000
+[   0.821436] [I] platform info: 060906010000
+[   0.821680] [I] initializing device cs40l2x:cs40l26
+[   0.832164] [I] CS40L26 found
+[   0.833829] [I] initializing device nfc:st21nfc
+[   0.835723] [I] tcpc vendor id 56
+[   0.836635] found 77779 on usi6
+[   0.836660] bms_init init usi10 as sec_i2c
+[   0.836691] [I] initializing device i2c:usi10
+[   0.836731] [I] usi10: version 2.2
+[   0.836928] [I] FG device name 0x5100
+[   0.837435] [I] [max77779fg] SOC(99), VCELL(4418), INOW(-358), IAVG(-58)
+[   0.838060] [I] fship 0x0
+[   0.838177] [I] master disconnect reason 0x0
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   0.840987] [I] LCS state:PRODUCTION
+[   0.841126] [I] no valid file
+[TMU:0] 34
+[TMU:1] 33
+[   0.844420] [I] dsim_probe dsim0+
+[   0.844457] [I] using data lane count(4)
+[   0.845134] [E] 
+Reboot Info:
+  RST_STAT: 0x180000 - PIN_RESET | PO_RESET
+  GSA_RESET_STATUS: 0x1 - GSA_PINRESET
+  Reboot reason: 0xcafe - User Reboot(S/W Reboot)
+  Reboot mode: 0xfc - Bootloader
+[   0.864506] [E] failed to get eUSB revision -62
+[   0.864541] [I] Set EUSB Ref clock auto
+[   0.864863] [I] LK build date: Apr 14 2026, time: 06:16:15
+[   0.864906] [I] BL version: ripcurrentpro-17.0-15199480
+[   0.864949] [I] BL type: official build
+starting app pixel_loader
+[   0.865419] [I] sota: empty signature.
+[   0.865454] [I] ABL start time (METRICS_BL3): 787ms
+[   0.865495] [I] AB Decision: active slot boot ok
+[   0.865532] [I] AB Decisions: 00000000
+[   0.865760] [I] TCPC BC1.2, type: 2 val:2
+[   0.865962] [I] boot voltage threshold=3400mV
+[   0.866072] [I] bootloader message:bootonce-bootloader
+[   0.866551] [I] fastboot enter reason: reboot bootloader
+[   0.866600] [W] power on source: 20
+starting app pixel_charger
+[   0.874744] [E] dsim0 wait phy pll stable
+[   0.895932] [I] Succeeded to read panel product id : 0x22a8a00a
+[   0.896007] [E] is_compatible is not defined!
+[   0.896045] [I] panel_rev: 0x1000
+[   0.901236] [I] use panel google-cm4 for dsim0
+[   0.901271] [I] dsim_probe -: dsim0 driver(cmd mode) has been probed.
+[   0.901322] [I] dsim_probe dsim1+
+[   0.901358] [I] using data lane count(4)
+[   0.901423] [E] dsim1 wait phy pll stable
+[   0.952526] [E] timeout!! wait for DSIM interrupt (0x40300000)
+[   0.952619] [E] MIPI DSIM (id=6) read Timeout! 0x4
+[   0.952658] [E] dsim fail to get panel operation
+[   0.952736] [E] dsim has error.
+[   0.952767] [E] dsim_probe -: dsim1 probe failed.
+[   0.952803] [I] dsim1 probe was failed
+[   0.952833] [I] dsim_init -: set dsim0 driver as primary.
+[   0.964075] [E] dsim0 wait phy pll stable
+[   0.983248] [I] dpp_probe +
+[   0.983273] [I] dpp-0's attr is (0x004d0047)
+[   0.983309] [I] dpp(0) init resources.
+[   0.983366] [I] dpp_probe -: dpp0 is probed successfully
+[   0.983417] [I] decon-int: max win6, command mode, hw trigger
+[   0.983467] [I] single dsi mode
+[   0.983500] [I] [decon0] d_path(0xB1) DSCC DSC_ENC1 DSC_ENC0 OFIFO.0
+[   0.983614] [I] [decon0] sel(0x0) OFIFO.0 - dsim0 - google-cm4
+[   0.983662] [I] Display 1st window(5) xres(1280) yres(2856) win_start_pos(0) win_end_pos(b2704ff)
+[   1.036011] [I] port connected
+[   1.050651] [I] TCPC BC1.2, type: 2 val:2
+[   1.118952] [I] decon0 registered successfully
+[   1.154272] [I] version: g5400c-260317-260429-B-15308590
+USB Pipe3 Initialization...
+[dwc3_dptx] CR write failed to 0x31c5
+[dwc3_dptx] CR write failed to 0x32c5
+[dwc3_dptx] CR write failed to 0x402d
+[dwc3_dptx] CR write failed to 0x412d
+[dwc3_dptx] CR write failed to 0x422d
+[dwc3_dptx] CR write failed to 0x432d
+[dwc3_dptx] CR write failed to 0x2021
+[dwc3_dptx] CR write failed to 0x2024
+[dwc3_dptx] CR write failed to 0x2027
+[dwc3_dptx] CR write failed to 0x202a
+[dwc3_dptx] CR write failed to 0x202d
+[dwc3_dptx] CR write failed to 0x2030
+[dwc3_dptx] CR write failed to 0x2033
+[dwc3_dptx] CR write failed to 0x2036
+[dwc3_dptx] CR write failed to 0x2022
+[dwc3_dptx] CR write failed to 0x2025
+[dwc3_dptx] CR write failed to 0x2028
+[dwc3_dptx] CR write failed to 0x202b
+[dwc3_dptx] CR write failed to 0x202e
+[dwc3_dptx] CR write failed to 0x2031
+[dwc3_dptx] CR write failed to 0x2034
+[dwc3_dptx] CR write failed to 0x2037
+[dwc3_dptx] PMA version:0x4604
+[dwc3_dptx] PCS ID:0x6790
+[dwc3_dptx] Firmware ID:0x6044, 0x04b3
+[   1.229260] [I] TCPC BC1.2, type: 2 val:2
+[   1.503280] [I] TCPC BC1.2, type: 2 val:2
+[   1.516016] [I] new high-speed device found
+[   1.516174] [I] TCPC BC1.2, type: 2 val:2
+[   1.523877] [I] TCPC BC1.2, type: 2 val:2
+[   2.576894] [I] Accept cmd:download:0000e000
+[   2.577007] [I] Downloading. Download size is 57344 bytes
+[   2.577102] [I] DATA0000e000
+[   2.578534] [I] OKAY
+[   2.578754] [I] Accept cmd:boot
+[   2.585787] [I] OKAY
+[   2.599020] [I] TCPC BC1.2, type: 2 val:2
+[   2.599841] [I] TCPC BC1.2, type: 2 val:2
+[   2.701389] [E] avb_property(com.android.build.boot.security_patch): not found
+[   2.701498] [E] boot_spl: can't find property
+[   2.701573] [I] boot_state: 160000:20261100:20000000
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   2.704601] [I] using init_boot ramdisk
+[   2.704669] [I] using vendor_kernel_boot ramdisk
+[   2.704874] [I] kernel: addr:0xffff000090701000, size:bfec
+[   2.705002] [I] kernel: total_time:0
+[   2.705065] [I] vendor kernel ramdisk copy
+[   2.705137] [I] ramdisk dst addr: 0xffff000086000000 src addr: 0xffff0000a5901000 size: 0x67591e(6773022)
+[   2.705290] [I] padding prepended: 0
+[   2.709000] [I] vendor ramdisk copy
+[   2.709057] [I] ramdisk dst addr: 0xffff00008667591e src addr: 0xffff0000a0001000 size: 0x1663ae2(23476962)
+[   2.709212] [I] padding prepended: 18
+[   2.721668] [I] ramdisk copy
+[   2.721737] [I] ramdisk dst addr: 0xffff000087cd9412 src addr: 0xffff0000a5101000 size: 0x250d04(2428164)
+[   2.721892] [I] padding prepended: 14
+[   2.723224] [I] Ramdisk load size with padding: 32678180
+[   2.723362] [I] rev: 09865.00.00
+[   2.723445] [I] rev: 09865.00.00
+[   2.723513] [I] rev: 09865.01.00
+[   2.723567] [I] rev: 09865.01.01
+[   2.723635] [I] rev: 09865.01.00
+[   2.723688] [I] rev: 09865.01.01
+[   2.723755] [I] rev: 09875.00.00
+[   2.723823] [I] rev: 09875.00.00
+[   2.723889] [I] rev: 09875.00.00
+[   2.723943] [I] rev: 09875.00.01
+[   2.724009] [I] rev: 09875.00.00
+[   2.724062] [I] rev: 09875.00.01
+[   2.724113] [I] SOC DTB: index:6
+[   2.724190] [I] DTBO match: id 0x60906, rev 0x10000
+[   2.746795] [I] dpm not merged
+[   2.749024] [I] MTE S: 0, NS: 0, tag base: 0x0
+[   2.786425] [W] power on source: 20
+[   2.786502] [I] bootmode:
+[   2.786638] [I] DDR size: 16GiB
+[   2.786687] [I] DDR Manufacturer: Samsung
+[   2.788930] [I] ro.misctrl.16kb_before=0
+[   2.789013] [I] console is disabled
+[   2.789257] [I] secure dram base 0xb6200000, size 0x9e00000
+[   2.789403] [I] secure PGTBL base 0xe0000000, size 58720256
+[   2.794259] [I] MTE S: 0, NS: 0, tag base: 0x0
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   2.811307] [I] device: /reserved-memory/debug_snapshot/log_s2d path not found (-1)
+[   2.811558] [I] device: /reserved-memory/debug_snapshot/log_array_reset path not found (-1)
+[   2.811788] [I] device: /reserved-memory/debug_snapshot/log_kevents path not found (-1)
+[   2.812037] [I] device: /reserved-memory/debug_snapshot/log_itmon path not found (-1)
+[   2.812264] [I] device: /reserved-memory/debug_snapshot/log_s2d_extract path not found (-1)
+[   2.813791] [I] device: /google,mitigation enabled ret=0
+[   2.834337] [I] ro.boot.hardware.cpu.pagesize=4096
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   2.835697] [I] panel settings after overriding: google-cm4.22a8a00a@dsim0 null@dsim1
+[   2.851348] [I] linux,initrd-start: 0x86000000, linux,initrd-end: 0x87f32125
+[   2.863824] [E] avb_property(com.android.build.microdroid-vendor.root_digest): not found
+[   2.863955] [W] failed to get microdroid vendor hashtree digest from avb property, skip appending value
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   2.866226] [W] no avf debug policy, because dpm is NULL
+[  12.939595] [I] slot data a: 0x00001e02
+[  12.939658] [I] slot data b: 0x00001000
+[  12.943337] [E] avb_property(com.android.build.boot.fingerprint): not found
+[  12.943440] [E] fingerprint property not found 
+[  13.421321] [I] shutdown complete
+[  13.421407] [I] thread stats (cpu 0): total idle time: 12168940, total busy time: 1252466
+Heap dump (using miniheap):
+	base 0xffff0000f8b93000, len 0x527000
+	free list:
+		base 0xffff0000f8d1b220, end 0xffff0000f8d3b660, len 0x20440
+		base 0xffff0000f8d3b6f0, end 0xffff0000f8d3b710, len 0x20
+		base 0xffff0000f8d7b510, end 0xffff0000f8d7b6c0, len 0x1b0
+		base 0xffff0000f8d7e7e0, end 0xffff0000f8d7e9a0, len 0x1c0
+		base 0xffff0000f8d7f810, end 0xffff0000f8d85980, len 0x6170
+		base 0xffff0000f8e07da0, end 0xffff0000f8e07dd0, len 0x30
+		base 0xffff0000f8e081a0, end 0xffff0000f8e09000, len 0xe60
+		base 0xffff0000f8e31020, end 0xffff0000f8e32000, len 0xfe0
+		base 0xffff0000f8ee03e0, end 0xffff0000f8f20240, len 0x3fe60
+		base 0xffff0000f8f30320, end 0xffff0000f90ba000, len 0x189ce0
+[  13.422473] [I] Starting Linux kernel ...
+=== caiman-probe 0668e60-dirty on caiman (Pixel 9 Pro, Tensor G4 / zumapro) ===
+hello from bare metal: loaded at 0x80000000 (file 0xbff0 bytes, 0x2b010 with bss+stack), x0/DTB=0x8a000000
+entry: EL2 SCTLR=0x30c50990 MMU=off D-cache=off I-cache=off
+
+--- cpu ---
+cpu: CurrentEL=2  MPIDR=0x81000000 (aff2.1.0 = 0.0.0)
+cpu: MIDR=0x410fd801 (Cortex-A520 r0p1) REVIDR=0x3
+cpu: SCTLR_EL2=0x30c50990 HCR_EL2=0x100000080000000 CPTR_EL2=0x33ff CNTHCTL_EL2=0x3ff5f
+cpu: entered at EL2 (hypervisor level): a loader for XNU must drop to EL1
+cpu: DAIF=0x3c0 ISR_EL1=0x0 CNTFRQ=24576000 Hz CNTVCT=330346025
+cpu: ID_AA64PFR0=0x1201111123111111 PFR1=0x0000000000010321
+cpu: ID_AA64ISAR0=0x0221111110212120 ISAR1=0x0111111100211002 ISAR2=0x0000000001005102
+cpu: ID_AA64MMFR0=0x2100022200101122 MMFR1=0x1001111011312122 MMFR2=0x1221011110101011
+cpu: ID_AA64DFR0=0x100f11f010305719 ZFR0=0x0000110100110021 SMFR0=0x0000000000000000
+cpu: CTR_EL0=0x49444c004 DCZID_EL0=0x4 CLIDR_EL1=0x54c3000123
+
+--- device tree ---
+dt: blob at 0x8a000000, 505098 bytes, version 17
+dt: memory 0xb80000000 - 0xc00000000 (2048 MiB)
+dt: memory 0xb00000000 - 0xb80000000 (2048 MiB)
+dt: memory 0xa80000000 - 0xb00000000 (2048 MiB)
+dt: memory 0xa00000000 - 0xa80000000 (2048 MiB)
+dt: memory 0x980000000 - 0xa00000000 (2048 MiB)
+dt: memory 0x900000000 - 0x980000000 (2048 MiB)
+dt: memory 0x880000000 - 0x900000000 (2048 MiB)
+dt: rsv pkvm_guest_firmware                  0x8b000000+0xd0000 no-map [linux,pkvm-guest-firmware-memory]
+dt: rsv abl@f8800000                         0xf8800000+0x1000000 no-map
+dt: rsv sec_pt                               0xe0000000+0x3800000 no-map
+dt: rsv sec_dram                             0xb6200000+0x9e00000 no-map
+dt: rsv ect_binary                           0x90000000+0x60000 [exynos,ect_rmem]
+dt: rsv gsa@90200000                         0x90200000+0x3ff000 no-map
+dt: rsv gsa@905FF000                         0x905ff000+0x1000 no-map
+dt: rsv gxp_scratchpad@91300000              0x91300000+0x60000 no-map
+dt: rsv iif_wait_table@91360000              0x91360000+0x20000 no-map
+dt: rsv iif_signal_table@91380000            0x91380000+0x20000 no-map
+dt: rsv gxp_secure_data@91400000             0x91400000+0x900000 no-map
+dt: rsv gxp_fw@91D00000                      0x91d00000+0x300000 no-map
+dt: rsv gxp_mcu_fw@92000000                  0x92000000+0x400000 no-map
+dt: rsv tpu_fw@92e00000                      0x92e00000+0x1200000 no-map
+dt: rsv aoc@94000000                         0x94000000+0x3000000 no-map
+dt: rsv dss_log_reserved@fd3f0000            0xfd3f0000+0xe000 no-map
+dt: rsv debug_kinfo_reserved@fd3fe000        0xfd3fe000+0x1000 no-map
+dt: rsv ramoops_mem@fd3ff000                 0xfd3ff000+0x400000 [ramoops]
+dt: rsv bldr_log_reserved@fd800000           0xfd800000+0x100000 no-map
+dt: rsv cp_rmem                              0xea400000+0xc00000 [exynos,modem_if]
+dt: rsv cp_msi_rmem                          0xf6200000+0x1000 [exynos,modem_if]
+dt: rsv cp_rmem_1                            0xe8000000+0x2000000 [exynos,modem_if]
+dt: rsv cp_aoc_rmem                          0x197fd000+0x3000 [exynos,modem_if]
+dt: rsv header                               0xd8100000+0x10000 no-map
+dt: rsv log_kevents                          0xd8110000+0x700000 no-map
+dt: rsv log_bcm                              0xdd610000+0x400000 no-map
+dt: rsv log_s2d                              0xd8810000+0x1800000 no-map
+dt: rsv log_array_reset                      0xda010000+0xa00000 no-map
+dt: rsv log_array_panic                      0xdaa10000+0xa00000 no-map
+dt: rsv log_slcdump                          0xdb410000+0x1100000 no-map
+dt: rsv log_preslcdump                       0xdc510000+0x1100000 no-map
+dt: rsv log_itmon                            0xdda10000+0x10000 no-map
+dt: rsv log_s2d_extract                      0xdda20000+0x600000 no-map
+dt: rsv seclog_mem                           0xc3000000+0x80000 [exynos,seclog]
+dt: rsv xhci_dma_buffer@17BB5000             0x17bb5000+0xb000 no-map [xhci-dma-pool]
+dt: rsv xhci_dma@17BC0000                    0x17bc0000+0x40000 no-map [xhci-dma-pool]
+dt: rsv xhci_dma_dram@97000000               0x97000000+0x400000 no-map [xhci-dma-pool]
+dt: rsv vstream                              [shared-dma-pool]
+dt: rsv vframe                               [shared-dma-pool]
+dt: rsv vscaler                              [shared-dma-pool]
+dt: rsv tui                                 
+dt: rsv gcma_camera                         
+dt: rsv faceauth_dsp                        
+dt: rsv faceauth_tpu                        
+dt: rsv famodel                             
+dt: rsv faimg                                [shared-dma-pool]
+dt: rsv farawimg                            
+dt: rsv faeval                              
+dt: rsv faprev                               [shared-dma-pool]
+dt: rsv mfc_fw                              
+dt: rsv dpado-rmem                           [exynos,dp_ado_rmem]
+dt: psci method=smc
+dt: memory 0x80000000 - 0x100000000 (2048 MiB)
+dt: /chosen bootargs: root=/dev/ram0 rw clocksource=arch_sys_counter clk_ignore_unused loop.max_part=7 loop.hw_queue_depth=31 coherent_pool=4M firmware_class.path=/vendor/firmware irqaffinity=0 sysrq_always_enabled no_console_suspend softlockup_panic=1 kasan_multi_shot kvm-arm.protected_modules=exynos-pd,pkvm_s2mpu-v9 fips140.load_sequential=1 exynos_drm.load_sequential=1 g2d.load_sequential=1 samsung_iommu_v9.load_sequential=1 vh_sched.load_sequential=1 pcie_exynos_gs.load_sequential=1 dyndbg="func alloc_contig_dump_pages +p" printk.devkmsg=on cma_sysfs.experimental=Y cgroup.memory=nokmem rcupdate.rcu_expedited=1 rcu_nocbs=all rcutree.enable_rcu_lazy swiotlb=noforce disable_dma32=on sysctl.kernel.sched_pelt_multiplier=4 rodata=on kasan=off at24.write_timeout=100 log_buf_len=1024K android_arch_task_struct_size=512 bootconfig console=null exynos_drm.panel_name=google-cm4.22a8a00a tcpci_max77759.conf_sbu=0 arm64.nomte ufs_pixel_fips140.fips_first_lba=151942 ufs_pixel_fips140.fips_last_lba=152453 ufs_pixel_fips140.fips_lu=0 ufs_pixel_fips140.use_hw_keys=true id_aa64mmfr1.vh=0  bootconfig
+dt: /chosen initrd 0x86000000 - 0x87f32125
+ramoops: DT ramoops_mem@fd3ff000: 0xfd3ff000 size 0x400000 record 0x0 console 0x200000 ftrace 0x0 pmsg 0x200000 ecc 0
+ramoops: console zone 0xfd3ff000 size 0x200000 matches the built-in default
+
+--- uart ---
+uart: samsung @ 0x10870000: reading ULCON/UCON/UFCON
+uart: ULCON=0x00000000 UCON=0x00003000 UFCON=0x00000000
+uart: transmitter disabled (UCON tx mode 0): bootloader did not enable the
+      debug UART. Try `fastboot oem uart enable` before `fastboot boot`.
+
+--- psci ---
+psci: conduit=smc version=1.1 (raw 0x10001)
+psci: SYSTEM_RESET2 supported (PSCI_FEATURES=0)
+
+--- bootloader log @ 0xfd800000 (0x100000 bytes) ---
+bldr: first 64 bytes:
+  fd800000: f7 32 00 00 00 00 00 00 f0 ff 07 00 00 00 00 00  |.2..............|
+  fd800010: 5b 20 20 20 30 2e 30 30 30 30 30 30 5d 20 5b 49  |[   0.000000] [I|
+  fd800020: 5d 20 73 65 63 75 72 65 20 70 61 79 6c 6f 61 64  |] secure payload|
+  fd800030: 20 6c 6f 61 64 69 6e 67 20 74 6f 6f 6b 20 30 6d  | loading took 0m|
+bldr: printable text (runs of >= 4 chars), up to 524288 bytes:
+[   0.000000] [I] secure payload loading took 0ms
+[   0.000000] [I] platform info binded: true
+[   0.000000] [I] platform info: 060906010000
+[   0.798956] [I] 
+welcome to lk/MP
+
+[   0.798984] [I] boot args 0x1 0x0 0x0 0x0
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   0.799621] [I] acpm locks regulators
+[   0.799675] [I] Soc Product ID: 0x09875
+[   0.799710] [I] Soc rev: A1
+[   0.799740] [I] Soc ID: 0x12b44c577850
+[   0.799772] [I] DVFS version: 2
+[   0.799834] [I] S2MPG_M CHIPID read: 0x10
+[   0.799901] [I] S2MPG_S CHIPID read: 0x10
+[   0.799969] [I] S2MPG_M PWRONSRC read: 0x20
+[   0.800036] [I] S2MPG_M OFFSRC1 read: 0x10
+[   0.800108] [I] S2MPG_M OFFSRC2 read: 0x0
+[   0.800175] [I] S2MPG_M RTC_WTSR read: 0x7e
+[   0.800216] [I] S2MPG_M INT1: 0x30
+[   0.800246] [I] S2MPG_M INT2: 0x0
+[   0.800272] [I] S2MPG_M INT3: 0x0
+[   0.800298] [I] S2MPG_M INT4: 0x0
+[   0.800328] [I] S2MPG_M INT5: 0x0
+[   0.800388] [I] S2MPG_S OFFSRC1 read: 0x11
+[   0.800427] [I] S2MPG_S INT1: 0x83
+[   0.800456] [I] S2MPG_S INT2: 0x80
+[   0.800483] [I] S2MPG_S INT3: 0x0
+[   0.800513] [I] S2MPG_S INT4: 0x0
+[   0.800540] [I] S2MPG_S INT5: 0x0
+APC Bootmetrics:
+  BL1: MT:1 / DT:ENTRY / 96664 us
+  BL1: MT:2 / DT:LOAD  / 7360 us
+  BL1: MT:F / DT:EXIT  / 147984 us
+  PBL: MT:1 / DT:ENTRY / 148112 us
+  PBL: MT:2 / DT:LOAD  / 19592 us
+  PBL: MT:F / DT:EXIT  / 213208 us
+  BL2: MT:1 / DT:ENTRY / 214776 us
+  BL2: MT:2 / DT:LOAD  / 160 us
+  BL2: MT:3 / DT:LOAD  / 152 us
+  BL2: MT:4 / DT:CHECK / 342800 us
+  BL2: MT:5 / DT:CHECK / 2096 us
+  BL2: MT:6 / DT:LOAD  / 62368 us
+  BL2: MT:7 / DT:CHECK / 157696 us
+  BL2: MT:8 / DT:CHECK / 157840 us
+  BL2: MT:9 / DT:LOAD  / 44424 us
+  BL2: MT:A / DT:LOAD  / 31624 us
+  BL2: MT:B / DT:LOAD  / 323880 us
+  BL2: MT:C / DT:LOAD  / 8 us
+  BL2: MT:F / DT:EXIT  / 607104 us
+  PBL: MT:3 / DT:LOAD  / 81256 us
+  PBL: MT:4 / DT:LOAD  / 28152 us
+  PBL: MT:5 / DT:LOAD  / 6176 us
+  PBL: MT:6 / DT:CHECK / 722872 us
+  PBL: MT:7 / DT:CHECK / 723000 us
+  EL3: MT:1 / DT:ENTRY / 725784 us
+  EL3: MT:D / DT:CHECK / 741336 us
+  EL3: MT:E / DT:CHECK / 787840 us
+  EL3: MT:F / DT:EXIT  / 787872 us
+APC Breadcrumbs(v2.4):
+ stages(S): 00000000 / 0000404F
+  flags(S): 00000000 / 000022C0
+stages(NS): 00000000 / 00005004
+ flags(NS): 00000000 / 0000D400
+    status: 00000000 / 00000000
+    device: 00000000 / 00000001
+   tmutrip: 00000000 / 00000000
+     reset: 00000000 / 00180000
+[   0.801533] [E] GSA Breadcrumb:
+00000000 0000000d 00000000 00000000  |................|
+00000000 00000000 00000001           |............    |
+[   0.801664] [I] SBDP initialized: chipid allowed=0, dpm_state=0x0000
+[   0.801715] [E] check header failed
+[   0.801841] [I] initializing device i2c:usi00
+[   0.801882] [I] usi00: version 2.2
+[   0.801930] [I] initializing device i2c:usi04
+[   0.801971] [I] usi04: version 2.2
+[   0.802016] [I] initializing device i2c:usi06
+[   0.802057] [I] usi06: version 2.2
+[   0.802102] [I] initializing device i2c:usi09
+[   0.802143] [I] usi09: version 2.2
+[   0.802193] [I] initializing device i2cm:i2cm0
+[   0.802234] [I] DVFS init
+[   0.804493] [I] DVFS init done
+[   0.804523] [I] UFS EVT version 0
+[   0.804564] [I] controller version 3.0 found
+[   0.804600] [I] capabilities 0x1383ff1f
+[   0.804806] [I] UFS device found
+zuma_ufs_device_init_done
+[   0.804849] [E] ufshc_notify done
+[   0.804928] [I] ufshc_power_mode_change HS gear 4
+[   0.815117] [I] ufshc: bBootLunEn 0x1
+[   0.815262] [I] UFS device SAMSUNG KLUDG4UHGC-B0E1 version 3.1
+[   0.815311] [I] Enabled LUNs found 4
+[   0.815370] [I] UFS device total size 127984992256
+[   0.815476] [I] Temp too high enabled
+[   0.815572] [I] Temp too low enabled
+[   0.818320] [I] Write Booster: available buffer=0x7 lifetime=0x2 current buffer=0x1dcb
+[   0.818412] [I] boot slot: a
+[   0.820591] [I] slot data a: 0x00001e02
+[   0.820622] [I] slot data b: 0x00001000
+[   0.821436] [I] platform info: 060906010000
+[   0.821680] [I] initializing device cs40l2x:cs40l26
+[   0.832164] [I] CS40L26 found
+[   0.833829] [I] initializing device nfc:st21nfc
+[   0.835723] [I] tcpc vendor id 56
+[   0.836635] found 77779 on usi6
+[   0.836660] bms_init init usi10 as sec_i2c
+[   0.836691] [I] initializing device i2c:usi10
+[   0.836731] [I] usi10: version 2.2
+[   0.836928] [I] FG device name 0x5100
+[   0.837435] [I] [max77779fg] SOC(99), VCELL(4418), INOW(-358), IAVG(-58)
+[   0.838060] [I] fship 0x0
+[   0.838177] [I] master disconnect reason 0x0
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   0.840987] [I] LCS state:PRODUCTION
+[   0.841126] [I] no valid file
+[TMU:0] 34
+[TMU:1] 33
+[   0.844420] [I] dsim_probe dsim0+
+[   0.844457] [I] using data lane count(4)
+[   0.845134] [E] 
+Reboot Info:
+  RST_STAT: 0x180000 - PIN_RESET | PO_RESET
+  GSA_RESET_STATUS: 0x1 - GSA_PINRESET
+  Reboot reason: 0xcafe - User Reboot(S/W Reboot)
+  Reboot mode: 0xfc - Bootloader
+[   0.864506] [E] failed to get eUSB revision -62
+[   0.864541] [I] Set EUSB Ref clock auto
+[   0.864863] [I] LK build date: Apr 14 2026, time: 06:16:15
+[   0.864906] [I] BL version: ripcurrentpro-17.0-15199480
+[   0.864949] [I] BL type: official build
+starting app pixel_loader
+[   0.865419] [I] sota: empty signature.
+[   0.865454] [I] ABL start time (METRICS_BL3): 787ms
+[   0.865495] [I] AB Decision: active slot boot ok
+[   0.865532] [I] AB Decisions: 00000000
+[   0.865760] [I] TCPC BC1.2, type: 2 val:2
+[   0.865962] [I] boot voltage threshold=3400mV
+[   0.866072] [I] bootloader message:bootonce-bootloader
+[   0.866551] [I] fastboot enter reason: reboot bootloader
+[   0.866600] [W] power on source: 20
+starting app pixel_charger
+[   0.874744] [E] dsim0 wait phy pll stable
+[   0.895932] [I] Succeeded to read panel product id : 0x22a8a00a
+[   0.896007] [E] is_compatible is not defined!
+[   0.896045] [I] panel_rev: 0x1000
+[   0.901236] [I] use panel google-cm4 for dsim0
+[   0.901271] [I] dsim_probe -: dsim0 driver(cmd mode) has been probed.
+[   0.901322] [I] dsim_probe dsim1+
+[   0.901358] [I] using data lane count(4)
+[   0.901423] [E] dsim1 wait phy pll stable
+[   0.952526] [E] timeout!! wait for DSIM interrupt (0x40300000)
+[   0.952619] [E] MIPI DSIM (id=6) read Timeout! 0x4
+[   0.952658] [E] dsim fail to get panel operation
+[   0.952736] [E] dsim has error.
+[   0.952767] [E] dsim_probe -: dsim1 probe failed.
+[   0.952803] [I] dsim1 probe was failed
+[   0.952833] [I] dsim_init -: set dsim0 driver as primary.
+[   0.964075] [E] dsim0 wait phy pll stable
+[   0.983248] [I] dpp_probe +
+[   0.983273] [I] dpp-0's attr is (0x004d0047)
+[   0.983309] [I] dpp(0) init resources.
+[   0.983366] [I] dpp_probe -: dpp0 is probed successfully
+[   0.983417] [I] decon-int: max win6, command mode, hw trigger
+[   0.983467] [I] single dsi mode
+[   0.983500] [I] [decon0] d_path(0xB1) DSCC DSC_ENC1 DSC_ENC0 OFIFO.0
+[   0.983614] [I] [decon0] sel(0x0) OFIFO.0 - dsim0 - google-cm4
+[   0.983662] [I] Display 1st window(5) xres(1280) yres(2856) win_start_pos(0) win_end_pos(b2704ff)
+[   1.036011] [I] port connected
+[   1.050651] [I] TCPC BC1.2, type: 2 val:2
+[   1.118952] [I] decon0 registered successfully
+[   1.154272] [I] version: g5400c-260317-260429-B-15308590
+USB Pipe3 Initialization...
+[dwc3_dptx] CR write failed to 0x31c5
+[dwc3_dptx] CR write failed to 0x32c5
+[dwc3_dptx] CR write failed to 0x402d
+[dwc3_dptx] CR write failed to 0x412d
+[dwc3_dptx] CR write failed to 0x422d
+[dwc3_dptx] CR write failed to 0x432d
+[dwc3_dptx] CR write failed to 0x2021
+[dwc3_dptx] CR write failed to 0x2024
+[dwc3_dptx] CR write failed to 0x2027
+[dwc3_dptx] CR write failed to 0x202a
+[dwc3_dptx] CR write failed to 0x202d
+[dwc3_dptx] CR write failed to 0x2030
+[dwc3_dptx] CR write failed to 0x2033
+[dwc3_dptx] CR write failed to 0x2036
+[dwc3_dptx] CR write failed to 0x2022
+[dwc3_dptx] CR write failed to 0x2025
+[dwc3_dptx] CR write failed to 0x2028
+[dwc3_dptx] CR write failed to 0x202b
+[dwc3_dptx] CR write failed to 0x202e
+[dwc3_dptx] CR write failed to 0x2031
+[dwc3_dptx] CR write failed to 0x2034
+[dwc3_dptx] CR write failed to 0x2037
+[dwc3_dptx] PMA version:0x4604
+[dwc3_dptx] PCS ID:0x6790
+[dwc3_dptx] Firmware ID:0x6044, 0x04b3
+[   1.229260] [I] TCPC BC1.2, type: 2 val:2
+[   1.503280] [I] TCPC BC1.2, type: 2 val:2
+[   1.516016] [I] new high-speed device found
+[   1.516174] [I] TCPC BC1.2, type: 2 val:2
+[   1.523877] [I] TCPC BC1.2, type: 2 val:2
+[   2.576894] [I] Accept cmd:download:0000e000
+[   2.577007] [I] Downloading. Download size is 57344 bytes
+[   2.577102] [I] DATA0000e000
+[   2.578534] [I] OKAY
+[   2.578754] [I] Accept cmd:boot
+[   2.585787] [I] OKAY
+[   2.599020] [I] TCPC BC1.2, type: 2 val:2
+[   2.599841] [I] TCPC BC1.2, type: 2 val:2
+[   2.701389] [E] avb_property(com.android.build.boot.security_patch): not found
+[   2.701498] [E] boot_spl: can't find property
+[   2.701573] [I] boot_state: 160000:20261100:20000000
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   2.704601] [I] using init_boot ramdisk
+[   2.704669] [I] using vendor_kernel_boot ramdisk
+[   2.704874] [I] kernel: addr:0xffff000090701000, size:bfec
+[   2.705002] [I] kernel: total_time:0
+[   2.705065] [I] vendor kernel ramdisk copy
+[   2.705137] [I] ramdisk dst addr: 0xffff000086000000 src addr: 0xffff0000a5901000 size: 0x67591e(6773022)
+[   2.705290] [I] padding prepended: 0
+[   2.709000] [I] vendor ramdisk copy
+[   2.709057] [I] ramdisk dst addr: 0xffff00008667591e src addr: 0xffff0000a0001000 size: 0x1663ae2(23476962)
+[   2.709212] [I] padding prepended: 18
+[   2.721668] [I] ramdisk copy
+[   2.721737] [I] ramdisk dst addr: 0xffff000087cd9412 src addr: 0xffff0000a5101000 size: 0x250d04(2428164)
+[   2.721892] [I] padding prepended: 14
+[   2.723224] [I] Ramdisk load size with padding: 32678180
+[   2.723362] [I] rev: 09865.00.00
+[   2.723445] [I] rev: 09865.00.00
+[   2.723513] [I] rev: 09865.01.00
+[   2.723567] [I] rev: 09865.01.01
+[   2.723635] [I] rev: 09865.01.00
+[   2.723688] [I] rev: 09865.01.01
+[   2.723755] [I] rev: 09875.00.00
+[   2.723823] [I] rev: 09875.00.00
+[   2.723889] [I] rev: 09875.00.00
+[   2.723943] [I] rev: 09875.00.01
+[   2.724009] [I] rev: 09875.00.00
+[   2.724062] [I] rev: 09875.00.01
+[   2.724113] [I] SOC DTB: index:6
+[   2.724190] [I] DTBO match: id 0x60906, rev 0x10000
+[   2.746795] [I] dpm not merged
+[   2.749024] [I] MTE S: 0, NS: 0, tag base: 0x0
+[   2.786425] [W] power on source: 20
+[   2.786502] [I] bootmode:
+[   2.786638] [I] DDR size: 16GiB
+[   2.786687] [I] DDR Manufacturer: Samsung
+[   2.788930] [I] ro.misctrl.16kb_before=0
+[   2.789013] [I] console is disabled
+[   2.789257] [I] secure dram base 0xb6200000, size 0x9e00000
+[   2.789403] [I] secure PGTBL base 0xe0000000, size 58720256
+[   2.794259] [I] MTE S: 0, NS: 0, tag base: 0x0
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   2.811307] [I] device: /reserved-memory/debug_snapshot/log_s2d path not found (-1)
+[   2.811558] [I] device: /reserved-memory/debug_snapshot/log_array_reset path not found (-1)
+[   2.811788] [I] device: /reserved-memory/debug_snapshot/log_kevents path not found (-1)
+[   2.812037] [I] device: /reserved-memory/debug_snapshot/log_itmon path not found (-1)
+[   2.812264] [I] device: /reserved-memory/debug_snapshot/log_s2d_extract path not found (-1)
+[   2.813791] [I] device: /google,mitigation enabled ret=0
+[   2.834337] [I] ro.boot.hardware.cpu.pagesize=4096
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   2.835697] [I] panel settings after overriding: google-cm4.22a8a00a@dsim0 null@dsim1
+[   2.851348] [I] linux,initrd-start: 0x86000000, linux,initrd-end: 0x87f32125
+[   2.863824] [E] avb_property(com.android.build.microdroid-vendor.root_digest): not found
+[   2.863955] [W] failed to get microdroid vendor hashtree digest from avb property, skip appending value
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   2.866226] [W] no avf debug policy, because dpm is NULL
+[  12.939595] [I] slot data a: 0x00001e02
+[  12.939658] [I] slot data b: 0x00001000
+[  12.943337] [E] avb_property(com.android.build.boot.fingerprint): not found
+[  12.943440] [E] fingerprint property not found 
+[  13.421321] [I] shutdown complete
+[  13.421407] [I] thread stats (cpu 0): total idle time: 12168940, total busy time: 1252466
+Heap dump (using miniheap):
+	base 0xffff0000f8b93000, len 0x527000
+	free list:
+		base 0xffff0000f8d1b220, end 0xffff0000f8d3b660, len 0x20440
+		base 0xffff0000f8d3b6f0, end 0xffff0000f8d3b710, len 0x20
+		base 0xffff0000f8d7b510, end 0xffff0000f8d7b6c0, len 0x1b0
+		base 0xffff0000f8d7e7e0, end 0xffff0000f8d7e9a0, len 0x1c0
+		base 0xffff0000f8d7f810, end 0xffff0000f8d85980, len 0x6170
+		base 0xffff0000f8e07da0, end 0xffff0000f8e07dd0, len 0x30
+		base 0xffff0000f8e081a0, end 0xffff0000f8e09000, len 0xe60
+		base 0xffff0000f8e31020, end 0xffff0000f8e32000, len 0xfe0
+		base 0xffff0000f8ee03e0, end 0xffff0000f8f20240, len 0x3fe60
+		base 0xffff0000f8f30320, end 0xffff0000f90ba000, len 0x189ce0
+[  13.422473] [I] Starting Linux kernel ...
+size
+fdbf49
+Y  00
+102] [
+] Kerjal: \
+tal_timE227
+[  !0.P
+2160] [I] vendnp
+kernel ram`isi
+copI
+[  10.
+32208] [AY ramdIsk dst addb: 08ffff00008
+00000  s2c addr:  Xfff`
+000a9)31000 size2  x67591E(
+773022)
+[  1
+78] [A\ paddi
+ prepEnded
+ 0
+[
+810.0"3582] YI]"ve
+d/R "amdisj copy
+[  10.013613] SIA rAidisk dpt 
+ddb:
+0xffff00 08667591e
+srk"addr: 0xffFf000
+31P0
+ SIze: 0x1
+63ae2 23D7&9&
+)
+[  10.033483] [A]
+ing `
+ep!nd`$: 18
+S  10.03
+] [I] pa}diSk Copy
+[  10.03
+4] [I] ramdiso dst aDdr
+xfff
+0000
+7cd9414 src !DdR8 0xfFfF0000a4011000 size: 0p2
+0$0$(2028164)
+0.018118\ [I\ pAdd
+ng prepended: !4
+[  !0. 38411] [I] Bamdic+ loaD 3yze whth pa`dhng: #2678180
+[& 10.03867
+] [I] rev8 09865.00.00
+[  00.
+708]
+[	] 2av: 
+9865"00N
+.0387
+7] [IM rdvZ(09865.01&
+[  10.0387
+6] [I] rev: 0)865.01.01
+[  10
+038814] [I] rev: 09865.01.00
+[  10.038842] [I] rev: 09865.01.01
+[  10.038078] [I] rev: 09874,00N  
+K  00.038915] [I] rev
+ 09875.00*00
+[  10.030953U [I] rew: 09815.00.00
+[  10.038981] [I] rev: 09875.00.(1
+[  10.038014] ]I] ref2 09875.00.00
+[  10.039042] [I] rev: 09875.00.01
+[  10.039069] [I] SOC DLB: ildex86
+[  10.039101] [I
+8DTBO
+match: id
+0x60906, re6 0x10000
+[  10.054'44]
+[I] dpm nit mergdd
+[  10.056272] SIY OTE S* 0, LS: 0, tag base:
+0h0
+[  
+0.082849Y 
+bomtmnde:
+[  10.082991] SI] DDR size: 16GiB
+[
+ 10,0
+2916] [I] DDR Manufacturer: Sa	sung
+trUsty_dev_comion.c: I
+FO selected truety aPi version: 3
+ req}estEd 3)
+[  10.093117M [I] ro.misctrl.16cb_bef
+re=0
+[  10.013176
+ [	] consol
+ is $is!bleD
+[
+092284] YIY secure dram zase 0xb620000
+, sizE 0x
+e00000
+[  1
+.0933$5] [I] secure PGTBL base 0xe0000000, size 58720256
+[  10.099744] [I] decon0 registeRed ruccesrfully
+[  10.101646] [I] MTE S: 0, NS: 0, tag base: 0x0
+[  10.104125M [H] deVace: -ResepvEd-memory/debug_snap3hOp.Log_s2d paph n/t fnund (-1)
+[  1p.104259U KI] devi#e: /rEservd`=mEmmr1/`e"ugYsoapqhot/,og_abra}Kr%set path fot fgq
+(-9)
+[  10.104414] WI\ Device
+ /rasdRv
+d%mem/2x/@ebug_sla@shot/l
+g]+efents!path not foUnd8(,1(
+[  10*1
+4570] ZI\
+devh#e
+ /beServed-
+emory/debug]s.apshoT/log_itmon pat( not found (-0)
+[  10&10
+2]8[
+ddvice: 'rdserved)memory/dEbuf_snapshGt
+lJg_s2d_extracT Path not(found (-1)
+10.105850U [I\ davice: /gOogde,Ii4igatio~ ejable$
+reT]0
+S  1 .120378U [I] ro.boot
+hardwcpe.c`u.0agdsize=4
+
+prusty_dev_commoh.c: INFO$selecp
+$ trustx ap) verSion: 3 (be1udsted 3)
+tsustyGdet[#oimon$c
+ INFO se`ected trustY api ve2sion: 3 (requested 3)
+[  10.120822] [I] panel sDtTings af4er overridinG:0cOogle-c,4.22a(@
+0a@Dqim0 null@dai-1
+[  10.135716] [H]
+linu8,anit2d-start: 0x8600 0
+0, linux,hnitrd-End: 
+`85F32105
+[  10.144664U SE] avb_property(com&an`r/id.buiLd(m)crodrOid-&endor.root]dige3t
+: .ot fould
+[  10.1447"8] [W] failed to get mi
+rndroid rendOr his`4ree 
+keest From avb prohErti, skip
+elding talUe
+drusty[def_comiwn.c: 	FFO selected trusty api version0 3 (reques
+)
+[  10.146020] ZW
+avd debuF policyl becausE dpm is NULL
+[  20.2 854&] [H]
+ot data a:&0x0  0
+e02
+[  20&208577Y [I]$slot data(b* 0x0000
+000
+[  20.2097
+4] [D] a6b_ppo0ert9(com.aJ
+roi$.build.boot&finferprinp)
+ lOt fkund
+[  20.2 9815]
+[E] fangerprint property not found 
+[  20.307368] [I] shutdown complete
+[  20.#0'735] [I] thread stats (cpu 0)2 
+otal Idle time: 10244372, todcl busY t)me: 1006
++63
+Heap duMp (using minileap):
+	"ase 0xffff00 0f8b)3000, l
+6cC000
+	free
+lisd:
+		basa 0xfff`0000f8ba44
+0, end 0xffff0000f8ba4480, len 0x20
+		bake 00fFff000 f0bba940, end 0xfdf&000
+f8bba99P, len 0x50
+	
+basd 
+x&ff`000 f8bbb12
+, end00xffff0000f8bbb600, len 0x4e0
+		base 0xffff0000f8bbbe20, end 0xffff000
+f8c134a0, l$n 0x57680
+		b!se 0xnfbf0000f8d0b"20, end 0XbFff0000d8d3b660, lej 0x20440
+	base 0xffff0000f8d3b6f0, end 0xffff0000f8d
+b510, len 0x20
+		bape 0xf
+ff000
+d8dF
+b70, dnd 0xffff0000f
+d$5Ba0, hen 0x30
+	ibase 0xdffF0000f8e05d00, end 0xfffF000 f8e0%d30* len 0x30
+		base
+0xFGff000
+f8%4
+0B , end 0X&
+f` (00f8e56"d0, ldj 0x10220
+		base 08ffBf
+000D8a56390, end 0xffff000
+fxe1&3#0, len 
+x34
+	base 0pbffd0000f8ed8a6 , end 0xfff&000 f8ed8b10, ldn pxb0
+	
+`asE@0xfDff0
+00f8ed(b90, enD 
+xffff0000f925f00(
+ lal 0X1x6470
+[
+E KA] Star4ing Li&ux kerjEd
+--- end of bootloader log (17097 bytes copied) ---
+
+--- watchdog ---
+wdt: reading cluster-0 watchdog @ 0x10060000
+wdt: WTCON=0x0001af39 WTDAT=0x0000ffaf WTCNT=0x0000da73: RUNNING, reset on expiry ON, irq off
+wdt: counts at 1090 Hz (if the input clock is 24576000 Hz): period 60050 ms, 51305 ms left
+
+--- touch screen (read-only) ---
+touch: ACPM initdata: 8 plugins, ipc_channels at 0x8f20, 41 channels, 16 for the AP
+touch: ACPM channel 2: id 2, queue 5 x 16 bytes, AP polls 1; to APM front 4 rear 4 (at 0x3c2ec), from APM front 4 rear 4
+touch: S2MPG14 chip id 0x10 (the bootloader read 0x10)
+touch: LDO4M  (TS_AVDD 3.3 V)  CTRL 0x3c: off
+touch: LDO25M (TSP_DVDD 1.8 V) CTRL 0x2c: off
+touch: reset pin 1: function 0, level 0, pull 1 (CON 0x00002200 DAT 0x0000000c)
+touch: interrupt pin 0: function 0, level 0, pull 1 (CON 0x00000000 DAT 0x00000000)
+touch: powering the chip: reset held low, LDO4M then LDO25M on
+touch: LDO4M  CTRL now 0xfc: ON
+touch: LDO25M CTRL now 0xec: ON
+touch: interrupt (powered, in reset) pin 0: function 0, level 1, pull 0 (CON 0x00000000 DAT 0x00000001)
+touch: interrupt line stayed high for 3 s after reset: no sign of the chip
+touch: interrupt (after) pin 0: function 0, level 1, pull 0 (CON 0x00000000 DAT 0x00000001)
+touch: reset (after) pin 1: function 1, level 1, pull 0 (CON 0x00002210 DAT 0x0000000e)
+touch: USI mode register 0x00000000 (SW_CONF 0; 2 = SPI)
+touch: CMU_HSI0 +0x30cc QCH USI2         0x00000002 (ENABLE 0 CLOCK_REQ 1)
+touch: CMU_HSI0 +0x101c MUX  USI2          0x00000000
+touch: CMU_HSI0 +0x181c DIV  USI2          0x00000000
+touch: CMU_HSI0 +0x2120 GATE USI2          0x00200000 (?)
+touch:   set to manual, on: 0x00300000
+touch: CMU_HSI0 +0x20fc GATE USI2 IPCLK    0x00200000 (?)
+touch:   set to manual, on: 0x00300000
+touch: CMU_HSI0 +0x2100 GATE USI2 PCLK     0x00200000 (?)
+touch:   set to manual, on: 0x00300000
+touch: CMU_HSI0 +0x20bc GATE USI2 RSTNSYNC 0x00200000 (?)
+touch:   set to manual, on: 0x00300000
+touch: USI mode register after writing SPI: 0x00000002
+touch: SPI after set-up: USI_CON 0x00000000 USI_OPTION 0x00000003 MODE_CFG 0x1ff80000 (want 0x1ff80000) CH_CFG 0x00000000 STATUS 0x00000000
+touch: tcm: DIV USI2 now 0x00000003
+touch: tcm: after reset the interrupt line went LOW after 0 ms
+touch: tcm: startup read, 4 bytes (filler 00): 4 of 4 bytes
+touch: tcm: startup read, 4 bytes (filler 00): a5 10 18 00
+touch:   v1 continuation (A5 03 payload 5A): a5 03 01 01 53 33 39 30 38 47 41 31 42 30 2d 31 35 2e 30 00 3a a3 43 00 00 04 5a
+touch:   identify: version 1, mode 1, part S3908GA1B0-15.0, build 4432698, max write 1024
+touch: tcm: touch report config: 128 bytes
+touch: tcm: config: 10 08 1b 38 1e 08 17 08 18 08 04 01 06 04 07 04 08 10 09 10 0a 10 0b 08 0c 08 d2 08 d3 08 d1 08 03 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+touch: tcm: reading reports for 90 s (touch the screen now)
+touch: tcm:     0 ms: report 0xc2, 2 bytes: 20 00
+touch: tcm:    85 ms: report 0xc2, 2 bytes: 00 00
+touch: tcm:   134 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 37 08 05 26 11 00 0a 0a 0a 0a 00
+touch: tcm:   169 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 ae 08 6f 26 30 00 08 09 09 08 27
+touch: tcm:   170 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 79 09 4a 27 32 00 09 07 09 07 00
+touch: tcm:   172 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 31 0a fc 27 37 00 09 07 09 07 00
+touch: tcm:   173 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 00 0b ab 28 3b 00 0a 08 0a 08 00
+touch: tcm:   175 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 f3 0b 73 29 3c 00 0a 08 0a 08 5a
+touch: tcm:   176 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 90 0c 35 2a 3d 00 0a 09 0a 09 00
+touch: tcm:   178 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 00 0d b8 2a 3d 00 0a 09 0a 09 00
+touch: tcm:   179 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 67 0d 2c 2b 40 00 0a 0a 0a 0a 17
+touch: tcm:   180 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 c2 0d 93 2b 40 00 0b 09 0b 09 00
+touch: tcm:   182 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 19 0e f4 2b 3f 00 0b 09 0b 09 00
+touch: tcm:   183 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 68 0e 4f 2c 3e 00 0a 08 0a 08 00
+touch: tcm:   185 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 b3 0e a6 2c 3f 00 0a 08 0a 08 ba
+touch: tcm:   186 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 ee 0e f4 2c 3e 00 0a 08 0a 08 5a
+touch: tcm:   188 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 1d 0f 3c 2d 3f 00 0a 09 0a 09 5a
+touch: tcm:   189 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 3f 0f 77 2d 3f 00 0a 09 0a 09 5a
+touch: tcm:   191 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 5b 0f b0 2d 3f 00 0a 09 0a 09 5a
+touch: tcm:   192 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 71 0f e5 2d 3f 00 0a 09 0a 09 00
+touch: tcm:   193 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 84 0f 11 2e 3e 00 0a 0a 0a 0a 00
+touch: tcm:   195 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 90 0f 3f 2e 3e 00 0a 0a 0a 0a 00
+touch: tcm:   196 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 9d 0f 6b 2e 3e 00 0a 0a 0a 0a 00
+touch: tcm:   198 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 a6 0f 9d 2e 3f 00 0a 09 0a 09 bb
+touch: tcm:   199 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 b6 0f d5 2e 3e 00 0a 09 0a 09 bb
+touch: tcm:   201 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 bf 0f 04 2f 3e 00 0a 09 0a 09 bb
+touch: tcm:   202 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 cc 0f 33 2f 3d 00 0a 09 0a 09 bb
+touch: tcm:   204 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 d5 0f 68 2f 3b 00 0a 08 0a 08 5a
+touch: tcm:   205 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 e5 0f 9a 2f 3b 00 0a 08 0a 08 5a
+touch: tcm:   206 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 f4 0f cc 2f 3b 00 0a 07 0a 07 bb
+touch: tcm:   208 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 0a 10 0e 30 3b 00 0a 08 0a 08 00
+touch: tcm:   209 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 20 10 59 30 3b 00 0a 08 0a 08 00
+touch: tcm:   211 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 39 10 a4 30 3b 00 0a 09 0a 09 00
+touch: tcm:   212 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 5c 10 ef 30 3b 00 09 09 09 09 00
+touch: tcm:   213 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 84 10 46 31 39 00 09 0a 0a 09 00
+touch: tcm:   215 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 b0 10 98 31 36 00 09 0a 0a 09 00
+touch: tcm:   217 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 dc 10 e6 31 36 00 09 09 09 09 00
+touch: tcm:   218 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 07 11 2e 32 35 00 09 08 09 08 00
+touch: tcm:   220 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 36 11 79 32 35 00 09 08 09 08 00
+touch: tcm:   221 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 6f 11 ca 32 35 00 09 07 09 07 00
+touch: tcm:   222 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 a7 11 18 33 36 00 09 07 09 07 00
+touch: tcm:   224 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 dc 11 69 33 37 00 0a 08 0a 08 00
+touch: tcm:   225 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 0b 12 ae 33 36 00 0a 08 0a 08 00
+touch: tcm:   227 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 3d 12 f6 33 35 00 0a 09 0a 09 00
+touch: tcm:   228 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 69 12 38 34 35 00 0a 09 0a 09 45
+touch: tcm:   229 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 91 12 70 34 35 00 0a 0a 0a 0a bc
+touch: tcm:   231 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 c0 12 b5 34 35 00 0a 0a 0a 0a bb
+touch: tcm:   232 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 e6 12 f0 34 34 00 09 09 09 09 00
+touch: tcm:   234 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 11 13 2e 35 33 00 09 08 09 08 00
+touch: tcm:   235 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 37 13 6d 35 32 00 09 08 09 08 00
+touch: tcm:   237 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 53 13 a2 35 32 00 09 07 09 07 00
+touch: tcm:   238 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 72 13 dd 35 32 00 09 07 09 07 00
+touch: tcm:   239 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 8b 13 1c 36 32 00 09 07 09 07 00
+touch: tcm:   241 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 a7 13 5e 36 32 00 08 07 08 07 00
+touch: tcm:   242 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 c0 13 a2 36 31 00 08 08 08 08 00
+touch: tcm:   243 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 e3 13 f0 36 30 00 08 09 09 08 00
+touch: tcm:   245 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 08 14 5b 37 2f 00 07 09 09 07 e8
+touch: tcm:   246 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 2b 14 b8 37 2f 00 08 0a 0a 08 00
+touch: tcm:   247 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 4d 14 0d 38 2e 00 08 09 09 08 00
+touch: tcm:   249 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 6c 14 58 38 2f 00 08 08 08 08 d1
+touch: tcm:   250 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 8b 14 9d 38 2f 00 08 08 08 08 d1
+touch: tcm:   251 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 b1 14 db 38 30 00 09 07 09 07 d1
+touch: tcm:   252 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 d0 14 20 39 30 00 09 07 09 07 00
+touch: tcm:   254 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 f6 14 68 39 2f 00 09 07 09 07 00
+touch: tcm:   255 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 21 15 b6 39 2f 00 09 07 09 07 00
+touch: tcm:   256 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 47 15 f7 39 31 00 0a 08 0a 08 00
+touch: tcm:   258 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 66 15 36 3a 32 00 0a 09 0a 09 00
+touch: tcm:   259 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 85 15 6b 3a 31 00 0a 09 0a 09 5a
+touch: tcm:   260 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 a5 15 a3 3a 31 00 0a 0a 0a 0a d8
+touch: tcm:   262 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 c1 15 df 3a 30 00 09 09 09 09 00
+touch: tcm:   263 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 da 15 1d 3b 30 00 09 09 09 09 00
+touch: tcm:   264 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 fc 15 5c 3b 31 00 09 09 09 09 00
+touch: tcm:   266 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 1f 16 a0 3b 30 00 09 08 09 08 00
+touch: tcm:   267 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 3e 16 df 3b 31 00 09 07 09 07 00
+touch: tcm:   268 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 5a 16 17 3c 30 00 08 07 08 07 00
+touch: tcm:   269 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 76 16 56 3c 30 00 08 07 08 07 00
+touch: tcm:   271 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 8c 16 9a 3c 32 00 08 07 08 07 00
+touch: tcm:   272 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 a5 16 d6 3c 31 00 08 08 08 08 00
+touch: tcm:   274 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 bb 16 17 3d 33 00 07 08 08 07 00
+touch: tcm:   275 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 d7 16 50 3d 30 00 07 09 09 07 00
+touch: tcm:   276 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 f6 16 8b 3d 31 00 07 09 09 07 00
+touch: tcm:   277 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 15 17 d6 3d 31 00 07 0a 0a 07 00
+touch: tcm:   279 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 2e 17 1e 3e 31 00 07 09 09 07 00
+touch: tcm:   280 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 44 17 60 3e 30 00 07 09 09 07 d3
+touch: tcm:   281 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 60 17 a1 3e 31 00 08 08 08 08 d2
+touch: tcm:   283 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 79 17 e3 3e 31 00 08 08 08 08 d2
+touch: tcm:   284 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 92 17 21 3f 30 00 08 07 08 07 00
+touch: tcm:   285 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 ab 17 5d 3f 30 00 08 07 08 07 00
+touch: tcm:   287 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 c1 17 9e 3f 30 00 08 07 08 07 00
+touch: tcm:   288 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 d7 17 e0 3f 30 00 08 08 08 08 00
+touch: tcm:   289 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 f0 17 2b 40 31 00 08 08 08 08 00
+touch: tcm:   291 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 03 18 6d 40 31 00 09 09 09 09 00
+touch: tcm:   292 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 16 18 ae 40 30 00 09 09 09 09 00
+touch: tcm:   293 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 2c 18 ed 40 30 00 09 0a 0a 09 00
+touch: tcm:   295 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 41 18 28 41 31 00 09 09 09 09 d4
+touch: tcm:   296 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 54 18 60 41 31 00 09 09 09 09 d3
+touch: tcm:   297 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 64 18 95 41 31 00 09 09 09 09 d2
+touch: tcm:   299 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 70 18 d1 41 32 00 09 08 09 08 d2
+touch: tcm:   300 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 7a 18 0f 42 31 00 09 07 09 07 d2
+touch: tcm:   301 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 80 18 44 42 31 00 09 07 09 07 d1
+touch: tcm:   302 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 86 18 7a 42 31 00 09 07 09 07 d1
+touch: tcm:   304 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 8c 18 ac 42 31 00 09 07 09 07 d1
+touch: tcm:   305 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 93 18 da 42 31 00 0a 07 0a 07 d1
+touch: tcm:   306 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 a5 18 19 43 32 00 0a 08 0a 08 d1
+touch: tcm:   308 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 b5 18 51 43 33 00 0a 08 0a 08 d1
+touch: tcm:   309 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 be 18 83 43 33 00 0a 08 0a 08 d1
+touch: tcm:   310 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 cb 18 b2 43 33 00 0a 09 0a 09 cf
+touch: tcm:   312 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 d1 18 de 43 32 00 0a 09 0a 09 d4
+touch: tcm:   313 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 d7 18 0d 44 32 00 0a 0a 0a 0a d3
+touch: tcm:   314 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 de 18 38 44 32 00 0a 0a 0a 0a 00
+touch: tcm:   316 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 e1 18 64 44 31 00 0a 09 0a 09 00
+touch: tcm:   317 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 e4 18 93 44 31 00 0a 09 0a 09 00
+touch: tcm:   318 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 e7 18 c2 44 31 00 0a 08 0a 08 00
+touch: tcm:   320 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 e7 18 eb 44 30 00 0a 08 0a 08 d2
+touch: tcm:   321 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 ea 18 10 45 30 00 0a 08 0a 08 d2
+touch: tcm:   322 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 ed 18 3c 45 30 00 0a 07 0a 07 5a
+touch: tcm:   324 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 f0 18 64 45 30 00 0a 07 0a 07 bd
+touch: tcm:   325 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 f0 18 8d 45 30 00 0a 07 0a 07 bd
+touch: tcm:   326 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 f7 18 bf 45 2f 00 0a 07 0a 07 00
+touch: tcm:   328 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 fa 18 f4 45 2e 00 09 07 09 07 5a
+touch: tcm:   329 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 fd 18 2c 46 2f 00 0a 07 0a 07 5a
+touch: tcm:   330 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 fd 18 5e 46 30 00 0a 07 0a 07 00
+touch: tcm:   332 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 fa 18 87 46 30 00 0a 08 0a 08 00
+touch: tcm:   333 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 fa 18 b0 46 2f 00 0a 08 0a 08 00
+touch: tcm:   334 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 fa 18 df 46 2f 00 09 09 09 09 5a
+touch: tcm:   335 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 fa 18 04 47 2f 00 0a 09 0a 09 5a
+touch: tcm:   337 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 fa 18 2a 47 2e 00 0a 09 0a 09 d8
+touch: tcm:   338 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 f7 18 52 47 2d 00 0a 0a 0a 0a d7
+touch: tcm:   339 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 f7 18 7b 47 2c 00 0a 09 0a 09 d6
+touch: tcm:   341 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 f7 18 a0 47 2c 00 0a 09 0a 09 00
+touch: tcm:   342 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 f7 18 c3 47 2c 00 0a 09 0a 09 00
+touch: tcm:   343 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 f7 18 e8 47 2c 00 0a 08 0a 08 00
+touch: tcm:   345 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 f7 18 0b 48 2c 00 0a 08 0a 08 00
+touch: tcm:   346 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 f7 18 2d 48 2c 00 09 08 09 08 00
+touch: tcm:   347 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 fa 18 4c 48 2c 00 09 07 09 07 00
+touch: tcm:   349 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 fd 18 6f 48 2b 00 09 07 09 07 00
+touch: tcm:   350 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 00 19 9d 48 29 00 09 06 09 06 00
+touch: tcm:   351 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 03 19 c3 48 29 00 09 06 09 06 00
+touch: tcm:   352 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 06 19 e8 48 29 00 09 06 09 06 00
+touch: tcm:   354 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 0d 19 11 49 28 00 09 06 09 06 00
+touch: tcm:   355 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 13 19 33 49 29 00 09 07 09 07 00
+touch: tcm:   356 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 16 19 50 49 29 00 09 07 09 07 00
+touch: tcm:   358 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 1c 19 72 49 2a 00 09 07 09 07 00
+touch: tcm:   359 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 22 19 91 49 2a 00 09 07 09 07 00
+touch: tcm:   360 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 29 19 ad 49 2a 00 09 08 09 08 00
+touch: tcm:   362 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 2f 19 c9 49 2a 00 09 08 09 08 00
+touch: tcm:   363 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 2f 19 ef 49 2c 00 09 09 09 09 5a
+touch: tcm:   364 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 2f 19 18 4a 2c 00 09 09 09 09 5a
+touch: tcm:   366 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 2f 19 37 4a 2c 00 09 09 09 09 5a
+touch: tcm:   367 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 2c 19 56 4a 2c 00 09 0a 0a 09 00
+touch: tcm:   368 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 2c 19 7f 4a 2b 00 09 0a 0a 09 00
+touch: tcm:   370 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 2c 19 a7 4a 2a 00 09 09 09 09 00
+touch: tcm:   371 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 2c 19 d0 4a 2a 00 09 09 09 09 00
+touch: tcm:   372 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 2c 19 f2 4a 2b 00 09 09 09 09 00
+touch: tcm:   374 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 29 19 1b 4b 2b 00 09 08 09 08 00
+touch: tcm:   375 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 26 19 3a 4b 2a 00 09 08 09 08 00
+touch: tcm:   376 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 26 19 66 4b 2a 00 09 07 09 07 00
+touch: tcm:   377 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 29 19 8b 4b 2a 00 09 07 09 07 00
+touch: tcm:   379 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 29 19 ab 4b 29 00 09 07 09 07 00
+touch: tcm:   380 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 29 19 d3 4b 28 00 09 06 09 06 00
+touch: tcm:   381 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 26 19 f6 4b 28 00 09 06 09 06 00
+touch: tcm:   383 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 22 19 18 4c 28 00 09 06 09 06 00
+touch: tcm:   384 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 1f 19 3a 4c 28 00 09 06 09 06 00
+touch: tcm:   385 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 1f 19 5a 4c 27 00 09 07 09 07 00
+touch: tcm:   387 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 1f 19 7c 4c 28 00 09 07 09 07 00
+touch: tcm:   388 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 1f 19 a5 4c 2a 00 09 07 09 07 00
+touch: tcm:   389 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 1c 19 d0 4c 2b 00 09 08 09 08 00
+touch: tcm:   391 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 19 19 f0 4c 2b 00 09 08 09 08 00
+touch: tcm:   392 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 16 19 09 4d 2b 00 09 08 09 08 00
+touch: tcm:   393 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 13 19 18 4d 2a 00 09 09 09 09 5a
+touch: tcm:   395 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 10 19 31 4d 2a 00 09 09 09 09 5a
+touch: tcm:   396 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 10 19 44 4d 2a 00 09 09 09 09 00
+touch: tcm:   397 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 0d 19 5d 4d 2a 00 09 09 09 09 00
+touch: tcm:   399 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 0d 19 6d 4d 29 00 09 09 09 09 00
+touch: tcm:   400 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 0d 19 7c 4d 29 00 09 09 09 09 00
+touch: tcm:   401 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 0d 19 89 4d 29 00 09 0a 0a 09 d8
+touch: tcm:   403 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 0d 19 92 4d 29 00 09 0a 0a 09 d8
+touch: tcm:   404 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 0d 19 98 4d 29 00 09 0a 0a 09 d8
+touch: tcm:   405 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 0d 19 9f 4d 29 00 09 0a 0a 09 d8
+touch: tcm:   407 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 0d 19 a5 4d 2a 00 09 0a 0a 09 d8
+touch: tcm:   408 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 0d 19 ab 4d 2a 00 09 0a 0a 09 d8
+touch: tcm:   409 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 0d 19 ae 4d 2a 00 09 0a 0a 09 d8
+touch: tcm:   411 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 0d 19 b1 4d 2a 00 0a 0a 0a 0a d7
+touch: tcm:   412 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 0d 19 b5 4d 2a 00 09 0a 0a 09 d8
+touch: tcm:   413 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 0d 19 b8 4d 2b 00 0a 0a 0a 0a d7
+touch: tcm:   414 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 0d 19 bb 4d 2b 00 0a 0a 0a 0a d7
+touch: tcm:   436 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 0d 19 b8 4d 2d 00 09 09 09 09 5a
+touch: tcm:   438 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 0d 19 b1 4d 2e 00 09 09 09 09 5a
+touch: tcm:   439 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 13 19 98 4d 2e 00 09 08 09 08 00
+touch: tcm:   440 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 1c 19 73 4d 2e 00 09 08 09 08 00
+touch: tcm:   442 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 29 19 47 4d 2d 00 09 07 09 07 00
+touch: tcm:   443 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 35 19 1b 4d 2e 00 09 07 09 07 00
+touch: tcm:   444 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 42 19 ed 4c 2e 00 09 07 09 07 00
+touch: tcm:   446 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 4b 19 c1 4c 30 00 09 07 09 07 00
+touch: tcm:   447 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 54 19 85 4c 31 00 09 07 09 07 00
+touch: tcm:   448 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 5b 19 4a 4c 31 00 09 08 09 08 00
+touch: tcm:   450 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 61 19 12 4c 32 00 09 08 09 08 00
+touch: tcm:   451 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 61 19 d0 4b 33 00 09 09 09 09 00
+touch: tcm:   452 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 5b 19 85 4b 33 00 09 09 09 09 00
+touch: tcm:   454 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 58 19 3a 4b 35 00 09 0a 0a 09 00
+touch: tcm:   455 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 51 19 ef 4a 36 00 09 09 09 09 00
+touch: tcm:   456 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 48 19 9e 4a 36 00 09 09 09 09 ea
+touch: tcm:   458 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 3f 19 43 4a 35 00 09 08 09 08 5a
+touch: tcm:   459 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 35 19 e2 49 36 00 09 08 09 08 5a
+touch: tcm:   460 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 2c 19 75 49 36 00 09 08 09 08 bd
+touch: tcm:   461 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 16 19 05 49 35 00 09 09 09 09 5a
+touch: tcm:   463 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 fd 18 9a 48 37 00 09 09 09 09 d4
+touch: tcm:   464 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 ed 18 2d 48 38 00 0a 0a 0a 0a d4
+touch: tcm:   465 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 db 18 b9 47 39 00 0a 09 0a 09 e9
+touch: tcm:   467 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 cb 18 49 47 3a 00 0a 09 0a 09 00
+touch: tcm:   468 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 ac 18 c6 46 38 00 0a 08 0a 08 d3
+touch: tcm:   469 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 93 18 42 46 3a 00 0a 09 0a 09 d3
+touch: tcm:   471 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 7a 18 b9 45 3a 00 0a 0a 0a 0a d3
+touch: tcm:   472 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 61 18 2c 45 3c 00 0a 0a 0a 0a 16
+touch: tcm:   473 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 54 18 9c 44 3d 00 0a 09 0a 09 00
+touch: tcm:   475 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 3b 18 03 44 3e 00 0a 09 0a 09 00
+touch: tcm:   476 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 1f 18 70 43 3d 00 0a 09 0a 09 00
+touch: tcm:   477 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 0c 18 e4 42 3e 00 0a 09 0a 09 00
+touch: tcm:   478 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 f0 17 41 42 3f 00 0a 0a 0a 0a d0
+touch: tcm:   480 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 d1 17 a2 41 40 00 0a 0a 0a 0a 00
+touch: tcm:   481 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 b2 17 fc 40 40 00 0a 09 0a 09 00
+touch: tcm:   482 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 8c 17 54 40 3f 00 0a 09 0a 09 00
+touch: tcm:   484 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 6a 17 b1 3f 3f 00 0a 09 0a 09 00
+touch: tcm:   485 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 3b 17 08 3f 41 00 0a 0a 0a 0a 00
+touch: tcm:   486 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 12 17 6c 3e 44 00 0a 0a 0a 0a ea
+touch: tcm:   488 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 ea 16 cd 3d 42 00 0a 09 0a 09 5a
+touch: tcm:   489 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 bb 16 34 3d 43 00 0a 09 0a 09 ba
+touch: tcm:   490 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 92 16 aa 3c 44 00 0a 09 0a 09 ba
+touch: tcm:   491 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 63 16 24 3c 44 00 0a 09 0a 09 00
+touch: tcm:   493 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 38 16 b0 3b 47 00 0a 0a 0a 0a 00
+touch: tcm:   494 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 02 16 36 3b 46 00 0b 0a 0b 0a 00
+touch: tcm:   495 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 d0 15 d2 3a 47 00 0b 0a 0b 0a 5a
+touch: tcm:   497 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 a2 15 74 3a 47 00 0b 09 0b 09 5a
+touch: tcm:   498 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 73 15 14 3a 46 00 0b 09 0b 09 5a
+touch: tcm:   499 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 44 15 b9 39 46 00 0b 09 0b 09 ba
+touch: tcm:   501 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 0c 15 58 39 47 00 0b 09 0b 09 00
+touch: tcm:   502 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 d6 14 fa 38 48 00 0b 09 0b 09 00
+touch: tcm:   503 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 a1 14 a3 38 48 00 0c 09 0c 09 00
+touch: tcm:   505 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 63 14 48 38 48 00 0c 0a 0c 0a 00
+touch: tcm:   506 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 27 14 e7 37 49 00 0b 0a 0b 0a ea
+touch: tcm:   507 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 e6 13 8a 37 48 00 0b 0a 0b 0a 5a
+touch: tcm:   509 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 a7 13 26 37 47 00 0b 09 0b 09 5a
+touch: tcm:   510 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 63 13 c2 36 47 00 0b 09 0b 09 5a
+touch: tcm:   511 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 1b 13 54 36 48 00 0b 09 0b 09 ba
+touch: tcm:   512 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 d3 12 ea 35 48 00 0b 09 0b 09 00
+touch: tcm:   514 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 7b 12 6d 35 47 00 0b 0a 0b 0a 00
+touch: tcm:   515 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 21 12 f0 34 48 00 0b 0a 0b 0a 00
+touch: tcm:   516 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 cc 11 66 34 47 00 0c 0a 0c 0a 00
+touch: tcm:   518 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 62 11 e3 33 45 00 0c 09 0c 09 00
+touch: tcm:   519 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 fb 10 63 33 46 00 0b 09 0b 09 00
+touch: tcm:   520 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 97 10 e9 32 46 00 0b 09 0b 09 00
+touch: tcm:   522 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 33 10 5d 32 47 00 0b 0a 0b 0a 00
+touch: tcm:   523 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 db 0f d3 31 47 00 0b 0a 0b 0a 00
+touch: tcm:   524 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 90 0f 4d 31 45 00 0b 09 0b 09 5a
+touch: tcm:   525 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 45 0f d0 30 45 00 0b 09 0b 09 5a
+touch: tcm:   527 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 fe 0e 56 30 44 00 0b 09 0b 09 5a
+touch: tcm:   528 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 c2 0e ef 2f 45 00 0b 09 0b 09 00
+touch: tcm:   529 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 96 0e 8e 2f 47 00 0b 09 0b 09 16
+touch: tcm:   531 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 71 0e 40 2f 47 00 0c 0a 0c 0a 27
+touch: tcm:   532 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 4f 0e f5 2e 47 00 0c 0a 0c 0a 26
+touch: tcm:   533 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 2c 0e b3 2e 48 00 0c 0a 0c 0a 00
+touch: tcm:   535 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 07 0e 71 2e 47 00 0c 0a 0c 0a 00
+touch: tcm:   536 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 e4 0d 3c 2e 48 00 0b 0a 0b 0a 00
+touch: tcm:   537 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 c2 0d 04 2e 48 00 0c 0a 0c 0a 00
+touch: tcm:   538 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 a3 0d d8 2d 48 00 0b 09 0b 09 b9
+touch: tcm:   540 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 83 0d a9 2d 49 00 0b 0a 0b 0a b9
+touch: tcm:   541 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 64 0d 7e 2d 49 00 0b 0a 0b 0a c8
+touch: tcm:   543 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 45 0d 58 2d 48 00 0b 0a 0b 0a c8
+touch: tcm:   544 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 29 0d 39 2d 48 00 0b 09 0b 09 c8
+touch: tcm:   545 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 0d 0d 10 2d 48 00 0b 09 0b 09 b9
+touch: tcm:   546 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 fa 0c f7 2c 48 00 0b 09 0b 09 b9
+touch: tcm:   548 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 ea 0c e5 2c 48 00 0b 09 0b 09 b9
+touch: tcm:   549 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 de 0c d5 2c 48 00 0b 09 0b 09 b9
+touch: tcm:   550 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 d4 0c c8 2c 48 00 0b 09 0b 09 b9
+touch: tcm:   552 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 ce 0c c2 2c 48 00 0b 0a 0b 0a b9
+touch: tcm:   553 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 c8 0c bc 2c 49 00 0b 0a 0b 0a b9
+touch: tcm:   554 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 c2 0c b9 2c 48 00 0b 0a 0b 0a b9
+touch: tcm:   556 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 bf 0c b6 2c 49 00 0b 0a 0b 0a b9
+touch: tcm:   557 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 bb 0c b3 2c 48 00 0b 0a 0b 0a b9
+touch: tcm:   558 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 b8 0c b3 2c 48 00 0b 09 0b 09 b9
+touch: tcm:   560 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 b2 0c b6 2c 48 00 0b 09 0b 09 b9
+touch: tcm:   561 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 a2 0c c8 2c 48 00 0b 09 0b 09 c9
+touch: tcm:   562 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 86 0c 07 2d 47 00 0b 09 0b 09 5a
+touch: tcm:   564 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 70 0c 5b 2d 47 00 0b 09 0b 09 5a
+touch: tcm:   565 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 5e 0c c2 2d 46 00 0b 0a 0b 0a 00
+touch: tcm:   566 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 54 0c 26 2e 44 00 0b 0a 0b 0a 00
+touch: tcm:   568 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 54 0c 94 2e 41 00 0b 09 0b 09 5a
+touch: tcm:   569 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 5e 0c fe 2e 3f 00 0a 09 0a 09 bb
+touch: tcm:   570 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 74 0c 6f 2f 3d 00 0a 08 0a 08 5a
+touch: tcm:   571 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 96 0c f5 2f 3f 00 0a 08 0a 08 5a
+touch: tcm:   573 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 bb 0c 6f 30 3f 00 0a 09 0a 09 5a
+touch: tcm:   574 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 e1 0c d9 30 3f 00 0a 09 0a 09 e9
+touch: tcm:   575 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 0a 0d 3a 31 3e 00 0a 0a 0a 0a 17
+touch: tcm:   577 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 3c 0d 9b 31 3e 00 0a 09 0a 09 17
+touch: tcm:   578 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 74 0d f2 31 3f 00 0a 09 0a 09 00
+touch: tcm:   579 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 a9 0d 44 32 3e 00 0b 08 0b 08 00
+touch: tcm:   581 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 e7 0d 9e 32 3f 00 0b 08 0b 08 00
+touch: tcm:   582 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 2c 0e f9 32 3e 00 0a 08 0a 08 00
+touch: tcm:   583 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 77 0e 66 33 41 00 0a 09 0a 09 00
+touch: tcm:   585 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 c2 0e d4 33 41 00 0a 09 0a 09 00
+touch: tcm:   586 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 0a 0f 4d 34 42 00 0a 0a 0a 0a 00
+touch: tcm:   587 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 52 0f c1 34 43 00 0a 09 0a 09 bb
+touch: tcm:   589 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 97 0f 38 35 40 00 0a 09 0a 09 5a
+touch: tcm:   590 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 db 0f ab 35 40 00 0a 09 0a 09 5a
+touch: tcm:   591 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 30 10 2f 36 40 00 0a 09 0a 09 00
+touch: tcm:   593 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 87 10 bb 36 42 00 0a 09 0a 09 d9
+touch: tcm:   594 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 e8 10 42 37 41 00 0a 0a 0a 0a 00
+touch: tcm:   595 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 4f 11 cb 37 41 00 0a 0a 0a 0a d0
+touch: tcm:   597 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 c0 11 58 38 40 00 0a 09 0a 09 bb
+touch: tcm:   598 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 37 12 e1 38 42 00 0a 09 0a 09 cb
+touch: tcm:   599 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 b4 12 68 39 43 00 0a 09 0a 09 5a
+touch: tcm:   600 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 43 13 04 3a 43 00 0b 0a 0b 0a e9
+touch: tcm:   602 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 e3 13 a3 3a 41 00 0b 0a 0b 0a 00
+touch: tcm:   603 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 8b 14 3c 3b 41 00 0b 09 0b 09 d0
+touch: tcm:   604 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 37 15 cf 3b 42 00 0a 0a 0a 0a bc
+touch: tcm:   606 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 e0 15 62 3c 43 00 0a 09 0a 09 5a
+touch: tcm:   607 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 8c 16 f2 3c 42 00 0a 0a 0a 0a eb
+touch: tcm:   608 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 32 17 85 3d 43 00 0a 0a 0a 0a 00
+touch: tcm:   610 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 d7 17 18 3e 44 00 0a 0a 0a 0a d2
+touch: tcm:   611 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 6a 18 a4 3e 44 00 0a 0a 0a 0a 5a
+touch: tcm:   612 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 f7 18 2b 3f 45 00 0a 0a 0a 0a ba
+touch: tcm:   614 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 7d 19 ae 3f 45 00 0a 0a 0a 0a eb
+touch: tcm:   615 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 fd 19 34 40 47 00 0b 0a 0b 0a da
+touch: tcm:   616 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 74 1a b1 40 46 00 0a 0b 0b 0a eb
+touch: tcm:   618 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 e1 1a 25 41 48 00 0a 0a 0a 0a 00
+touch: tcm:   619 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 42 1b 83 41 48 00 0a 0a 0a 0a bb
+touch: tcm:   620 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 9a 1b da 41 47 00 0a 0a 0a 0a 5a
+touch: tcm:   621 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 eb 1b 28 42 47 00 0a 0a 0a 0a ca
+touch: tcm:   623 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 3c 1c 70 42 47 00 0a 0a 0a 0a ba
+touch: tcm:   624 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 91 1c bb 42 46 00 0a 0a 0a 0a 00
+touch: tcm:   626 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 e2 1c 00 43 46 00 0a 0a 0a 0a eb
+touch: tcm:   627 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 2d 1d 38 43 47 00 0a 0a 0a 0a db
+touch: tcm:   628 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 75 1d 6a 43 46 00 0a 0a 0a 0a db
+touch: tcm:   629 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 c0 1d 99 43 47 00 0a 0a 0a 0a 00
+touch: tcm:   631 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 0b 1e c8 43 47 00 0a 0a 0a 0a 00
+touch: tcm:   632 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 59 1e ed 43 47 00 0a 0a 0a 0a 00
+touch: tcm:   633 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 a4 1e 13 44 46 00 0a 0a 0a 0a 00
+touch: tcm:   635 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 f5 1e 35 44 47 00 0a 0b 0b 0a 00
+touch: tcm:   636 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 46 1f 55 44 47 00 0a 0b 0b 0a d4
+touch: tcm:   637 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 8b 1f 6a 44 46 00 0a 0b 0b 0a d3
+touch: tcm:   639 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 d3 1f 7d 44 47 00 0a 0a 0a 0a 00
+touch: tcm:   640 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 18 20 8d 44 46 00 0b 0a 0b 0a 00
+touch: tcm:   641 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 60 20 99 44 45 00 0b 0a 0b 0a ea
+touch: tcm:   643 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 b4 20 a3 44 44 00 0a 0a 0a 0a 00
+touch: tcm:   644 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 05 21 af 44 43 00 0a 0a 0a 0a 00
+touch: tcm:   645 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 50 21 b9 44 43 00 0a 0a 0a 0a 00
+touch: tcm:   647 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 95 21 bc 44 43 00 0a 0a 0a 0a 00
+touch: tcm:   648 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 e3 21 b5 44 43 00 0a 0a 0a 0a 00
+touch: tcm:   649 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 2b 22 af 44 43 00 0a 0a 0a 0a 00
+touch: tcm:   651 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 6d 22 a6 44 43 00 0a 0a 0a 0a 00
+touch: tcm:   652 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 ae 22 9c 44 42 00 0a 0a 0a 0a 00
+touch: tcm:   653 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 e6 22 90 44 43 00 0a 0b 0b 0a 00
+touch: tcm:   654 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 1c 23 7d 44 43 00 0a 0a 0a 0a eb
+touch: tcm:   656 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 54 23 67 44 44 00 0b 0a 0b 0a da
+touch: tcm:   657 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 95 23 4e 44 43 00 0b 0a 0b 0a da
+touch: tcm:   658 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 c7 23 38 44 45 00 0b 0a 0b 0a db
+touch: tcm:   660 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 ed 23 23 44 45 00 0b 0a 0b 0a 00
+touch: tcm:   661 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 16 24 0a 44 46 00 0b 0a 0b 0a 00
+touch: tcm:   662 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 35 24 f1 43 46 00 0b 0a 0b 0a 00
+touch: tcm:   664 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 4e 24 d8 43 47 00 0b 0a 0b 0a 00
+touch: tcm:   665 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 76 24 ac 43 46 00 0b 0a 0b 0a 5a
+touch: tcm:   666 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 99 24 80 43 46 00 0b 0a 0b 0a ba
+touch: tcm:   668 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 b8 24 48 43 47 00 0b 0a 0b 0a ca
+touch: tcm:   669 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 ce 24 0c 43 47 00 0b 0a 0b 0a ca
+touch: tcm:   670 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 e4 24 cb 42 47 00 0b 0a 0b 0a ba
+touch: tcm:   672 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 f3 24 89 42 48 00 0b 0a 0b 0a ba
+touch: tcm:   673 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 fd 24 41 42 48 00 0b 0b 0b 0b 00
+touch: tcm:   674 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 00 25 ea 41 48 00 0b 0b 0b 0b 00
+touch: tcm:   676 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 fa 24 8f 41 49 00 0b 0a 0b 0a 00
+touch: tcm:   677 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 f3 24 35 41 48 00 0b 0a 0b 0a 00
+touch: tcm:   678 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 e7 24 d4 40 48 00 0b 0a 0b 0a 5a
+touch: tcm:   680 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 d7 24 5d 40 47 00 0b 0a 0b 0a ca
+touch: tcm:   681 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 b5 24 ca 3f 47 00 0b 0a 0b 0a ba
+touch: tcm:   682 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 80 24 2b 3f 48 00 0b 0a 0b 0a 00
+touch: tcm:   684 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 41 24 79 3e 48 00 0b 0a 0b 0a 00
+touch: tcm:   685 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 f6 23 d3 3d 48 00 0b 0a 0b 0a 00
+touch: tcm:   686 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 9f 23 0e 3d 48 00 0b 0a 0b 0a 00
+touch: tcm:   688 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 41 23 49 3c 48 00 0b 0a 0b 0a 2f
+touch: tcm:   689 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 e3 22 84 3b 49 00 0b 0a 0b 0a 00
+touch: tcm:   690 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 79 22 b9 3a 48 00 0b 0a 0b 0a 5a
+touch: tcm:   692 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 12 22 e5 39 48 00 0b 0a 0b 0a ba
+touch: tcm:   693 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 9b 21 16 39 49 00 0b 0a 0b 0a 00
+touch: tcm:   694 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 28 21 55 38 4a 00 0c 0b 0c 0b dc
+touch: tcm:   695 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 a4 20 b5 37 4a 00 0c 0a 0c 0a 5a
+touch: tcm:   697 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 24 20 00 37 4a 00 0b 0b 0b 0b 5a
+touch: tcm:   698 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 a4 1f 45 36 4b 00 0b 0b 0b 0b 00
+touch: tcm:   699 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 24 1f c1 35 4b 00 0c 0b 0c 0b 00
+touch: tcm:   701 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 9a 1e 22 35 4c 00 0c 0b 0c 0b 00
+touch: tcm:   702 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 24 1e a5 34 4c 00 0d 0a 0d 0a 14
+touch: tcm:   703 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 97 1d 3b 34 4b 00 0d 0b 0d 0b 5a
+touch: tcm:   705 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 1d 1d ca 33 4c 00 0b 0b 0b 0b 5a
+touch: tcm:   706 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 8a 1c 53 33 4d 00 0c 0b 0c 0b b8
+touch: tcm:   707 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 f7 1b dd 32 4c 00 0b 0a 0b 0a 00
+touch: tcm:   709 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 65 1b 6f 32 4d 00 0c 0a 0c 0a 00
+touch: tcm:   710 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 bc 1a 0b 32 4b 00 0c 0b 0c 0b d1
+touch: tcm:   711 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 20 1a b1 31 4c 00 0c 0b 0c 0b 00
+touch: tcm:   713 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 74 19 50 31 4c 00 0c 0a 0c 0a 00
+touch: tcm:   714 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 d7 18 e6 30 4b 00 0b 0a 0b 0a 5a
+touch: tcm:   715 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 3b 18 7b 30 4b 00 0c 0a 0c 0a 00
+touch: tcm:   717 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 92 17 11 30 4a 00 0c 0a 0c 0a 2f
+touch: tcm:   718 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 f0 16 aa 2f 4a 00 0b 0a 0b 0a 00
+touch: tcm:   719 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 5d 16 43 2f 49 00 0b 0a 0b 0a 00
+touch: tcm:   720 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 ca 15 df 2e 49 00 0b 0a 0b 0a 00
+touch: tcm:   722 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 3a 15 84 2e 48 00 0b 0a 0b 0a 00
+touch: tcm:   723 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 a4 14 30 2e 48 00 0b 0a 0b 0a 00
+touch: tcm:   724 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 05 14 f1 2d 48 00 0b 0a 0b 0a 5a
+touch: tcm:   726 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 82 13 bc 2d 47 00 0b 0a 0b 0a 5a
+touch: tcm:   727 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 0e 13 8d 2d 47 00 0b 09 0b 09 ba
+touch: tcm:   728 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 9e 12 5e 2d 46 00 0b 09 0b 09 ba
+touch: tcm:   730 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 40 12 36 2d 45 00 0b 09 0b 09 5a
+touch: tcm:   731 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 e8 11 1a 2d 45 00 0b 09 0b 09 00
+touch: tcm:   732 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 a7 11 0a 2d 45 00 0c 09 0c 09 00
+touch: tcm:   733 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 72 11 01 2d 48 00 0c 09 0c 09 00
+touch: tcm:   735 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 49 11 fa 2c 48 00 0c 0a 0c 0a 00
+touch: tcm:   736 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 24 11 fa 2c 48 00 0c 0a 0c 0a 00
+touch: tcm:   737 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 04 11 fa 2c 48 00 0c 0a 0c 0a 00
+touch: tcm:   739 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 eb 10 01 2d 48 00 0c 0a 0c 0a c9
+touch: tcm:   740 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 dc 10 07 2d 49 00 0b 0a 0b 0a c9
+touch: tcm:   741 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 c6 10 13 2d 49 00 0b 0a 0b 0a b9
+touch: tcm:   743 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 b9 10 20 2d 49 00 0b 0a 0b 0a 5a
+touch: tcm:   744 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 9d 10 42 2d 49 00 0b 0a 0b 0a 5a
+touch: tcm:   745 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 84 10 71 2d 49 00 0b 0a 0b 0a 00
+touch: tcm:   747 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 71 10 a9 2d 48 00 0b 0a 0b 0a 00
+touch: tcm:   748 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 65 10 f4 2d 48 00 0b 0a 0b 0a 00
+touch: tcm:   749 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 62 10 43 2e 48 00 0b 0a 0b 0a 00
+touch: tcm:   751 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 68 10 9a 2e 47 00 0b 0a 0b 0a 00
+touch: tcm:   752 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 75 10 f5 2e 46 00 0b 09 0b 09 b9
+touch: tcm:   753 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 8e 10 56 2f 44 00 0b 09 0b 09 00
+touch: tcm:   754 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 b0 10 c9 2f 43 00 0b 09 0b 09 00
+touch: tcm:   756 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 d9 10 50 30 42 00 0b 09 0b 09 00
+touch: tcm:   757 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 1a 11 df 30 42 00 0b 0a 0b 0a 00
+touch: tcm:   758 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 68 11 72 31 41 00 0a 0a 0a 0a 00
+touch: tcm:   760 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 c3 11 0e 32 3e 00 0a 09 0a 09 ba
+touch: tcm:   761 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 2a 12 b1 32 3e 00 0a 09 0a 09 bb
+touch: tcm:   762 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 97 12 63 33 3e 00 0a 09 0a 09 5a
+touch: tcm:   764 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 0e 13 12 34 3e 00 0a 0a 0a 0a e9
+touch: tcm:   765 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 91 13 ca 34 3c 00 0a 09 0a 09 00
+touch: tcm:   766 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 12 14 70 35 3a 00 0a 08 0a 08 00
+touch: tcm:   768 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 9b 14 13 36 3a 00 0a 09 0a 09 00
+touch: tcm:   769 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 21 15 bb 36 3c 00 0a 09 0a 09 00
+touch: tcm:   770 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 98 15 5e 37 3c 00 0a 0a 0a 0a 00
+touch: tcm:   772 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 0f 16 00 38 3b 00 0a 09 0a 09 bb
+touch: tcm:   773 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 79 16 93 38 3a 00 09 08 09 08 00
+touch: tcm:   774 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 e0 16 2f 39 3a 00 09 09 09 09 00
+touch: tcm:   776 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 47 17 cf 39 3b 00 09 09 09 09 ea
+touch: tcm:   777 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 a5 17 5f 3a 3a 00 09 0a 0a 09 00
+touch: tcm:   778 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 f6 17 eb 3a 3d 00 0a 09 0a 09 d2
+touch: tcm:   780 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 3e 18 72 3b 3c 00 0a 09 0a 09 d3
+touch: tcm:   781 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 7a 18 e5 3b 3d 00 0a 09 0a 09 bc
+touch: tcm:   782 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 b2 18 62 3c 3f 00 0a 09 0a 09 5a
+touch: tcm:   783 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 e7 18 d9 3c 40 00 0a 09 0a 09 d4
+touch: tcm:   785 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 19 19 53 3d 3e 00 0a 0a 0a 0a d3
+touch: tcm:   786 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 42 19 bd 3d 3f 00 0a 0a 0a 0a 16
+touch: tcm:   787 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 6a 19 2a 3e 40 00 0a 0a 0a 0a 00
+touch: tcm:   789 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 90 19 88 3e 3f 00 09 09 09 09 00
+touch: tcm:   790 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 b2 19 f9 3e 3f 00 0a 09 0a 09 00
+touch: tcm:   791 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 d5 19 6c 3f 3f 00 09 09 09 09 00
+touch: tcm:   793 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 f4 19 d7 3f 3f 00 09 09 09 09 eb
+touch: tcm:   794 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 16 1a 4a 40 41 00 0a 0a 0a 0a ea
+touch: tcm:   795 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 39 1a c4 40 41 00 0a 0a 0a 0a 00
+touch: tcm:   797 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 58 1a 3e 41 3f 00 0a 0a 0a 0a 00
+touch: tcm:   798 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 77 1a ab 41 3d 00 0a 09 0a 09 00
+touch: tcm:   799 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 99 1a 1c 42 3d 00 09 09 09 09 00
+touch: tcm:   800 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 b6 1a 86 42 3e 00 09 09 09 09 00
+touch: tcm:   802 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 d8 1a fa 42 3e 00 09 09 09 09 00
+touch: tcm:   803 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 fd 1a 6a 43 3e 00 0a 0a 0a 0a 00
+touch: tcm:   804 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 1d 1b ce 43 3f 00 0a 0a 0a 0a 00
+touch: tcm:   806 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 3f 1b 3f 44 3e 00 09 0a 0a 09 00
+touch: tcm:   807 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 5e 1b a9 44 3e 00 09 0a 0a 09 d3
+touch: tcm:   808 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 77 1b 0d 45 3d 00 0a 09 0a 09 d4
+touch: tcm:   810 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 90 1b 74 45 3e 00 0a 0a 0a 0a d4
+touch: tcm:   811 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 a9 1b d8 45 3f 00 0a 09 0a 09 d5
+touch: tcm:   812 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 b9 1b 3c 46 3f 00 0a 0a 0a 0a eb
+touch: tcm:   814 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 c9 1b a0 46 3f 00 0a 0a 0a 0a 00
+touch: tcm:   815 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 de 1b 0d 47 3d 00 0a 0a 0a 0a 00
+touch: tcm:   816 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 ee 1b 68 47 3d 00 0a 0a 0a 0a 00
+touch: tcm:   818 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 f4 1b c3 47 3c 00 0a 0a 0a 0a bc
+touch: tcm:   819 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 01 1c 20 48 3b 00 0a 09 0a 09 5a
+touch: tcm:   820 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 0a 1c 75 48 3a 00 0a 09 0a 09 bd
+touch: tcm:   822 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 0d 1c cf 48 3c 00 0a 09 0a 09 bd
+touch: tcm:   823 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 10 1c 2a 49 3c 00 0a 09 0a 09 5a
+touch: tcm:   824 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 1a 1c 85 49 3b 00 09 09 09 09 00
+touch: tcm:   826 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 20 1c d6 49 3b 00 09 0a 0a 09 d4
+touch: tcm:   827 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 23 1c 24 4a 3b 00 09 0a 0a 09 d6
+touch: tcm:   828 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 26 1c 6f 4a 3b 00 09 0a 0a 09 00
+touch: tcm:   829 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 23 1c b1 4a 3b 00 09 0a 0a 09 5a
+touch: tcm:   831 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 20 1c f2 4a 3a 00 0a 09 0a 09 5a
+touch: tcm:   832 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 1a 1c 3a 4b 38 00 0a 09 0a 09 5a
+touch: tcm:   833 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 17 1c 88 4b 39 00 0a 09 0a 09 bd
+touch: tcm:   835 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 14 1c cd 4b 38 00 09 09 09 09 bd
+touch: tcm:   836 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 0a 1c 1e 4c 3a 00 0a 09 0a 09 d4
+touch: tcm:   837 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 04 1c 66 4c 3a 00 0a 09 0a 09 d4
+touch: tcm:   839 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 01 1c b4 4c 38 00 0a 09 0a 09 d3
+touch: tcm:   840 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 fb 1b ff 4c 39 00 0a 09 0a 09 00
+touch: tcm:   841 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 f4 1b 4a 4d 38 00 0a 0a 0a 0a 00
+touch: tcm:   843 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 ee 1b 89 4d 38 00 0a 0a 0a 0a 00
+touch: tcm:   844 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 e2 1b ca 4d 37 00 0a 0a 0a 0a d4
+touch: tcm:   845 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 d5 1b 0c 4e 35 00 09 09 09 09 d4
+touch: tcm:   846 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 c9 1b 4b 4e 34 00 09 09 09 09 d3
+touch: tcm:   848 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 bc 1b 89 4e 35 00 09 09 09 09 d4
+touch: tcm:   849 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 b0 1b c8 4e 35 00 09 08 09 08 d5
+touch: tcm:   850 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 a9 1b fd 4e 35 00 09 08 09 08 d5
+touch: tcm:   852 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 a0 1b 38 4f 36 00 09 09 09 09 d6
+touch: tcm:   853 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 97 1b 77 4f 37 00 09 09 09 09 d5
+touch: tcm:   854 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 90 1b af 4f 37 00 09 09 09 09 00
+touch: tcm:   856 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 87 1b e4 4f 36 00 09 09 09 09 00
+touch: tcm:   857 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 7e 1b 16 50 36 00 09 09 09 09 00
+touch: tcm:   858 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 77 1b 4e 50 36 00 09 0a 0a 09 00
+touch: tcm:   860 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 74 1b 83 50 36 00 09 0a 0a 09 00
+touch: tcm:   861 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 6b 1b af 50 36 00 09 0a 0a 09 00
+touch: tcm:   862 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 61 1b e4 50 34 00 09 0a 0a 09 d5
+touch: tcm:   864 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 58 1b 10 51 34 00 08 09 09 08 d5
+touch: tcm:   865 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 4c 1b 45 51 34 00 08 09 09 08 d4
+touch: tcm:   866 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 3c 1b 71 51 34 00 08 09 09 08 d5
+touch: tcm:   868 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 2c 1b a0 51 34 00 08 08 08 08 d4
+touch: tcm:   869 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 1d 1b cf 51 34 00 08 08 08 08 d4
+touch: tcm:   870 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 13 1b f7 51 34 00 08 08 08 08 d5
+touch: tcm:   871 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 0a 1b 1a 52 34 00 08 08 08 08 00
+touch: tcm:   873 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 fd 1a 42 52 35 00 08 08 08 08 00
+touch: tcm:   874 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 f4 1a 6b 52 35 00 08 08 08 08 00
+touch: tcm:   875 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 eb 1a 8a 52 35 00 08 08 08 08 00
+touch: tcm:   877 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 e1 1a a3 52 35 00 07 08 08 07 00
+touch: tcm:   878 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 d8 1a bc 52 35 00 07 08 08 07 00
+touch: tcm:   879 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 d2 1a cf 52 36 00 07 08 08 07 00
+touch: tcm:   881 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 cb 1a d8 52 36 00 07 08 08 07 00
+touch: tcm:   882 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 c8 1a de 52 36 00 07 08 08 07 00
+touch: tcm:   883 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 c5 1a e2 52 37 00 08 09 09 08 00
+touch: tcm:   885 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 c2 1a e5 52 38 00 08 09 09 08 00
+touch: tcm:   886 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 bc 1a e8 52 38 00 08 08 08 08 00
+touch: tcm:   887 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 b6 1a eb 52 39 00 08 09 09 08 00
+touch: tcm:   888 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 af 1a ee 52 39 00 08 09 09 08 00
+touch: tcm:   890 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 a9 1a ee 52 3a 00 09 09 09 09 00
+touch: tcm:   891 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 a3 1a ee 52 3b 00 09 08 09 08 00
+touch: tcm:   892 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 96 1a eb 52 3c 00 09 08 09 08 00
+touch: tcm:   894 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 90 1a e8 52 3b 00 09 09 09 09 00
+touch: tcm:   895 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 80 1a db 52 3c 00 09 08 09 08 00
+touch: tcm:   896 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 67 1a bc 52 3b 00 09 08 09 08 00
+touch: tcm:   898 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 4e 1a 90 52 3b 00 09 09 09 09 00
+touch: tcm:   899 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 35 1a 52 52 3b 00 08 09 09 08 00
+touch: tcm:   900 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 1c 1a 01 52 3b 00 08 09 09 08 00
+touch: tcm:   902 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 03 1a a3 51 3c 00 08 0a 0a 08 00
+touch: tcm:   903 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 e7 19 35 51 3e 00 08 0a 0a 08 ea
+touch: tcm:   904 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 c8 19 b5 50 3d 00 08 09 09 08 eb
+touch: tcm:   906 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 af 19 38 50 3d 00 08 0a 0a 08 ec
+touch: tcm:   907 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 83 19 a9 4f 3f 00 08 0b 0b 08 bd
+touch: tcm:   908 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 54 19 0c 4f 40 00 09 0b 0b 09 bc
+touch: tcm:   910 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 1f 19 5d 4e 3f 00 09 0a 0a 09 eb
+touch: tcm:   911 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 e7 18 b8 4d 40 00 0a 0a 0a 0a ec
+touch: tcm:   912 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 b2 18 15 4d 40 00 0a 0a 0a 0a ed
+touch: tcm:   914 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 6d 18 69 4c 3f 00 0a 0a 0a 0a ee
+touch: tcm:   915 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 28 18 b4 4b 3f 00 0a 0b 0b 0a 00
+touch: tcm:   916 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 ce 17 e0 4a 40 00 0a 0a 0a 0a da
+touch: tcm:   918 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 79 17 1e 4a 3f 00 0a 0a 0a 0a 00
+touch: tcm:   919 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 1f 17 5c 49 40 00 09 0a 0a 09 00
+touch: tcm:   920 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 ce 16 a7 48 43 00 09 0b 0b 09 d3
+touch: tcm:   922 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 7c 16 eb 47 45 00 0a 0a 0a 0a d4
+touch: tcm:   923 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 28 16 2a 47 44 00 0a 0a 0a 0a 5a
+touch: tcm:   924 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 c7 15 5b 46 42 00 0a 0a 0a 0a bb
+touch: tcm:   926 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 76 15 a6 45 46 00 0b 0a 0b 0a d1
+touch: tcm:   927 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 31 15 ee 44 47 00 0b 0a 0b 0a 00
+touch: tcm:   928 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 e3 14 3f 44 47 00 0b 09 0b 09 eb
+touch: tcm:   930 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 95 14 90 43 45 00 0c 09 0c 09 00
+touch: tcm:   931 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 4a 14 ed 42 46 00 0b 09 0b 09 00
+touch: tcm:   932 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 02 14 51 42 47 00 0b 0a 0b 0a d0
+touch: tcm:   933 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 ba 13 be 41 48 00 0b 0a 0b 0a 00
+touch: tcm:   935 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 6c 13 2e 41 48 00 0a 0a 0a 0a 5a
+touch: tcm:   936 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 21 13 ae 40 48 00 0b 0a 0b 0a 5a
+touch: tcm:   937 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 df 12 34 40 47 00 0b 0a 0b 0a b9
+touch: tcm:   939 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 a1 12 c7 3f 48 00 0b 09 0b 09 5a
+touch: tcm:   940 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 5f 12 60 3f 48 00 0b 09 0b 09 b9
+touch: tcm:   941 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 2a 12 02 3f 49 00 0b 0a 0b 0a 00
+touch: tcm:   943 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 f5 11 b1 3e 49 00 0c 0a 0c 0a 00
+touch: tcm:   944 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 c0 11 63 3e 4a 00 0c 0a 0c 0a 00
+touch: tcm:   945 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 8e 11 0e 3e 4a 00 0c 0a 0c 0a 00
+touch: tcm:   947 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 59 11 ca 3d 4a 00 0c 0a 0c 0a 00
+touch: tcm:   948 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 1d 11 88 3d 4a 00 0c 0a 0c 0a 00
+touch: tcm:   949 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 df 10 43 3d 49 00 0c 0a 0c 0a 5a
+touch: tcm:   950 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 a0 10 f2 3c 49 00 0b 0a 0b 0a c9
+touch: tcm:   952 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 62 10 b0 3c 49 00 0b 0a 0b 0a b9
+touch: tcm:   953 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 14 10 65 3c 49 00 0b 0a 0b 0a b9
+touch: tcm:   954 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 c9 0f 1a 3c 4a 00 0b 0a 0b 0a 00
+touch: tcm:   956 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 74 0f c6 3b 49 00 0b 0a 0b 0a 00
+touch: tcm:   957 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 20 0f 78 3b 4a 00 0b 0a 0b 0a 00
+touch: tcm:   958 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 cf 0e 30 3b 4b 00 0c 0a 0c 0a 00
+touch: tcm:   960 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 7d 0e eb 3a 4b 00 0c 0a 0c 0a 16
+touch: tcm:   961 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 36 0e a6 3a 4a 00 0c 0a 0c 0a 15
+touch: tcm:   962 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 f4 0d 68 3a 4a 00 0c 0a 0c 0a 47
+touch: tcm:   964 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 b9 0d 29 3a 4a 00 0b 0a 0b 0a b8
+touch: tcm:   965 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 83 0d eb 39 4a 00 0b 0a 0b 0a c8
+touch: tcm:   966 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 4e 0d a6 39 4a 00 0b 0a 0b 0a c8
+touch: tcm:   968 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 1c 0d 6e 39 4a 00 0b 0a 0b 0a b9
+touch: tcm:   969 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 e7 0c 36 39 4a 00 0b 0a 0b 0a 00
+touch: tcm:   970 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 b5 0c fa 38 4b 00 0b 0a 0b 0a 00
+touch: tcm:   971 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 80 0c c2 38 4a 00 0b 0a 0b 0a 00
+touch: tcm:   973 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 4e 0c 8d 38 4a 00 0b 0a 0b 0a 00
+touch: tcm:   974 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 19 0c 5b 38 4b 00 0b 0a 0b 0a 00
+touch: tcm:   975 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 e7 0b 26 38 4b 00 0b 0b 0b 0b 00
+touch: tcm:   977 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 bb 0b f7 37 4b 00 0c 0b 0c 0b 2f
+touch: tcm:   978 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 93 0b ce 37 4b 00 0c 0a 0c 0a 25
+touch: tcm:   979 ms: report 0x11, 23 bytes: 00 00 00 00 00 00 00 00 00 01 01 10 67 0b a3 37 4b 00 0c 0a 0c 0a 15
+touch: tcm: 600 messages
+touch: reset pin 1: function 1, level 1, pull 0 (CON 0x00002210 DAT 0x0000000e)
+touch: interrupt pin 0: function 0, level 0, pull 0 (CON 0x00000000 DAT 0x00000000)
+touch: SPI controller @ 0x111d0000: 00000000 00000000 1ff80000 00000001 00000000 02000000 00000000 00000000 0001001a 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+
+--- display ---
+display: DT drmdecon@19470000 (decon 0)
+display: DT decon node has no memory-region (no handover buffer declared)
+display: DECON0 main=0x19470000 win=0x19480000 wincon=0x194a0000 (14 windows)
+display: reading DECON0 main registers (a hang right after this line means
+         the DECON block is powered down)
+display: VERSION=0x07060000 FRAME_COUNT=5 GLOBAL_CON=0x00000133 (shadow 0x00000101) TRIG_CON=0x00003070
+display: mode=COMMAND enabled=yes run=1 idle=1
+display: reading WINCON 0..13
+display: window 5 ON: WINCON=0x00000001 chmap=0 -> dpp 0  pos (0,0)-(1279,2855)
+display:   reading RDMA @ 0x19900000
+display:   live   ENABLE=0x40000000 IN_CTRL_0=0xff400000 (fmt 0 BGRA8888)
+display:   live   SRC 1280x2856  OFFSET=0x00000000  IMG 1280x2856
+display:   live   BASEADDR_P0=0xfac00000 P1=0x00000000 STRIDE_0=0x00000000
+display:   shadow ENABLE=0x40000000 IN_CTRL_0=0xff400000 (fmt 0 BGRA8888)
+display:   shadow SRC 1280x2856  OFFSET=0x00000000  IMG 1280x2856
+display:   shadow BASEADDR_P0=0xfac00000 P1=0x00000000 STRIDE_0=0x00000000
+display: FRAME_COUNT 5 -> 5 over 100 ms (no new frames: idle/command mode)
+display: FRAME BUFFER: 0xfac00000  1280x2856  BGRA8888  stride 5120 bytes  (dpp 0)
+
+=== SUMMARY ===
+platform     : caiman (Pixel 9 Pro, Tensor G4 / zumapro), probe 0668e60-dirty
+entry        : EL2, MPIDR 0x81000000, image 0x80000000+0x2b010, DTB 0x8a000000
+dram         : 8 range(s) from DT
+ramoops log  : console zone 0xfd3ff000 size 0x200000
+uart         : not usable
+psci         : version 0x10001, SYSTEM_RESET2 yes
+fb (regs)    : 0xfac00000 1280x2856 fmt 0 bpp 4 stride 5120 (dpp 0)
+fb (DT)      : no handover memory-region
+decon mode   : command, 0 frames in 100 ms
+watchdog     : RUNNING (bootloader left it armed), period 60050 ms, 51305 ms left at probe time
+aborted reads: 0
+
+finish: done; rebooting in 3000 ms (PSCI SYSTEM_RESET2 warm)
+=== caiman-probe end ===
+[   0.000000] [I] secure payload loading took 0ms
+[   0.000000] [I] platform info binded: true
+[   0.000000] [I] platform info: 060906010000
+[   9.736624] [I] 
+welcome to lk/MP
+
+[   9.736655] [I] boot args 0x1 0x0 0x0 0x0
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   9.737279] [I] acpm locks regulators
+[   9.737335] [I] Soc Product ID: 0x09875
+[   9.737373] [I] Soc rev: A1
+[   9.737400] [I] Soc ID: 0x12b44c577850
+[   9.737432] [I] DVFS version: 2
+[   9.737463] [E] vendor magic_number must be 0xcceeddff but 0x00000000
+[   9.737515] [E] magic_number must be 0xcceeddff but 0x00000000
+[   9.737595] [I] S2MPG_M CHIPID read: 0x10
+[   9.737658] [I] S2MPG_S CHIPID read: 0x10
+[   9.737727] [I] S2MPG_M PWRONSRC read: 0x4
+[   9.737793] [I] S2MPG_M OFFSRC1 read: 0x10
+[   9.737865] [I] S2MPG_M OFFSRC2 read: 0x0
+[   9.737930] [I] S2MPG_M RTC_WTSR read: 0x7e
+[   9.737971] [I] S2MPG_M INT1: 0x30
+[   9.738000] [I] S2MPG_M INT2: 0x0
+[   9.738026] [I] S2MPG_M INT3: 0x0
+[   9.738052] [I] S2MPG_M INT4: 0x0
+[   9.738082] [I] S2MPG_M INT5: 0x0
+[   9.738142] [I] S2MPG_S OFFSRC1 read: 0x11
+[   9.738182] [I] S2MPG_S INT1: 0x83
+[   9.738210] [I] S2MPG_S INT2: 0x80
+[   9.738236] [I] S2MPG_S INT3: 0x0
+[   9.738267] [I] S2MPG_S INT4: 0x0
+[   9.738293] [I] S2MPG_S INT5: 0x0
+APC Bootmetrics:
+  BL1: MT:1 / DT:ENTRY / 96584 us
+  BL1: MT:2 / DT:LOAD  / 7368 us
+  BL1: MT:F / DT:EXIT  / 147808 us
+  PBL: MT:1 / DT:ENTRY / 147944 us
+  PBL: MT:2 / DT:LOAD  / 19592 us
+  PBL: MT:F / DT:EXIT  / 213032 us
+  BL2: MT:1 / DT:ENTRY / 214608 us
+  BL2: MT:2 / DT:LOAD  / 160 us
+  BL2: MT:3 / DT:LOAD  / 152 us
+  BL2: MT:4 / DT:CHECK / 342648 us
+  BL2: MT:5 / DT:CHECK / 2096 us
+  BL2: MT:6 / DT:LOAD  / 8983288 us
+  BL2: MT:7 / DT:CHECK / 9078616 us
+  BL2: MT:8 / DT:CHECK / 9078752 us
+  BL2: MT:9 / DT:LOAD  / 44216 us
+  BL2: MT:A / DT:LOAD  / 31584 us
+  BL2: MT:B / DT:LOAD  / 325896 us
+  BL2: MT:C / DT:LOAD  / 8 us
+  BL2: MT:F / DT:EXIT  / 9529768 us
+  PBL: MT:3 / DT:LOAD  / 81256 us
+  PBL: MT:4 / DT:LOAD  / 28152 us
+  PBL: MT:5 / DT:LOAD  / 6176 us
+  PBL: MT:6 / DT:CHECK / 9660488 us
+  PBL: MT:7 / DT:CHECK / 9660616 us
+  EL3: MT:1 / DT:ENTRY / 9663392 us
+  EL3: MT:D / DT:CHECK / 9678952 us
+  EL3: MT:E / DT:CHECK / 9725504 us
+  EL3: MT:F / DT:EXIT  / 9725544 us
+APC Breadcrumbs(v2.4):
+ stages(S): 0000404F / 0000404F
+  flags(S): 000022C0 / 000022C0
+stages(NS): 00005FFE / 00005004
+ flags(NS): 0000D400 / 0000D400
+    status: 00000000 / 00000000
+    device: 00000001 / 00000001
+   tmutrip: 00000000 / 00000000
+     reset: 00180000 / 00180000
+[   9.739294] [E] GSA Breadcrumb:
+00000000 0000000d 00000000 00000000  |................|
+00000000 00000000 00000001           |............    |
+[   9.739430] [I] SBDP initialized: chipid allowed=0, dpm_state=0x0000
+[   9.739482] [E] check header failed
+[   9.739609] [I] initializing device i2c:usi00
+[   9.739648] [I] usi00: version 2.2
+[   9.739695] [I] initializing device i2c:usi04
+[   9.739733] [I] usi04: version 2.2
+[   9.739778] [I] initializing device i2c:usi06
+[   9.739819] [I] usi06: version 2.2
+[   9.739863] [I] initializing device i2c:usi09
+[   9.739900] [I] usi09: version 2.2
+[   9.739950] [I] initializing device i2cm:i2cm0
+[   9.739991] [I] DVFS init
+[   9.742251] [I] DVFS init done
+[   9.742280] [I] UFS EVT version 0
+[   9.742323] [I] controller version 3.0 found
+[   9.742358] [I] capabilities 0x1383ff1f
+[   9.742567] [I] UFS device found
+zuma_ufs_device_init_done
+[   9.742612] [E] ufshc_notify done
+[   9.742691] [I] ufshc_power_mode_change HS gear 4
+[   9.752886] [I] ufshc: bBootLunEn 0x1
+[   9.753028] [I] UFS device SAMSUNG KLUDG4UHGC-B0E1 version 3.1
+[   9.753076] [I] Enabled LUNs found 4
+[   9.753140] [I] UFS device total size 127984992256
+[   9.753246] [I] Temp too high enabled
+[   9.753339] [I] Temp too low enabled
+[   9.756085] [I] Write Booster: available buffer=0x7 lifetime=0x2 current buffer=0x1dcb
+[   9.756180] [I] boot slot: a
+[   9.758379] [I] slot data a: 0x00001e02
+[   9.758410] [I] slot data b: 0x00001000
+[   9.759206] [I] platform info: 060906010000
+[   9.759451] [I] initializing device cs40l2x:cs40l26
+[   9.769909] [I] CS40L26 found
+[   9.771574] [I] initializing device nfc:st21nfc
+[   9.773468] [I] tcpc vendor id 56
+[   9.774402] found 77779 on usi6
+[   9.774430] bms_init init usi10 as sec_i2c
+[   9.774464] [I] initializing device i2c:usi10
+[   9.774505] [I] usi10: version 2.2
+[   9.774700] [I] FG device name 0x5100
+[   9.775207] [I] [max77779fg] SOC(99), VCELL(4403), INOW(-317), IAVG(-316)
+[   9.775946] [I] fship 0x0
+[   9.776067] [I] master disconnect reason 0x0
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   9.778962] [I] LCS state:PRODUCTION
+[   9.779246] [I] saving ddr training data
+[   9.781138] [I] no valid file
+[TMU:0] 37
+[TMU:1] 37
+[   9.822961] [I] dsim_probe dsim0+
+[   9.822998] [I] using data lane count(4)
+[   9.834202] [E] dsim0 wait phy pll stable
+[   9.860527] [I] Succeeded to read panel product id : 0x22a8a00a
+[   9.860573] [E] is_compatible is not defined!
+[   9.860609] [I] panel_rev: 0x1000
+[   9.865747] [I] use panel google-cm4 for dsim0
+[   9.865781] [I] dsim_probe -: dsim0 driver(cmd mode) has been probed.
+[   9.865829] [I] dsim_probe dsim1+
+[   9.865862] [I] using data lane count(4)
+[   9.865928] [E] dsim1 wait phy pll stable
+[   9.916885] [E] timeout!! wait for DSIM interrupt (0x40300000)
+[   9.916928] [E] MIPI DSIM (id=6) read Timeout! 0x4
+[   9.916964] [E] dsim fail to get panel operation
+[   9.917036] [E] dsim has error.
+[   9.917062] [E] dsim_probe -: dsim1 probe failed.
+[   9.917096] [I] dsim1 probe was failed
+[   9.917125] [I] dsim_init -: set dsim0 driver as primary.
+[   9.928323] [E] dsim0 wait phy pll stable
+[   9.946670] [I] dpp_probe +
+[   9.946693] [I] dpp-0's attr is (0x004d0047)
+[   9.946726] [I] dpp(0) init resources.
+[   9.946780] [I] dpp_probe -: dpp0 is probed successfully
+[   9.946822] [I] decon-int: max win6, command mode, hw trigger
+[   9.946865] [I] single dsi mode
+[   9.946896] [I] [decon0] d_path(0xB1) DSCC DSC_ENC1 DSC_ENC0 OFIFO.0
+[   9.947003] [I] [decon0] sel(0x0) OFIFO.0 - dsim0 - google-cm4
+[   9.947048] [I] Display 1st window(5) xres(1280) yres(2856) win_start_pos(0) win_end_pos(b2704ff)
+[   9.950408] [E] [   1.922025] [I] -------------------- DSS LOGS START --------------------
+[PRE] reset message: APC Watchdog Early
+[PRE] RST_STAT: 0x80 - SYSTEM_SWRESET_SYSTEM
+[PRE] GSA_RESET_STATUS: 0x10 - GSA_INTERMEDIATE_RESET
+[PRE] Reboot reason: 0xcbea - APC Watchdog Early
+[PRE] Reboot mode: 0x0 - Normal Boot
+[   1.924476] APC Breadcrumbs(v2.4):
+ stages(S): 0000404F / 00004030
+  flags(S): 000022C0 / 000022C0
+stages(NS): 00005FFE / 00005004
+ flags(NS): 0000D400 / 0000D400
+    status: 00000000 / 00000000
+    device: 00000001 / 00000001
+   tmutrip: 00000000 / 00000000
+     reset: 00180000 / 00000080
+[   1.925804] [E] GSA Breadcrumb:
+00000000 fffd000d 00000000 00000000  |................|
+00000000 00000000 00000010           |............    |
+[   1.927321] [I] ACPM GPR DUMP - NOT AVAILABLE
+STATES_MIF|TOP - 0x27df8540 | 0xca9dd059
+
+          pd-apm - 0xb17d2124	          pd-cmu - 0x4526c25	       pd-cpucl0 - 0xcf830019	       pd-cpucl1 - 0xca6b9fc	
+       pd-cpucl2 - 0x7f3fcb10	          pd-g3d - 0x1a6dfb5b	pd-embedded_cpucl0 - 0xffeb0575	pd-embedded_cpucl1 - 0x216abefa	
+pd-embedded_cpucl2 - 0x1fb77184	 pd-embedded_g3d - 0xa0cff2f	         pd-dpub - 0x891d1c55	        pd-dpuf0 - 0x82b976	
+        pd-dpuf1 - 0xec3b822c	          pd-g2d - 0x1657d77	          pd-gdc - 0xf7e314a9	          pd-gse - 0xc1152cb3	
+         pd-mcsc - 0x857fcc6c	          pd-mfc - 0xac85e9e2	         pd-rgbp - 0xca9c3154	          pd-tnr - 0x4114f7e7	
+         pd-yuvp - 0xf31a0180	          pd-aoc - 0x8025594f	          pd-aur - 0xc73797af	           pd-bw - 0xa70d374f	
+           pd-eh - 0x99510044	        pd-ispfe - 0x1a17c563	          pd-tpu - 0x55850d15	         pd-mif0 - 0xb919a1f9	
+         pd-mif1 - 0x6feb2350	         pd-mif2 - 0xc042cd7c	         pd-mif3 - 0x93cb0600	         pd-misc - 0x1622ba7f	
+        pd-nocl0 - 0xff130004	       pd-nocl1a - 0x6992d5e5	       pd-nocl1b - 0xeee1090	      pd-nocl2aa - 0x49cea3b	
+      pd-nocl2ab - 0x74eb5384	         pd-hsi0 - 0x13aa2f3b	         pd-hsi1 - 0x7aeb0a10	         pd-hsi2 - 0x818cb6c5	
+       pd-peric0 - 0xbf3f4ac5	       pd-peric1 - 0x304385cb	          pd-s2d - 0x6afaa0a2	
+
+[UP] CUR_SEQ0 - 163044888
+[DOWN] CUR_SEQ0 - DONE
+APSOC_CNT - 86837
+APSOC|MIF_CNT_SLEEP- 96861 | 29081
+APSOC|MIF_CNT_SICD - 0 | 808989753
+CURR_POWERMODE - 875574834
+CPU_STAT - cpu0:on, cpu1:off, cpu2:off, cpu3:off, cpu4:on, cpu5:off, cpu6:off, cpu7:off
+SEQ_STAT - APSOC_SEQ_down, MIF_SEQ_down, CL0_off, CL1_off, CL2_off
+[UP] CUR_SEQ0 - 163044888
+[DOWN] CUR_SEQ0 - DONE
+access_type: CUR_SEQ1 - 667347933, index: 0
+hotplug_flag - cpu0:out, cpu1:in, cpu2:out, cpu3:in, cpu4:out, cpu5:in, cpu6:out, cpu7:in, 
+MIF REF_COUNT:0
+MIF REQ_MASTER - 
+CURR_POWERMODE - 875574834
+EHLD core status
+Core0:  (No Lockup)
+Core1:  (No Lockup)
+Core2:  (No Lockup)
+Core3:  (No Lockup)
+Core4:  (No Lockup)
+Core5:  (No Lockup)
+Core6:  (No Lockup)
+Core7:  (No Lockup)
+[   1.944702] [I] ***** S2D Info Block ********************************************************
+[   1.945397] [I] S2D Magic didn't detect - s2d validity check failed!
+[   1.945802] [I] Additional information:
+[   1.946183] [I]    S2D status: Not triggered
+[   1.946507] [I] *****************************************************************************
+[   1.947013] [I] Core reg status and PC:
+[   1.947302] [I]        /- Power state  - +:On -:Off
+[   1.947643] [I]        |/- Recorded by - P:panic A:arraydump S:s2d _:none
+[   1.948070] [I]        ||/- IRQ        - O:enabled X:disabled _:n/a
+[   1.948473] [I]        |||/- FIQ       - O:enabled X:disabled _:n/a
+[   1.948874] [I] core#  ||||
+[   1.949119] [I]   0    -___ N/A
+[   1.949455] [I]   1    -___ N/A
+[   1.949794] [I]   2    -___ N/A
+[   1.950128] [I]   3    -___ N/A
+[   1.950463] [I]   4    -___ N/A
+[   1.950798] [I]   5    -___ N/A
+[   1.951132] [I]   6    -___ N/A
+[   1.951467] [I]   7    -___ N/A
+[   1.951803] PCSR iteration magic is invalid: 000000
+APC cpu contexts:
+Core0 is off
+[   1.954490] [E] Discarding ramdump file gsa_sram_key.lst flag 0
+[   1.954957] [E] fail to add gsa_sram_key.lst to ramdump sub-file, -8
+[   1.955934] [E] Invalid bl31 log reserved region: bypass
+
+[   1.956349] [E] Invalid pbl log reserved region: bypass
+
+[   1.956717] PSCI Breadcrumbs(v2.0):
+[   1.957017] Core0: 00000000 / 00000000
+[   1.957419] Core1: 00000000 / 00000000
+[   1.957818] Core2: 00000000 / 00000000
+[   1.958218] Core3: 00000000 / 00000000
+[   1.958618] Core4: 00000000 / 00000000
+[   1.959018] Core5: 00000000 / 00000000
+[   1.959420] Core6: 00000000 / 00000000
+[   1.959819] Core7: 00000000 / 00000000
+[   1.960222] WDT FIQ info:
+[   1.960484] core# type    raw-magic   elr
+[   1.960840]     0-7   N/A
+[   1.961164] [I] linux debug info is not valid
+[   1.961484] [E] cdd_param is out of boundary
+[   1.961874] [I] Last AVB: avb_ret=OK
+[   1.962188] [I] Last AVB: avb_veritymode=<unknown>
+[   1.962558] [I] Last AVB: avb_error_parts=
+RAMDUMP_MSG.txt:
+  reset message: APC Watchdog Early
+  UUID: eb26d762-2bd6-f445-b088-41218182c7e4
+  last kernel version: N/A
+  aosp kernel version: N/A
+  build: caiman
+  RST_STAT: 0x80 - SYSTEM_SWRESET_SYSTEM
+  GSA_RESET_STATUS: 0x10 - GSA_INTERMEDIATE_RESET
+  Reboot reason: 0xcbea - APC Watchdog Early
+  Reboot mode: 0x0 - Normal Boot
+[   1.965611] [I] -------------------- DSS LOGS END --------------------
+
+Reboot Info:
+  RST_STAT: 0x180000 - PIN_RESET | PO_RESET
+  GSA_RESET_STATUS: 0x1 - GSA_PINRESET
+  Reboot reason: 0xcbea - APC Watchdog Early
+  Reboot mode: 0x0 - Normal Boot
+[   9.973534] [E] failed to get eUSB revision -62
+[   9.973571] [I] Set EUSB Ref clock auto
+[   9.973811] [I] port connected
+[   9.974188] [I] LK build date: Apr 14 2026, time: 06:16:15
+[   9.974231] [I] BL version: ripcurrentpro-17.0-15199480
+[   9.974270] [I] BL type: official build
+starting app pixel_loader
+[   9.974816] [I] sota: empty signature.
+[   9.974848] [I] ABL start time (METRICS_BL3): 9725ms
+[   9.974889] [I] AB Decision: active slot boot ok
+[   9.974925] [I] AB Decisions: 00000000
+[   9.975156] [I] TCPC BC1.2, type: 2 val:2
+[   9.975367] [I] boot voltage threshold=3400mV
+[   9.975554] [I] bootloader message:
+[   9.975876] [I] TCPC BC1.2, type: 2 val:2
+[   9.976067] [I] boot voltage threshold=3400mV
+[   9.993171] [E] avb_property(com.android.build.system.os_version): not found
+[   9.993224] [E] system.os_version: can't find property
+[   9.993268] [E] avb_property(com.android.build.system.security_patch): not found
+[   9.993321] [E] system_spl: can't find property
+[   9.993357] [E] avb_property(com.android.build.boot.security_patch): not found
+[   9.993409] [E] boot_spl: can't find property
+[   9.993444] [I] boot_state: 000000:20000000:20000000
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   9.994648] [I] using init_boot ramdisk
+[   9.994681] [I] using vendor_kernel_boot ramdisk
+[   9.994758] [I] kernel: addr:0xffff0000a0011000, size:fdbf49
+[  10.031647] [I] kernel: total_time:37
+[  10.031709] [I] vendor kernel ramdisk copy
+[  10.031742] [I] ramdisk dst addr: 0xffff000086000000 src addr: 0xffff0000a9931000 size: 0x67591e(6773022)
+[  10.031813] [I] padding prepended: 0
+[  10.033106] [I] vendor ramdisk copy
+[  10.033134] [I] ramdisk dst addr: 0xffff00008667591e src addr: 0xffff0000a5931000 size: 0x1663ae2(23476962)
+[  10.033210] [I] padding prepended: 18
+[  10.037604] [I] ramdisk copy
+[  10.037629] [I] ramdisk dst addr: 0xffff000087cd9412 src addr: 0xffff0000a4011000 size: 0x250d04(2428164)
+[  10.037698] [I] padding prepended: 14
+[  10.038192] [I] Ramdisk load size with padding: 32678180
+[  10.038253] [I] rev: 09865.00.00
+[  10.038288] [I] rev: 09865.00.00
+[  10.038325] [I] rev: 09865.01.00
+[  10.038353] [I] rev: 09865.01.01
+[  10.038389] [I] rev: 09865.01.00
+[  10.038418] [I] rev: 09865.01.01
+[  10.038454] [I] rev: 09875.00.00
+[  10.038486] [I] rev: 09875.00.00
+[  10.038523] [I] rev: 09875.00.00
+[  10.038551] [I] rev: 09875.00.01
+[  10.038587] [I] rev: 09875.00.00
+[  10.038615] [I] rev: 09875.00.01
+[  10.038641] [I] SOC DTB: index:6
+[  10.038677] [I] DTBO match: id 0x60906, rev 0x10000
+[  10.054362] [I] dpm not merged
+[  10.055889] [I] MTE S: 0, NS: 0, tag base: 0x0
+[  10.082128] [I] bootmode:
+[  10.082171] [I] DDR size: 16GiB
+[  10.082195] [I] DDR Manufacturer: Samsung
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[  10.092440] [I] ro.misctrl.16kb_before=0
+[  10.092481] [I] console is disabled
+[  10.092636] [I] secure dram base 0xb6200000, size 0x9e00000
+[  10.092699] [I] secure PGTBL base 0xe0000000, size 58720256
+[  10.099355] [I] decon0 registered successfully
+[  10.101254] [I] MTE S: 0, NS: 0, tag base: 0x0
+[  10.103713] [I] device: /reserved-memory/debug_snapshot/log_s2d path not found (-1)
+[  10.103848] [I] device: /reserved-memory/debug_snapshot/log_array_reset path not found (-1)
+[  10.104004] [I] device: /reserved-memory/debug_snapshot/log_kevents path not found (-1)
+[  10.104158] [I] device: /reserved-memory/debug_snapshot/log_itmon path not found (-1)
+[  10.104311] [I] device: /reserved-memory/debug_snapshot/log_s2d_extract path not found (-1)
+[  10.105455] [I] device: /google,mitigation enabled ret=0
+[  10.120163] [I] ro.boot.hardware.cpu.pagesize=4096
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[  10.120607] [I] panel settings after overriding: google-cm4.22a8a00a@dsim0 null@dsim1
+[  10.135662] [I] linux,initrd-start: 0x86000000, linux,initrd-end: 0x87f32125
+[  10.144675] [E] avb_property(com.android.build.microdroid-vendor.root_digest): not found
+[  10.144741] [W] failed to get microdroid vendor hashtree digest from avb property, skip appending value
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[  10.145988] [W] no avf debug policy, because dpm is NULL
+[  20.216566] [I] slot data a: 0x00001e02
+[  20.216597] [I] slot data b: 0x00001000
+[  20.217829] [E] avb_property(com.android.build.boot.fingerprint): not found
+[  20.217880] [E] fingerprint property not found 
+[  20.302436] [I] shutdown complete
