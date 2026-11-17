@@ -601,6 +601,29 @@ static void hsi0_sysreg_dump(void)
  */
 static const u32 hsi0_sysreg_android[][2] = { { 0x104, 0x8007ffff }, { 0x700, 0x00000011 } };
 
+/*
+ * AOC PCU +0xa000 (AP 0x1840a000): in Android, bit 8 is set with the screen on and clear while it
+ * dozes, when the AOC takes the touch bus for tap-to-wake (AOC console dumps, 2026-11-17). Our boot
+ * has it clear. Set it: the bus owner select, if that is what it is.
+ */
+#define AOC_PCU_A000	0x1840a000ULL
+
+static void aoc_bus_to_ap(void)
+{
+	u32 v;
+	int ok;
+
+	v = safe_rd32(AOC_PCU_A000, &ok);
+	if (!ok) {
+		pr("touch: AOC PCU +0xa000: read aborted\n");
+		return;
+	}
+	wr32(AOC_PCU_A000, v | 0x100);
+	delay_us(1000);
+	pr("touch: AOC PCU +0xa000: 0x%08x -> reads 0x%08x\n", v, rd32(AOC_PCU_A000));
+	log_flush();
+}
+
 static void hsi0_sysreg_copy(void)
 {
 	u32 i, v;
@@ -628,8 +651,8 @@ static void spi_identify(void)
 		return;
 	aoc_touch_pads();
 	aoc_regs_dump();
-	hsi0_sysreg_dump();
 	hsi0_sysreg_copy();
+	aoc_bus_to_ap();
 	/* the controller's own loopback (MODE_CFG bit 3): needs its clock, not the pins */
 	wr32(TOUCH_SPI + SPI_MODE_CFG, rd32(TOUCH_SPI + SPI_MODE_CFG) | (1u << 3));
 	got = spi_read(buf, 16);

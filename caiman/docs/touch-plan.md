@@ -402,3 +402,29 @@ the AP cannot read, and the AP side of the path (HSI0 pads or sysreg).
 
 What is left are the AOC PCU pages that abort from the AP (0x81400-0x81402, 0x81404-0x81407,
 0x81409). Android has non-zero values in them that only the AOC can read.
+
+### Screen on against screen off in Android: the bus owner (run 20, 2026-11-17)
+
+When the screen dozes, the AOC takes the touch bus for tap-to-wake; when the screen is on, the AP has
+it. The AOC pages were read in both states with the AOC console. It was read-only, and the AOC did
+not restart.
+
+| AOC address | Screen on (AP owns the bus) | Dozing (AOC owns it) |
+|---|---|---|
+| 0x81401008 | 5 | 7 |
+| 0x8140100c, 0x81401010 | 0x149400 | 0x149000 |
+| 0x8140a000 | 0x4cc1e13c (bit 8 set) | 0x4cc1e03c |
+| 0x81c00050/5c | GPIO inputs | GPIO inputs |
+
+- **Nothing else changes** in PCU pages 0x81400-0x8140a or in the pad CSRs.
+- **The bus owner select** is therefore 0x8140a000 bit 8, 0x81401008 bit 1, or 0x8140100c bit 10.
+- **Both pages abort from the AP in our boot.** Run 16's list was cut short: 0x8140a aborts too.
+  Run 20 tried to set 0x8140a000 bit 8 from the AP, and its read aborted. The AP can reach only
+  0x81403 and 0x81408 (the pads).
+- **Neither 0x8140a000 nor 0x81401008 appears as a constant** in aoc.bin (base plus offset).
+
+Conclusion: only the AOC itself can hand the touch bus to the AP. The ways left are:
+
+1. Find what opens these pages to the AP (an AOC sysreg or TZPC setting, or a clock left off in
+   our boot).
+2. Start the AOC firmware in our boot, as aoc_core.ko does, and ask it to give the bus to the AP.
