@@ -220,3 +220,28 @@ screen: 241 of 3072 cells lit
 The first press locked the phone, the second woke it: the panel shows the lock screen (clock and
 date), not the home screen (1320 cells before). So a key record reaches backboardd and SpringBoard
 acts on it. What is left is a run with a hand on the real keys.
+
+## Step 2d: asking the AOC itself (Android running, touch working), 2026-11-16
+
+Android has the AOC's debug console at `/dev/acd-debug` (one opener at a time; write and read on
+one descriptor: `exec 3<>/dev/acd-debug`). `help` lists, on core 1 ("A3", the A32), among others
+`dbg gpio`: "Sets a gpio as a specified mux setting, and direction ... `-d` dumps the csr register,
+`-a` dumps all", with pad numbers from `pin_configuration.h enum zuma_pad_name` (39 = XAOC_GPIO2).
+
+`dbg gpio -n N -d 1` for N = 0..127 (read only) gives every pad's function, direction and level:
+`docs/aoc-pads-android.txt`. Four pads side by side on function 2 stand out (72-75, all inputs
+reading 1), and the 4-pad groups 8-11 and 16-19 look like SPI buses (three outputs, drive 2, and
+one input). The AOC's numbering is not Linux's: Linux (debugfs, mountable as root:
+`mount -t debugfs debugfs /sys/kernel/debug`) has gpn0-0 = pin 118, and AP `CON` values like
+0xf (EINT) never appear in the AOC's list.
+
+Screen awake vs dozing (pads 60-80): only pad 64 changes, function 1 awake, 2 dozing. This is the
+AOC taking something over while the AP sleeps. One pad, not the four SPI pads.
+
+**Caution:** `mem dump` without arguments crashed the AOC (it was reset at 17:35:12, right after that
+command; Android restarted it in 0.2 s, `restart_count` 1, touch and Bluetooth came back). Only
+`help` and `dbg gpio ... -d`/`-a` are known to be safe.
+
+Next: the pad CSR's address (the `dbg gpio` handler on the A32 core of `aoc.bin`: the image is a
+container, the A32 part's load address is not found yet), so that the loader can put the touch pads
+on function 2 itself.
