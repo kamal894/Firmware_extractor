@@ -635,3 +635,19 @@ GPU (`no GPU draws, vibrant views are plain`) over a black wallpaper: not the di
 `fb_flip=1` (two buffers, kernel patch; the loader gives `/chosen/fb-flip`, second buffer 0xf0000000)
 does not work yet: DPP0's +0x440 never shows the new address, every other frame waited 50 ms. Off by
 default; left in for later.
+
+## Temperatures and a thermal governor (2026-11-17)
+
+ACPM's TMU channel 9 (`acpm_tmu` in the DT; Google's exynos_acpm_tmu.c `TMU_IPC_READ_TEMP` = 2): word 1 =
+2 | tzid << 16, the reply's degrees in byte 3 of word 1. Zones 0 BIG, 1 MID, 2 LITTLE, 3 G3D. The loader
+(`dvfs.c`) reads them: 45-46 C at boot; Android under use showed 66-67.
+
+Kernel `thermal=2` (`drivers/power/hakios.thermal.c`, in `hakios/caiman-kernel.patch`): every second the
+three CPU zones through ACPM, and by the hottest one of four levels of cluster clocks over the DVFS channel
+(below 70 C the loader's 1696/2130/2499 MHz; 70-80 1548/1795/2147; 80-90 1328/1328/1557; above 1098/1065/1164),
+down at once, up 5 degrees below the edge; the run ends at 95 C three times in a row. Run darwin-therm1:
+BIG reached 70-71 C after about four minutes of use, the governor stepped down to level 1 and back up at
+64 C, no IPC errors (docs/darwin-log-therm1.txt).
+
+Side effect of the memory clock: the loader's read of xnusys is much faster; XNU starts at payload epoch
++44 s instead of +106.

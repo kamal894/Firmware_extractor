@@ -160,19 +160,43 @@ static void show_rates(const char *when)
 /*
  * The other domains of zuma.h that the display depends on: memory (MIF), the internal bus (INT), DSU, BCI,
  * DISP. The boot loader leaves MIF at its lowest step, 421 MHz (of 3744; Android idles at 546), INT at 356
- * and DISP at 400: with the CPUs writing 14 MB a frame, the screen went black for a refresh now and then
- * (17 November, a video). want: a step of Android's devfreq tables, 0 to leave it.
+ * and DISP at 400: with the CPUs writing 14 MB a frame, iOS's framebuffer took 8-12 ms a frame there, 2-7
+ * with MIF at 2028 (17 November). want: a step of Android's devfreq tables, 0 to leave it.
  */
 static const struct {
 	char name[8];
 	u32 domain, want;
 } other[] = { { "MIF", 0, 2028000 }, { "INT", 1, 664000 }, { "DSU", 5, 0 }, { "BCI", 6, 0 }, { "DISP", 0xe, 533000 } };
 
+/*
+ * Temperatures (drivers/thermal/samsung/exynos_acpm_tmu.c, TMU_IPC_READ_TEMP): on ACPM's TMU channel (9 in
+ * the device tree's acpm_tmu), word 1 = type 2 | tzid << 16; the reply has the degrees Celsius in byte 3 of
+ * word 1 and its status in byte 0 of word 2. Zones by the DT's gs-tmu-v3 ids: 0 BIG, 1 MID, 2 LITTLE, 3 G3D.
+ */
+#define TMU_CHANNEL		9
+#define TMU_IPC_READ_TEMP	2
+
+static void show_temps(const char *when)
+{
+	static const char zone[4][8] = { "BIG", "MID", "LITTLE", "G3D" };
+	u32 tz;
+
+	for (tz = 0; tz < 4; tz++) {
+		u32 cmd[4] = { 0, TMU_IPC_READ_TEMP | tz << 16, 0, 0 };
+
+		if (acpm_xchg(TMU_CHANNEL, cmd, 50))
+			continue;
+		pr("dvfs: %s: %-6s %u C (status %u, ret %d)\n", when, zone[tz], cmd[1] >> 24, cmd[2] & 0xff,
+		   (int)(signed char)(cmd[1] >> 8));
+	}
+}
+
 void dvfs_probe(void)
 {
 	u32 j;
 
 	pr("\n--- CPU clocks through ACPM (channel %u) ---\n", DVFS_CHANNEL);
+	show_temps("now");
 	show_rates("now");
 	for (j = 0; j < sizeof(other) / sizeof(other[0]); j++)
 		pr("dvfs: now: %-4s (domain %u) %lld kHz\n", other[j].name, other[j].domain, cluster_rate(other[j].domain));

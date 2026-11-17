@@ -306,6 +306,258 @@ index 38c9ff2..13e5398 100644
  		thread_deallocate(thread);
  	}
  }
+diff --git a/drivers/power/hakios.thermal.c b/drivers/power/hakios.thermal.c
+index 8d69400..f6ebbf9 100644
+--- a/drivers/power/hakios.thermal.c
++++ b/drivers/power/hakios.thermal.c
+@@ -41,6 +41,7 @@
+  *
+  * Boot-args:
+  *   thermal=1          read the sensors
++ *   thermal=2          the Pixel 9 Pro: read its zones through ACPM and slow the CPUs when hot (near the end)
+  *   thermal_poll=<ms>  how often (200 to 60000; 2000)
+  *   thermal_log=<s>    a summary line this often (0: only on a rise; 60)
+  *   thermal_stop=<C>   stop the run at this temperature (0: never; 105)
+@@ -245,6 +246,217 @@ tick(__unused thread_call_param_t p0, __unused thread_call_param_t p1)
+ 	thread_call_enter_delayed(call, deadline);
+ }
+ 
++/*
++ * thermal=2: the Pixel 9 Pro (caiman, Tensor G4 "zuma"). There the temperatures and the CPU clocks are both
++ * ACPM's (the power-management core), asked through its IPC: a request of four words in a queue in its SRAM
++ * (0x15700000) and a doorbell in its mailbox (0x15110000), the reply in another queue (Google's acpm_ipc.c; the
++ * caiman loader's probe/dvfs.c does the same before the kernel and raises the clocks: CPU clusters 1696, 2130 and
++ * 2499 MHz, memory 2028). Nothing in iOS here slows the CPUs when the phone gets hot; this does:
++ *   - every thermal_poll ms (default 1000) the BIG, MID and LITTLE zones are read (TMU_IPC_READ_TEMP on ACPM's
++ *     TMU channel 9: exynos_acpm_tmu.c), degrees Celsius;
++ *   - by the hottest, a level of clocks for the three clusters (FREQ_REQ on the DVFS channel 1: acpm_dvfs.c),
++ *     each a step of Android's own table; down at once, back up only 5 degrees below the edge it crossed;
++ *   - the stop at thermal_stop degrees three times in a row (default 95 here) as on the other phone.
++ * Measured on the phone before this was written: 45-46 C at the loader, 66-67 C for BIG and MID under Android.
++ */
++#define ZUMA_ACPM_MBOX          0x15110000UL
++#define ZUMA_ACPM_SRAM          0x15700000UL
++#define ZUMA_ACPM_SRAM_SIZE     0x58000u
++#define ZUMA_ACPM_INITDATA      0xa000u
++#define ZUMA_APM_INTGR          0x40
++#define ZUMA_AP_INTCR           0x24
++#define ZUMA_DVFS_CHANNEL       1
++#define ZUMA_TMU_CHANNEL        9
++
++static vm_offset_t zuma_sram, zuma_mbox;
++static uint32_t zuma_seq, zuma_level, zuma_errors;
++
++static const struct {
++	uint32_t below;                 /* the level holds while the hottest zone is below this */
++	uint32_t khz[3];                /* CPUCL0 (A520), CPUCL1 (A720), CPUCL2 (X4) */
++} zuma_levels[] = {
++	{ 70, { 1696000, 2130000, 2499000 } },  /* what the loader set */
++	{ 80, { 1548000, 1795000, 2147000 } },
++	{ 90, { 1328000, 1328000, 1557000 } },
++	{ 999, { 1098000, 1065000, 1164000 } }, /* about the boot loader's own */
++};
++
++static uint32_t
++zuma_rd(uint32_t off)
++{
++	return *(volatile uint32_t *)(zuma_sram + off);
++}
++
++static void
++zuma_wr(uint32_t off, uint32_t value)
++{
++	*(volatile uint32_t *)(zuma_sram + off) = value;
++}
++
++/* One request on ACPM channel ch, its reply in cmd; every reply in the queue is taken off. 0, or -1. */
++static int
++zuma_acpm(uint32_t ch, uint32_t *cmd)
++{
++	uint32_t base = zuma_rd(ZUMA_ACPM_INITDATA + 8) + ch * 72;
++	uint32_t id, len, esz, txf_at, txr_at, rxf_at, rxr_at, txb, rxb, txf, txr, seq;
++	uint64_t deadline;
++
++	if (base >= ZUMA_ACPM_SRAM_SIZE) {
++		return -1;
++	}
++	id = zuma_rd(base);
++	txr_at = zuma_rd(base + 16);
++	txf_at = zuma_rd(base + 20);
++	txb = zuma_rd(base + 24);
++	rxr_at = zuma_rd(base + 40);
++	rxf_at = zuma_rd(base + 44);
++	rxb = zuma_rd(base + 48);
++	len = zuma_rd(base + 52);
++	esz = zuma_rd(base + 56);
++	if (len == 0 || len > 64 || esz < 16 || esz > 64 || txb + len * esz > ZUMA_ACPM_SRAM_SIZE ||
++	    rxb + len * esz > ZUMA_ACPM_SRAM_SIZE || txf_at >= ZUMA_ACPM_SRAM_SIZE || txr_at >= ZUMA_ACPM_SRAM_SIZE ||
++	    rxf_at >= ZUMA_ACPM_SRAM_SIZE || rxr_at >= ZUMA_ACPM_SRAM_SIZE) {
++		return -1;
++	}
++	txf = zuma_rd(txf_at);
++	txr = zuma_rd(txr_at);
++	if (txf >= len || txr >= len || (txf + 1) % len == txr) {
++		return -1;
++	}
++	if (++zuma_seq >= 64) {
++		zuma_seq = 1;
++	}
++	seq = zuma_seq;
++	cmd[0] |= seq << 16;
++	for (uint32_t i = 0; i < esz; i += 4) {
++		zuma_wr(txb + esz * txf + i, i < 16 ? cmd[i / 4] : 0);
++	}
++	__builtin_arm_dsb(0xf);
++	zuma_wr(txf_at, (txf + 1) % len);
++	__builtin_arm_dsb(0xf);
++	*(volatile uint32_t *)(zuma_mbox + ZUMA_APM_INTGR) = 1u << id;
++	clock_interval_to_deadline(50, NSEC_PER_MSEC, &deadline);
++	while (mach_absolute_time() < deadline) {
++		uint32_t rf = zuma_rd(rxf_at), rr = zuma_rd(rxr_at);
++
++		if (rf >= len || rr >= len) {
++			break;
++		}
++		for (; rr != rf; rr = (rr + 1) % len) {
++			uint32_t at = rxb + esz * rr;
++			bool mine = ((zuma_rd(at) >> 16) & 0x3f) == seq;
++
++			if (mine) {
++				for (uint32_t i = 0; i < 4; i++) {
++					cmd[i] = zuma_rd(at + 4 * i);
++				}
++			}
++			zuma_wr(rxr_at, (rr + 1) % len);
++			*(volatile uint32_t *)(zuma_mbox + ZUMA_AP_INTCR) = 1u << id;
++			if (mine) {
++				return 0;
++			}
++		}
++		delay(20);
++	}
++	return -1;
++}
++
++static void
++zuma_set_level(uint32_t level, int hottest)
++{
++	for (uint32_t c = 0; c < 3; c++) {
++		uint32_t cmd[4] = { 2 + c, zuma_levels[level].khz[c], 0 /* FREQ_REQ */, 0 };
++
++		if (zuma_acpm(ZUMA_DVFS_CHANNEL, cmd) != 0) {
++			zuma_errors++;
++		}
++	}
++	say("thermal: %d C: CPU clocks %u, %u, %u MHz (level %u, was %u)\n", hottest, zuma_levels[level].khz[0] / 1000,
++	    zuma_levels[level].khz[1] / 1000, zuma_levels[level].khz[2] / 1000, level, zuma_level);
++	zuma_level = level;
++}
++
++static void
++zuma_look(void)
++{
++	static const char zone[3][8] = { "BIG", "MID", "LITTLE" };
++	int temp[3], hottest = -1, hot = 0;
++	uint32_t want = 0;
++	uint64_t now = mach_absolute_time(), nanos;
++
++	for (uint32_t z = 0; z < 3; z++) {
++		uint32_t cmd[4] = { 0, 2 /* TMU_IPC_READ_TEMP */ | z << 16, 0, 0 };
++
++		temp[z] = zuma_acpm(ZUMA_TMU_CHANNEL, cmd) == 0 ? (int)(cmd[1] >> 24) : -1;
++		if (temp[z] < 0) {
++			zuma_errors++;
++		}
++		if (temp[z] > hottest) {
++			hottest = temp[z];
++			hot = (int)z;
++		}
++	}
++	reads++;
++	thermal_reads_value = (int)reads;
++	if (hottest < 0) {
++		return;
++	}
++	thermal_max_mc = hottest * 1000;
++	strlcpy(thermal_hottest, zone[hot], sizeof(thermal_hottest));
++	snprintf(thermal_list, sizeof(thermal_list), "BIG=%d MID=%d LITTLE=%d", temp[0], temp[1], temp[2]);
++
++	while (want + 1 < sizeof(zuma_levels) / sizeof(zuma_levels[0]) && hottest >= (int)zuma_levels[want].below) {
++		want++;
++	}
++	/* up again (to a faster level) only when 5 degrees below the edge that was crossed */
++	if (want < zuma_level && hottest + 5 >= (int)zuma_levels[want].below) {
++		want = zuma_level;
++	}
++	if (want != zuma_level) {
++		zuma_set_level(want, hottest);
++	}
++
++	absolutetime_to_nanoseconds(now - last_log, &nanos);
++	if (log_seconds != 0 && nanos >= (uint64_t)log_seconds * NSEC_PER_SEC) {
++		say("thermal: %s C, level %u, %llu reads, %u IPC errors\n", thermal_list, zuma_level, reads, zuma_errors);
++		last_log = now;
++	}
++	strikes = stop_celsius != 0 && hottest >= (int)stop_celsius ? strikes + 1 : 0;
++	if (strikes >= 3 && !stopping) {
++		stopping = true;
++		say("\n--- thermal: %s reads %d C, at or above thermal_stop=%u three times in a row: back to the loader ---\n",
++		    zone[hot], hottest, stop_celsius);
++		hakios_var_save_on_return();
++		loader_return();
++	}
++}
++
++static void
++zuma_tick(__unused thread_call_param_t p0, __unused thread_call_param_t p1)
++{
++	uint64_t deadline;
++
++	zuma_look();
++	clock_interval_to_deadline(poll_ms, NSEC_PER_MSEC, &deadline);
++	thread_call_enter_delayed(call, deadline);
++}
++
++static void
++zuma_thermal_init(void)
++{
++	zuma_sram = ml_io_map(ZUMA_ACPM_SRAM, ZUMA_ACPM_SRAM_SIZE);
++	zuma_mbox = ml_io_map(ZUMA_ACPM_MBOX, PAGE_SIZE);
++	if (zuma_sram == 0 || zuma_mbox == 0) {
++		say("thermal: caiman: could not map ACPM; off\n");
++		return;
++	}
++	say("thermal: caiman: ACPM's TMU and DVFS, every %u ms; levels below 70/80/90 C; stop at %u C%s\n", poll_ms,
++	    stop_celsius, stop_celsius ? "" : " (off)");
++	call = thread_call_allocate(zuma_tick, NULL);
++	zuma_tick(NULL, NULL);
++}
++
+ __startup_func
+ static void
+ thermal_init(void)
+@@ -259,6 +471,10 @@ thermal_init(void)
+ 	}
+ 	(void)PE_parse_boot_argn("thermal_tm0", &tm_pa[0], sizeof(tm_pa[0]));
+ 	(void)PE_parse_boot_argn("thermal_tm1", &tm_pa[1], sizeof(tm_pa[1]));
++	if (enabled == 2) {
++		poll_ms = 1000;
++		stop_celsius = 95;
++	}
+ 	if (PE_parse_boot_argn("thermal_poll", &value, sizeof(value)) && value >= 200 && value <= 60000) {
+ 		poll_ms = value;
+ 	}
+@@ -268,6 +484,10 @@ thermal_init(void)
+ 	if (PE_parse_boot_argn("thermal_stop", &value, sizeof(value)) && value <= 160) {
+ 		stop_celsius = value;
+ 	}
++	if (enabled == 2) {
++		zuma_thermal_init();
++		return;
++	}
+ 	for (unsigned b = 0; b < 2; b++) {
+ 		tm_va[b] = ml_io_map(tm_pa[b], TM_SIZE);
+ 		if (tm_va[b] == 0) {
 diff --git a/xnu-deps/setup.sh b/xnu-deps/setup.sh
 index c390093..de72f4d 100755
 --- a/xnu-deps/setup.sh

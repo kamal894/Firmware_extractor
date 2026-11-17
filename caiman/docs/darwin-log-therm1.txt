@@ -1,0 +1,6 @@
+thermal: caiman: ACPM's TMU and DVFS, every 1000 ms; levels below 70/80/90 C; stop at 95 C
+thermal: BIG=45 MID=45 LITTLE=46 C, level 0, 1 reads, 0 IPC errors
+thermal: BIG=71 MID=67 LITTLE=65 C, level 1, 231 reads, 0 IPC errors
+thermal: 64 C: CPU clocks 1696, 2130, 2499 MHz (level 0, was 1)
+thermal: 70 C: CPU clocks 1548, 1795, 2147 MHz (level 1, was 0)
+thermal: BIG=69 MID=65 LITTLE=63 C, level 1, 241 reads, 0 IPC errors
