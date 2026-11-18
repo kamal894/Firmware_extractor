@@ -738,7 +738,7 @@ index 3f1f97a..797ce69 100644
  		display_probe();
  	}
 diff --git a/drivers/gpu/hakios.gpu.cpp b/drivers/gpu/hakios.gpu.cpp
-index 633b419..5c49001 100644
+index 633b419..a9fa761 100644
 --- a/drivers/gpu/hakios.gpu.cpp
 +++ b/drivers/gpu/hakios.gpu.cpp
 @@ -56,6 +56,12 @@ void hakios_gpu_mapped(void);
@@ -840,18 +840,65 @@ index 633b419..5c49001 100644
  		IOLog("HakiosGPU: a wait for submission %u, which is not done, until %lld.%09lld s, asked for at %llu.%09llu s: "
  		    "over before it began\n", fence, when->seconds, when->nanoseconds, now / NSEC_PER_SEC, now % NSEC_PER_SEC);
  	}
-@@ -433,6 +493,7 @@ class HakiosGPUUserClient : public IOUserClient
+@@ -433,6 +493,8 @@ class HakiosGPUUserClient : public IOUserClient
  	void dropKept(struct gpu_kept * k);
  	void reap(void);
  	IOReturn gemNew(struct msm_gem_new * request);
 +	IOReturn maliBind(const struct mali_bind * request);
++	void maliCaches(void);
  	IOReturn surfaceBuffer(struct hakios_surface * request);
  	IOReturn userBuffer(struct hakios_user_memory * request);
  	IOReturn gemInfo(struct msm_gem_info * request);
-@@ -944,6 +1005,43 @@ HakiosGPUUserClient::userBuffer(struct hakios_user_memory * request)
+@@ -944,6 +1006,89 @@ HakiosGPUUserClient::userBuffer(struct hakios_user_memory * request)
  	return kIOReturnSuccess;
  }
  
++/*
++ * Before a Mali submission (kMaliSubmit): the processor's caches over this client's memory that is not the GPU's own
++ * kind -- IOSurfaces and the client's own pages, ordinary cached memory the Mali does not look into -- cleaned and
++ * invalidated by physical address, as the msm submission does for the buffers it names (a surface the processor has
++ * not written since is passed over). The Mali's submissions name no buffers, so every such buffer of the client is.
++ */
++void
++HakiosGPUUserClient::maliCaches(void)
++{
++	uint64_t began = mach_absolute_time(), again;
++
++	nanoseconds_to_absolutetime(GPU_KEPT_SECONDS * NSEC_PER_SEC, &again);
++	for (uint32_t i = 0; i < GPU_BUFFERS; i++) {
++		struct gpu_buffer * b = &fBuffers[i];
++
++		if (b->memory == NULL || (b->surface == NULL && !b->client)) {
++			continue;
++		}
++		if (b->surface != NULL) {
++			uint32_t seed = b->surface->shared()->seed;
++
++			if (seed == b->seed && !b->seen && began - b->pushed < again) {
++				continue;
++			}
++			b->seed = seed;
++			b->pushed = began;
++			hakios_gpu_to_memory(b->kernel, b->size);
++		} else {
++			for (uint64_t offset = 0; offset < b->size;) {
++				IOByteCount length = 0;
++				addr64_t phys = b->memory->getPhysicalSegment(offset, &length, kIOMemoryMapperNone);
++
++				if (phys == 0 || length == 0) {
++					break;
++				}
++				length = MIN(length, b->size - offset);
++				flush_dcache64(phys, (unsigned) length, TRUE);
++				offset += length;
++			}
++		}
++		gGPUStat.flushed += b->size;
++	}
++	hakios_gpu_to_memory(NULL, 0);
++	gGPUStat.flushing += mach_absolute_time() - began;
++}
++
 +/*
 + * Panthor's VM_BIND (kMaliBind): the pages of buffer `handle` from `offset` at the user addresses from `va`, or, with
 + * handle 0, nothing at them. PanVK chooses its addresses itself; the buffer stays at the kernel's address as well.
@@ -892,7 +939,7 @@ index 633b419..5c49001 100644
  IOReturn
  HakiosGPUUserClient::gemInfo(struct msm_gem_info * request)
  {
-@@ -1216,6 +1314,11 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
+@@ -1216,6 +1361,11 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
  		struct hakios_surface surface;
  		struct hakios_user_memory user;
  		struct hakios_show show;
@@ -904,7 +951,7 @@ index 633b419..5c49001 100644
  	} r;
  	size_t size = args->structureInputSize;
  	struct gpu_buffer * b;
-@@ -1311,6 +1414,29 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
+@@ -1311,6 +1461,30 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
  	case kHakiosShow:
  		ret = show(&r.show);
  		break;
@@ -913,6 +960,7 @@ index 633b419..5c49001 100644
 +		break;
 +	case kMaliSubmit:
 +		IOLockLock(gGPULock);
++		maliCaches();
 +		r.maliSubmit.fence = hakios_mali_submit(r.maliSubmit.queue, r.maliSubmit.address, r.maliSubmit.size);
 +		IOLockUnlock(gGPULock);
 +		ret = r.maliSubmit.fence ? kIOReturnSuccess : kIOReturnBadArgument;
@@ -1525,10 +1573,10 @@ index 3797eb7..458b2b2 100644
 +         };
 diff --git a/tools/mesa/hakios-panthor/hakios.panthor.c b/tools/mesa/hakios-panthor/hakios.panthor.c
 new file mode 100644
-index 0000000..fb7dce2
+index 0000000..8298732
 --- /dev/null
 +++ b/tools/mesa/hakios-panthor/hakios.panthor.c
-@@ -0,0 +1,1210 @@
+@@ -0,0 +1,1242 @@
 +/*
 + * The libdrm of xf86drm.h for PanVK: Linux's Panthor requests to the kernel's HakiosGPU on the Mali (boot-arg mali=1),
 + * the counterpart of hakios-drm (Adreno, msm). What the kernel has (caiman repo docs/gpu-plan.md, steps 10-14):
@@ -1810,6 +1858,12 @@ index 0000000..fb7dce2
 +static void
 +host_range_add(uintptr_t address, uint64_t size, uint32_t handle)
 +{
++	static unsigned told;
++
++	if (told++ < 32) {
++		fprintf(stderr, "hakios-panthor: caches kept over %#lx, %llu bytes (buffer %u)\n", (unsigned long)address,
++		    (unsigned long long)size, handle);
++	}
 +	pthread_mutex_lock(&ranges_lock);
 +	for (unsigned i = 0; i < HOST_RANGES; i++) {
 +		if (host_ranges[i].address == 0) {
@@ -1838,13 +1892,37 @@ index 0000000..fb7dce2
 +static void
 +host_ranges_to_memory(void)
 +{
++	/* (now the kernel's: HakiosGPU cleans and invalidates a client's IOSurfaces and own pages by physical address before
++	 * each Mali submission; this process's mappings of them could be gone, and faulted here) */
++	if (1) {
++		return;
++	}
 +	pthread_mutex_lock(&ranges_lock);
 +	for (unsigned i = 0; i < HOST_RANGES; i++) {
++		uintptr_t end;
++
 +		if (host_ranges[i].address == 0) {
 +			continue;
 +		}
-+		for (uintptr_t p = host_ranges[i].address & ~(uintptr_t)63; p < host_ranges[i].address + host_ranges[i].size; p += 64) {
-+			__asm__ volatile("dc civac, %0" : : "r"(p) : "memory");
++		end = host_ranges[i].address + host_ranges[i].size;
++		for (uintptr_t page = host_ranges[i].address & ~(uintptr_t)16383; page < end; page += 16384) {
++			char resident;
++
++			/* (a page no longer mapped is passed over: a cache operation on it would fault) */
++			if (mincore((void *)page, 16384, &resident) != 0) {
++				static unsigned told;
++
++				if (told++ < 8) {
++					fprintf(stderr, "hakios-panthor: range %#lx+%llu (buffer %u): page %#lx not mapped\n",
++					    (unsigned long)host_ranges[i].address, (unsigned long long)host_ranges[i].size,
++					    host_ranges[i].handle, (unsigned long)page);
++				}
++				continue;
++			}
++			for (uintptr_t p = page < host_ranges[i].address ? host_ranges[i].address & ~(uintptr_t)63 : page;
++			    p < page + 16384 && p < end; p += 64) {
++				__asm__ volatile("dc civac, %0" : : "r"(p) : "memory");
++			}
 +		}
 +	}
 +	__asm__ volatile("dsb sy" ::: "memory");
@@ -2261,10 +2339,12 @@ index 0000000..fb7dce2
 +		 * the program unmaps an IOSurface while its buffer lives on, and a cache operation on an unmapped address
 +		 * faults (backboardd: SIGSEGV in fence_done). This mapping lasts as long as the buffer (host_range_drop).
 +		 */
-+		void *own = hakios_panthor_mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, -1, (off_t)((uint64_t)*handle << 32));
++		void *own = MAP_FAILED;         /* (no longer kept here: see host_ranges_to_memory) */
 +
-+		if (own != MAP_FAILED) {
-+			host_range_add((uintptr_t)own, size, *handle);
++		(void)host_range_add;
++		if (tracing()) {
++			fprintf(stderr, "hakios-panthor: buffer %u (%s at %#lx, %llu bytes) kept over %p\n", *handle,
++			    surface ? "IOSurface" : "own pages", (unsigned long)address, (unsigned long long)size, own);
 +		}
 +	}
 +	return error ? fail(error) : 0;
@@ -3694,7 +3774,7 @@ index c6a7ff1..ca3a3ed 100644
  			/* what it did, every 5 s: commits, passes, draws, refusals; the textures and the surfaces imported */
  			dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
 diff --git a/userland/src/m2v_test.m b/userland/src/m2v_test.m
-index beaec62..7e70102 100644
+index beaec62..56dc669 100644
 --- a/userland/src/m2v_test.m
 +++ b/userland/src/m2v_test.m
 @@ -7,6 +7,7 @@
@@ -3705,6 +3785,15 @@ index beaec62..7e70102 100644
  #import <IOSurface/IOSurfaceRef.h>
  #include <mach/mach.h>
  #include <signal.h>
+@@ -22,7 +23,7 @@ size_t native_bridge_metal_status(char *out, size_t size);
+ uint64_t native_bridge_metal_first_problem(char *out, size_t size);
+ 
+ #define TURNIP "/redwood/lib/libvulkan_freedreno.dylib"
+-#define CACHE "/private/var/tmp/m2v"
++#define CACHE "/private/var/tmp/m2v-test"     /* (its own: the window server keeps /private/var/tmp/m2v, as another user) */
+ 
+ static double
+ now_ms(void)
 @@ -97,7 +98,14 @@ main(void)
  
  	@autoreleasepool {

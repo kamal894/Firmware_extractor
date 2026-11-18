@@ -348,7 +348,15 @@ PanVK. What each run found, and the fix:
   a new group's CS registers being zero, and every group here is group 0: hakios-panthor clears r0-r91 on
   each stream at GROUP_CREATE; AS1 flushes are now LOCK/FLUSH_MEM/UNLOCK over the whole space;
 - the kernel's hang report reads each stream's CS status; the plug-in prints a backtrace on a crash;
-- cache maintenance of imported memory over hakios-panthor's own mapping (the program's may be gone).
+- cache maintenance of imported memory moved into the kernel (HakiosGPU cleans and invalidates a client's
+  IOSurfaces and own pages by physical address before each Mali submission, as its msm path does): a
+  process's own mappings of them can be gone, and user-space cache operations faulted;
+- m2v_test keeps a shader cache of its own (one made by root was not the window server's to write).
+
+**Run darwin-ws19: the home screen drawn by the Mali** (docs/darwin-ws19-home-on-mali.png): backboardd ran the
+whole 240 s on its one Metal device over PanVK with no restart and no GPU hang; m2v_test beside it passed. The
+wallpaper is black and the widgets are white boxes (blur and materials, and the iPhone functions that stand-in
+copies replace, still to be looked at).
 
 ## Next
 
