@@ -14,6 +14,7 @@
 #   PROBE_TOUCH=9           with LOADER=1: the touch chip powered, its SPI set up and the chip identified for XNU (touchscreen=2)
 #   PROBE_SHOTS=N           50 pictures of the panel, one a second from XNU's N-th, into pstore's pmsg zone (watcher.c)
 #   PROBE_DVFS=1|2          CPU cluster clocks through ACPM: 1 read them, 2 also raise them (dvfs.c)
+#   PROBE_PANEL=1           the panel over DSIM0: power mode and brightness read, brightness set and put back (panel.c)
 #   PROBE_BATTERY=1         the battery read from the MAX77779 (hsi2c_6) and shared with XNU (battery.c)
 #   PROBE_G3D_KHZ=N         with PROBE_DVFS=2: the GPU's clock (default 580000; the DT's steps go to 940000)
 #   PROBE_GPU=1             the Mali GPU: power domains and its first registers, read only (gpu.c)
@@ -64,6 +65,9 @@ endif
 ifdef PROBE_DVFS
 CFLAGS += -DPROBE_DVFS=$(PROBE_DVFS)
 endif
+ifdef PROBE_PANEL
+CFLAGS += -DPROBE_PANEL=$(PROBE_PANEL)
+endif
 ifdef PROBE_BATTERY
 CFLAGS += -DPROBE_BATTERY=$(PROBE_BATTERY)
 endif
@@ -82,7 +86,7 @@ endif
 LDFLAGS := -pie --no-dynamic-linker -z norelro -z noexecstack --build-id=none -T linker.ld
 
 LOADER ?= 0
-SRCS := start.S main.c log.c uart.c timer.c fdt.c psci.c exception.c display.c wdt.c ufs.c touch.c trusty.c aoc.c dvfs.c gpu.c battery.c lib.c
+SRCS := start.S main.c log.c uart.c timer.c fdt.c psci.c exception.c display.c wdt.c ufs.c touch.c trusty.c aoc.c dvfs.c gpu.c battery.c panel.c lib.c
 ifeq ($(LOADER),1)
 SRCS += xnu.c watcher.c handoff.S
 CFLAGS += -DPROBE_LOADER=1

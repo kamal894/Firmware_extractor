@@ -95,6 +95,9 @@ u32 safe_rd32(u64 addr, int *ok);
 u32 safe_rd32_async(u64 addr, int *ok);
 void exc_handler(u64 idx, u64 esr, u64 far, u64 elr, u64 spsr, u64 *frame);
 
+/* ---- panel.c (PROBE_PANEL) --------------------------------------------- */
+void panel_probe(void);
+
 /* ---- battery.c (PROBE_BATTERY) ------------------------------------------ */
 void battery_probe(void);
 int battery_poll(int say);
