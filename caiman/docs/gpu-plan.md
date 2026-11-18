@@ -182,6 +182,19 @@ gpu: stream 2: CS ack 0x00000001 (state 1), extract 0, wrote 0x22220002: OK
 /chosen/mali-handoff grows to 20 words: the 8 before, then for each stream its ring PA, ring size, queue PA
 and INSERT.
 
+## Step 10: the kernel on three streams (run darwin-mali3)
+
+The kernel's Mali back end takes over all three streams from the handoff and submits on any of them, the
+way Panthor does it: a FLUSH_CACHE2 (L2 and LSC clean+invalidate, other invalidate) first, then a CALL per
+command buffer, then the stream's fence (AS1 0x200c00 + 4 s), all with the kernel's registers r92-r95;
+done() checks every stream's fence. Self test, one command buffer submitted on each stream from XNU:
+
+```
+mali: self test, stream 0: ... fence 1 done; it wrote 0xc0ffee10: OK
+mali: self test, stream 1: ... fence 2 done; it wrote 0xc0ffee11: OK
+mali: self test, stream 2: ... fence 3 done; it wrote 0xc0ffee12: OK
+```
+
 ## Next
 
 8. User space: a Mali back end for hakios-metal (today Adreno PM4 + ir3) emitting CSF command buffers and

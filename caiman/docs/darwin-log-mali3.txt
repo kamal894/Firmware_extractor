@@ -1,0 +1,4 @@
+mali: GPU_ID 0xb8a21030, MCU_STATUS 1; firmware interface 0x2080000; stream 0 insert 512, extract 512; streams 1, 2 rings 65536, 65536 bytes; AS1 tables at 0xf0130000, 30260 KiB of DRAM for more
+mali: self test, stream 0: a command buffer in kernel memory (phys 0x8fc53c000) at GPU address 0x100000000, fence 1 done; it wrote 0xc0ffee10: OK
+mali: self test, stream 1: a command buffer in kernel memory (phys 0x8fc53c000) at GPU address 0x100000000, fence 2 done; it wrote 0xc0ffee11: OK
+mali: self test, stream 2: a command buffer in kernel memory (phys 0x8fc53c000) at GPU address 0x100000000, fence 3 done; it wrote 0xc0ffee12: OK

@@ -1,5 +1,5 @@
 diff --git a/drivers/gpu/hakios.adreno.c b/drivers/gpu/hakios.adreno.c
-index 3f1f97a..bccf2ef 100644
+index 3f1f97a..8e5f8d5 100644
 --- a/drivers/gpu/hakios.adreno.c
 +++ b/drivers/gpu/hakios.adreno.c
 @@ -100,6 +100,7 @@
@@ -127,7 +127,7 @@ index 3f1f97a..bccf2ef 100644
  	for (int i = 0; i < 20000; i++) {
  		room = (rd(gpu.base + CP_RB_RPTR) + RING_WORDS - ring_at - 1) % RING_WORDS;
  		if (room >= wanted) {
-@@ -3753,6 +3805,291 @@ start_by_itself(void)
+@@ -3753,6 +3805,335 @@ start_by_itself(void)
   * as long as the steps and the watch after them last, nothing else writes to the log, so that
   * its end -- all that the loader's notes keep -- is about what is being done here.
   */
@@ -143,11 +143,14 @@ index 3f1f97a..bccf2ef 100644
 + * - addresses: AS1 VAs from 4 GiB up, in 64 KiB steps (hakios_gpu_address);
 + * - mapping: 4 KiB AArch64 entries as kbase writes them (entry_set_ate: type 3, AF, AP read/write or read only,
 + *   MEMATTR slot 5 = 0x4c non-cacheable, executable), then a FLUSH_MEM of AS1;
-+ * - submission: for each command buffer, MOVE48 r68:r69 = its address, MOVE32 r70 = its length in bytes, CALL;
-+ *   then the fence: MOVE48 r68:r69 = the fence's VA, MOVE32 r70 = the number, STORE_MULTIPLE, WAIT; INSERT up
-+ *   and the doorbells as the loader rings them (the stream's bell 1, group 0's bit, bell 0);
-+ * - done: the fence word.
-+ * The CS registers above r63 are not the IDVS/compute staging registers a command buffer sets.
++ * - streams: group 0 has three (the loader's step 9, PanVK's layout: vertex-tiler, fragment, compute), each with
++ *   its ring, queue pages, doorbell s + 1 and fence word (AS1 0x200c00 + 4 s);
++ * - submission on a stream: the caches flushed and invalidated (FLUSH_CACHE2, as Panthor does before calling a
++ *   user stream), then for each command buffer MOVE48 r92:r93 = its address, MOVE32 r94 = its length in bytes,
++ *   CALL; then the fence: MOVE48 r92:r93 = the fence's VA, MOVE32 r94 = the number, STORE_MULTIPLE, WAIT;
++ *   INSERT up and the doorbells as the loader rings them (the stream's bell, the group's bit for it, bell 0);
++ * - done: every stream's fence word has reached the number or the last number given to that stream.
++ * r92-r95 are the kernel's registers (Panthor's convention: the last four of the 96, docs/panvk-uapi.md).
 + */
 +#define MALI_PHYS               0x1f000000UL
 +#define MALI_DOORBELL(n)        (0x80000u + (n) * 0x10000u)
@@ -158,10 +161,17 @@ index 3f1f97a..bccf2ef 100644
 +#define MALI_VA_SIZE            0x700000000ull
 +#define MALI_TABLES             512
 +
-+static vm_offset_t mali_regs, mali_bell0, mali_bell1;
-+static volatile uint32_t *mali_glb_in, *mali_glb_out, *mali_csg_in, *mali_csg_out, *mali_fence_word;
-+static volatile uint64_t *mali_ring, *mali_q_in, *mali_q_out;
-+static uint64_t mali_insert, mali_pool_next, mali_pool_end, mali_va_next = MALI_VA_START;
++static vm_offset_t mali_regs, mali_bell0;
++static volatile uint32_t *mali_glb_in, *mali_glb_out, *mali_csg_in, *mali_csg_out;
++#define MALI_STREAMS            3
++static struct mali_stream {
++	vm_offset_t bell;
++	volatile uint64_t *ring, *q_in, *q_out;
++	volatile uint32_t *fence_word;
++	uint64_t ring_size, insert;
++	uint32_t last;                          /* the last fence given to this stream */
++} mali_stream[MALI_STREAMS];
++static uint64_t mali_pool_next, mali_pool_end, mali_va_next = MALI_VA_START;
 +static struct {
 +	uint64_t pa;
 +	vm_offset_t va;
@@ -276,13 +286,14 @@ index 3f1f97a..bccf2ef 100644
 +}
 +
 +static uint32_t
-+mali_submit(const uint64_t *addresses, const uint32_t *words, uint32_t count)
++mali_submit_on(unsigned st, const uint64_t *addresses, const uint32_t *words, uint32_t count)
 +{
-+	uint32_t n = 4 * count + 8, i;
++	struct mali_stream *q = &mali_stream[st];
++	uint32_t n = 3 * count + 16, i;
 +	uint64_t deadline;
 +
 +	clock_interval_to_deadline(1, NSEC_PER_SEC, &deadline);
-+	while (mali_insert + n * 8 + 64 - mali_q_out[0] > MALI_RING_SIZE) {
++	while (q->insert + n * 8 + 64 - q->q_out[0] > q->ring_size) {
 +		if (mach_absolute_time() > deadline) {
 +			return 0;
 +		}
@@ -291,30 +302,41 @@ index 3f1f97a..bccf2ef 100644
 +	if (++mali_fence == 0) {
 +		mali_fence = 1;
 +	}
-+#define MALI_RING(w) do { mali_ring[(mali_insert / 8) % (MALI_RING_SIZE / 8)] = (w); mali_insert += 8; } while (0)
++#define MALI_RING(w) do { q->ring[(q->insert / 8) % (q->ring_size / 8)] = (w); q->insert += 8; } while (0)
++	MALI_RING((0x02ULL << 56) | (95ULL << 48));                                 /* MOVE32 r95 = 0: flush always */
++	MALI_RING((0x24ULL << 56) | (95ULL << 40) | 0x233);                         /* FLUSH_CACHE2 L2, LSC, other */
++	MALI_RING((0x03ULL << 56) | (1ULL << 16));                                  /* WAIT slot 0 */
 +	for (i = 0; i < count; i++) {
-+		MALI_RING((0x01ULL << 56) | (68ULL << 48) | (addresses[i] & 0xffffffffffffULL));
-+		MALI_RING((0x02ULL << 56) | (70ULL << 48) | (uint64_t)words[i] * 4);
-+		MALI_RING((0x20ULL << 56) | (68ULL << 40) | (70ULL << 32));            /* CALL */
++		MALI_RING((0x01ULL << 56) | (92ULL << 48) | (addresses[i] & 0xffffffffffffULL));
++		MALI_RING((0x02ULL << 56) | (94ULL << 48) | (uint64_t)words[i] * 4);
++		MALI_RING((0x20ULL << 56) | (92ULL << 40) | (94ULL << 32));            /* CALL */
 +	}
-+	MALI_RING((0x01ULL << 56) | (68ULL << 48) | MALI_FENCE_VA);
-+	MALI_RING((0x02ULL << 56) | (70ULL << 48) | mali_fence);
++	MALI_RING((0x01ULL << 56) | (92ULL << 48) | (MALI_FENCE_VA + 4 * st));
++	MALI_RING((0x02ULL << 56) | (94ULL << 48) | mali_fence);
 +	MALI_RING((0x1cULL << 56) | (1ULL << 32));                                  /* SB_SEL_OTHER 0 */
-+	MALI_RING((0x15ULL << 56) | (70ULL << 48) | (68ULL << 40) | (1ULL << 16));  /* STORE_MULTIPLE r70 -> [r68] */
++	MALI_RING((0x15ULL << 56) | (94ULL << 48) | (92ULL << 40) | (1ULL << 16));  /* STORE_MULTIPLE r94 -> [r92] */
 +	MALI_RING((0x03ULL << 56) | (0xffffULL << 16));                             /* WAIT all */
-+	while (mali_insert % 64) {
++	while (q->insert % 64) {
 +		MALI_RING(0);
 +	}
 +#undef MALI_RING
++	q->last = mali_fence;
 +	__builtin_arm_dsb(0xf);
-+	mali_q_in[0] = mali_insert;
++	q->q_in[0] = q->insert;
 +	__builtin_arm_dsb(0xf);
-+	*(volatile uint32_t *)mali_bell1 = 1;
-+	mali_csg_in[2] = (mali_csg_in[2] & ~1u) | ((mali_csg_out[2] ^ 1u) & 1u);
++	*(volatile uint32_t *)q->bell = 1;
++	mali_csg_in[2] = (mali_csg_in[2] & ~(1u << st)) | ((mali_csg_out[2] ^ (1u << st)) & (1u << st));
 +	mali_glb_in[2] = (mali_glb_in[2] & ~1u) | ((mali_glb_out[2] ^ 1u) & 1u);
 +	__builtin_arm_dsb(0xf);
 +	*(volatile uint32_t *)mali_bell0 = 1;
 +	return mali_fence;
++}
++
++/* HakiosGPU's submissions: on stream 0 */
++static uint32_t
++mali_submit(const uint64_t *addresses, const uint32_t *words, uint32_t count)
++{
++	return mali_submit_on(0, addresses, words, count);
 +}
 +
 +static bool
@@ -327,7 +349,14 @@ index 3f1f97a..bccf2ef 100644
 +		mali_wr(0x1004, raw);
 +	}
 +	mali_csg_in[3] = mali_csg_out[3];
-+	return (int32_t)(*mali_fence_word - fence) >= 0;
++	for (unsigned st = 0; st < MALI_STREAMS; st++) {
++		uint32_t need = (int32_t)(mali_stream[st].last - fence) < 0 ? mali_stream[st].last : fence;
++
++		if (mali_stream[st].ring != NULL && need != 0 && (int32_t)(*mali_stream[st].fence_word - need) < 0) {
++			return false;
++		}
++	}
++	return true;
 +}
 +
 +/* The API, used the way HakiosGPU's client uses it: a command buffer in a kernel page, mapped, submitted, waited for. */
@@ -363,15 +392,20 @@ index 3f1f97a..bccf2ef 100644
 +	cmd[4] = (0x03ULL << 56) | (1ULL << 16);                                       /* WAIT */
 +	words = 5 * 2;
 +	hakios_gpu_to_memory((void *)page, PAGE_SIZE);
-+	fence = mali_submit(&address, &words, 1);
-+	clock_interval_to_deadline(1, NSEC_PER_SEC, &deadline);
-+	while (fence && !mali_done(fence) && mach_absolute_time() < deadline) {
-+		delay(10);
++	for (unsigned st = 0; st < MALI_STREAMS; st++) {
++		*data = 0;
++		cmd[1] = (0x02ULL << 56) | (2ULL << 48) | (0xc0ffee10 + st);
++		hakios_gpu_to_memory((void *)page, PAGE_SIZE);
++		fence = mali_submit_on(st, &address, &words, 1);
++		clock_interval_to_deadline(1, NSEC_PER_SEC, &deadline);
++		while (fence && !mali_done(fence) && mach_absolute_time() < deadline) {
++			delay(10);
++		}
++		hakios_gpu_to_memory((void *)(page + 0x800), 64);
++		printf("mali: self test, stream %u: a command buffer in kernel memory (phys %#llx) at GPU address %#llx, fence "
++		    "%u %s; it wrote %#x%s\n", st, phys, address, fence, fence && mali_done(fence) ? "done" : "NOT done", *data,
++		    *data == 0xc0ffee10 + st ? ": OK" : "");
 +	}
-+	hakios_gpu_to_memory((void *)(page + 0x800), 64);
-+	printf("mali: self test: a command buffer in kernel memory (phys %#llx) at GPU address %#llx, fence %u %s; it "
-+	    "wrote %#x%s\n", phys, address, fence, fence && mali_done(fence) ? "done" : "NOT done", *data,
-+	    *data == 0xc0ffee11 ? ": SUBMISSION THROUGH THE HAKIOSGPU API WORKS" : "");
 +}
 +
 +static void
@@ -384,23 +418,32 @@ index 3f1f97a..bccf2ef 100644
 +	vm_offset_t shared, queue, target;
 +
 +	if (SecureDTLookupEntry(NULL, "/chosen", &chosen) != kSuccess ||
-+	    SecureDTGetProperty(chosen, "mali-handoff", &prop, &size) != kSuccess || size != 8 * sizeof(uint64_t)) {
++	    SecureDTGetProperty(chosen, "mali-handoff", &prop, &size) != kSuccess || size != 20 * sizeof(uint64_t)) {
 +		printf("mali: no /chosen/mali-handoff from the loader\n");
 +		return;
 +	}
 +	h = prop;
 +	mali_regs = ml_io_map(MALI_PHYS, 0x4000);
 +	mali_bell0 = ml_io_map(MALI_PHYS + MALI_DOORBELL(0), 0x4000);
-+	mali_bell1 = ml_io_map(MALI_PHYS + MALI_DOORBELL(1), 0x4000);
 +	shared = ml_io_map(h[0], 0x10000);
-+	mali_ring = (volatile uint64_t *)ml_io_map(h[1], 0x4000);
-+	queue = ml_io_map(h[2], 0x4000);
 +	target = ml_io_map(h[3], 0x4000);
-+	mali_q_in = (volatile uint64_t *)queue;
-+	mali_q_out = (volatile uint64_t *)(queue + 0x1000);     /* (4 KiB pages: the loader's, not the kernel's 16 KiB) */
-+	mali_fence_word = (volatile uint32_t *)(target + 0xc00);
-+	*mali_fence_word = 0;
-+	mali_insert = h[4];
++	for (unsigned st = 0; st < MALI_STREAMS; st++) {
++		const uint64_t *hs = h + 8 + 4 * st;
++		struct mali_stream *q = &mali_stream[st];
++
++		if (hs[0] == 0) {
++			continue;
++		}
++		q->bell = ml_io_map(MALI_PHYS + MALI_DOORBELL(st + 1), 0x4000);
++		q->ring = (volatile uint64_t *)ml_io_map(hs[0], hs[1] < 0x4000 ? 0x4000 : hs[1]);
++		q->ring_size = hs[1];
++		queue = ml_io_map(hs[2], 0x4000);
++		q->q_in = (volatile uint64_t *)queue;
++		q->q_out = (volatile uint64_t *)(queue + 0x1000);       /* (4 KiB pages: the loader's, not the kernel's 16 KiB) */
++		q->insert = hs[3];
++		q->fence_word = (volatile uint32_t *)(target + 0xc00 + 4 * st);
++		*q->fence_word = 0;
++	}
 +	mali_as1_root = h[5];
 +	mali_pool_next = h[6];
 +	mali_pool_end = h[7];
@@ -408,9 +451,10 @@ index 3f1f97a..bccf2ef 100644
 +	mali_glb_out = (volatile uint32_t *)(shared + (*(volatile uint32_t *)(shared + 0xc) - 0x04000000));
 +	mali_csg_in = (volatile uint32_t *)(shared + (*(volatile uint32_t *)(shared + 0x1004) - 0x04000000));
 +	mali_csg_out = (volatile uint32_t *)(shared + (*(volatile uint32_t *)(shared + 0x1008) - 0x04000000));
-+	printf("mali: GPU_ID %#x, MCU_STATUS %u; firmware interface %#x; ring insert %llu, extract %llu; AS1 tables at "
-+	    "%#llx, %llu KiB of DRAM for more\n", mali_rd(0), mali_rd(0x704), *(volatile uint32_t *)shared, mali_insert,
-+	    mali_q_out[0], mali_as1_root, (mali_pool_end - mali_pool_next) / 1024);
++	printf("mali: GPU_ID %#x, MCU_STATUS %u; firmware interface %#x; stream 0 insert %llu, extract %llu; streams 1, 2 "
++	    "rings %llu, %llu bytes; AS1 tables at %#llx, %llu KiB of DRAM for more\n", mali_rd(0), mali_rd(0x704),
++	    *(volatile uint32_t *)shared, mali_stream[0].insert, mali_stream[0].q_out[0], mali_stream[1].ring_size,
++	    mali_stream[2].ring_size, mali_as1_root, (mali_pool_end - mali_pool_next) / 1024);
 +	mali_kept = true;
 +	mali_self_test();
 +	HakiosGPUStart();
@@ -419,7 +463,7 @@ index 3f1f97a..bccf2ef 100644
  void
  hakios_adreno_init(void)
  {
-@@ -3765,6 +4102,11 @@ hakios_adreno_init(void)
+@@ -3765,6 +4146,11 @@ hakios_adreno_init(void)
  	uint32_t only = 0, done = 0, failed = 0, keep = 0;
  	bool by_itself = false;
  
