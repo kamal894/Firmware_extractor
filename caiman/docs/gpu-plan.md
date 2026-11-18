@@ -265,6 +265,26 @@ mali_test: bound at 0x40000000: bind 0, submit and wait 0; the word is 0xb19d000
 mali_test: unbound: 0
 ```
 
+## Step 15: PanVK runs on iOS: the first Vulkan work on the Mali (run darwin-panvk10)
+
+userland/src/vk_test.c (Turnip's round, the driver chosen by path) with PanVK and hakios-panthor:
+vkCreateInstance, the Mali as a physical device, vkCreateDevice (PanVK's own BOs bound at the top of the
+user space, its queue's group and tiler heap made, its first submissions waited for), then vkCmdFillBuffer
+of 4 MB, read back and checked:
+
+```
+vk_test: device "Mali-G715 MC7", Vulkan 1.4.368, driver 0x6863063, vendor 0x13b5 device 0xb8a21030
+vk_test: the GPU filled 1048576 of 1048576 words with 0x600dc0de in 1.51 ms
+vk_test: 100 fills of 4 MB, each submitted and waited for: 0.683 ms on average, 0.557 at best
+vk_test: PASS
+```
+
+What it took, after step 14 (panvk-darwin.patch and hakios-panthor): the Mach-O LC_UUID in place of the ELF
+build-id; PAN_I_WANT_A_BROKEN_VULKAN_DRIVER=1 (Mesa calls v11 "not well-tested"); the DRM sync provider built
+on iOS (without it pan_kmod_dev_init() gives up silently: found by Codex); CTR_EL0 from hw.cachelinesize
+(user space may not read it on Darwin: SIGILL); drmGetCap saying syncobj timelines are there; VM binds of
+part of a page rounded up to the page, as Panthor does.
+
 ## Next
 
 8. User space: a Mali back end for hakios-metal (today Adreno PM4 + ir3) emitting CSF command buffers and

@@ -1,0 +1,42 @@
+  -rwxr-xr-x  1    50368 /redwood/bin/vk_test  -rwxr-xr-x  1    50368 /redwood/bin/vk_test
+$ /redwood/bin/vk_test /redwood/bin/vk_test
+map_with_linking_np: [21(vk_test)]: region 0, not code signed
+vk_test: loader interface version 5
+MESA: info: panvk_debug: startup
+MESA: info: Created an instance
+vk_test: instance madevk_test: instance made
+hakios-panthor: device list: the Mali 61: ok
+hakios-panthor: version: panthor 1.2 63: ok
+hakios-panthor: Panthor request 0: ok
+MESA: info: Found compatible device '/dev/null'.
+MESA: info: panvk (Mali-G715 MC7) Mesa 27.0.0-devel (git-da2d473159)
+vk_test: device "Mali-G715 MC7", Vulkan 1.4.368, driver 0x6863063, vendor 0x13b5vk_test: device "Mali-G715 MC7", Vulkan 1.4.368, driver 0x6863063, vendor 0x13b5 device 0xb8a21030
+vk_test: 2 queue families
+hakios-panthor: Panthor request 1: ok
+hakios-panthor: Panthor request 5: ok
+hakios-panthor: Panthor request 6: ok
+hakios-panthor: bind op 0: map handle 1 flags 0x2 va 0x7ffffffff000 offset 0 sizhakios-panthor: bind op 0: map handle 1 flags 0x2 va 0x7ffffffff000 offset 0 size 0x600: ok
+hakios-panthor: Panthor request 3: ok
+hakios-panthor: bind op 0: map handle 2 flags 0x2 va 0x7fffffff7000 offset 0 sizhakios-panthor: bind op 0: map handle 2 flags 0x2 va 0x7fffffff7000 offset 0 size 0x8000: ok
+hakios-panthor: bind op 0: map handle 3 flags 0x2 va 0x7fffffff3000 offset 0 sizhakios-panthor: bind op 0: map handle 3 flags 0x2 va 0x7fffffff3000 offset 0 size 0x4000: ok
+hakios-panthor: bind op 0: map handle 4 flags 0x2 va 0x7fffffff1000 offset 0 sizhakios-panthor: bind op 0: map handle 4 flags 0x2 va 0x7fffffff1000 offset 0 size 0x2000: ok
+hakios-panthor: bind op 0: map handle 5 flags 0x2 va 0x7ffffffe0000 offset 0 sizhakios-panthor: bind op 0: map handle 5 flags 0x2 va 0x7ffffffe0000 offset 0 size 0x11000: ok
+hakios-panthor: bind op 0: map handle 6 flags 0x2 va 0x7ffffffdc000 offset 0 sizhakios-panthor: bind op 0: map handle 6 flags 0x2 va 0x7ffffffdc000 offset 0 size 0x4000: ok
+hakios-panthor: Panthor request 11: ok
+hakios-panthor: Panthor request 7: ok
+hakios-panthor: bind op 0: map handle 7 flags 0x2 va 0x7fffffe00000 offset 0 sizhakios-panthor: bind op 0: map handle 7 flags 0x2 va 0x7fffffe00000 offset 0 size 0x80000: ok
+hakios-panthor: bind op 1: map handle 7 flags 0x2 va 0x7fffffe80000 offset 0 sizhakios-panthor: bind op 1: map handle 7 flags 0x2 va 0x7fffffe80000 offset 0 size 0x80000: ok
+hakios-panthor: Panthor request 9: ok
+hakios-panthor: bind op 0: map handle 8 flags 0x2 va 0x7fffff400000 offset 0 sizhakios-panthor: bind op 0: map handle 8 flags 0x2 va 0x7fffff400000 offset 0 size 0xa00000: ok
+vk_test: device madevk_test: device made
+hakios-panthor: bind op 0: map handle 9 flags 0x2 va 0x7fffff000000 offset 0 sizhakios-panthor: bind op 0: map handle 9 flags 0x2 va 0x7fffff000000 offset 0 size 0x400000: ok
+hakios-panthor: bind op 0: map handle 10 flags 0x1 va 0xffffc000 offset 0 size 0hakios-panthor: bind op 0: map handle 10 flags 0x1 va 0xffffc000 offset 0 size 0x4000: ok
+hakios-panthor: bind op 0: map handle 11 flags 0x2 va 0x7ffffffcc000 offset 0 sihakios-panthor: bind op 0: map handle 11 flags 0x2 va 0x7ffffffcc000 offset 0 size 0x10000: ok
+hakios-panthor: bind op 0: map handle 12 flags 0x2 va 0x7ffffffbc000 offset 0 sihakios-panthor: bind op 0: map handle 12 flags 0x2 va 0x7ffffffbc000 offset 0 size 0x10000: ok
+hakios-panthor: bind op 0: map handle 13 flags 0x2 va 0x7ffffffac000 offset 0 sihakios-panthor: bind op 0: map handle 13 flags 0x2 va 0x7ffffffac000 offset 0 size 0x10000: ok
+hakios-panthor: bind op 0: map handle 14 flags 0x2 va 0x7ffffff9c000 offset 0 sihakios-panthor: bind op 0: map handle 14 flags 0x2 va 0x7ffffff9c000 offset 0 size 0x10000: ok
+hakios-panthor: Panthor request 10: ok
+hakios-panthor: Panthor request 4: ok
+vk_test: the GPU filled 1048576 of 1048576 words with 0x600dc0de in 1.51 ms
+vk_test: 100 fills of 4 MB, each submitted and waited for: 0.683 ms on average, vk_test: 100 fills of 4 MB, each submitted and waited for: 0.683 ms on average, 0.557 at best
+vk_test: PASS

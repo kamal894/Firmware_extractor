@@ -1418,10 +1418,10 @@ index 8d69400..f6ebbf9 100644
  		if (tm_va[b] == 0) {
 diff --git a/tools/mesa/hakios-panthor/hakios.panthor.c b/tools/mesa/hakios-panthor/hakios.panthor.c
 new file mode 100644
-index 0000000..a6702fe
+index 0000000..68143bb
 --- /dev/null
 +++ b/tools/mesa/hakios-panthor/hakios.panthor.c
-@@ -0,0 +1,915 @@
+@@ -0,0 +1,916 @@
 +/*
 + * The libdrm of xf86drm.h for PanVK: Linux's Panthor requests to the kernel's HakiosGPU on the Mali (boot-arg mali=1),
 + * the counterpart of hakios-drm (Adreno, msm). What the kernel has (caiman repo docs/gpu-plan.md, steps 10-14):
@@ -2161,7 +2161,8 @@ index 0000000..a6702fe
 +			struct k_bind k = {
 +				.handle = type == DRM_PANTHOR_VM_BIND_OP_TYPE_MAP ? op->bo_handle : 0,
 +				.flags = (op->flags & DRM_PANTHOR_VM_BIND_OP_MAP_READONLY) ? 1 : 0,
-+				.va = op->va, .offset = op->bo_offset, .size = op->size,
++				/* (a size of part of a page means the whole page, as Panthor takes it: PanVK binds small BOs so) */
++				.va = op->va, .offset = op->bo_offset, .size = (op->size + 4095) & ~4095ull,
 +			};
 +
 +			if (op->flags & DRM_PANTHOR_VM_BIND_OP_MAP_SPARSE) {
