@@ -162,11 +162,15 @@ static void dump_utrl(u64 utrl, u32 nutrs, u32 doorbell)
 
 #define UFS_BLOCK	4096u
 #define UFS_MAX_BLOCKS	64u
+/* one READ(10) of an image (read_extents): 1 MiB, a PRDT entry a block; fewer requests, each one's overhead paid less often */
+#ifndef UFS_XFER_BLOCKS
+#define UFS_XFER_BLOCKS	256u
+#endif
 
 /* our own lists and one command descriptor (slot 0), in the image's BSS */
 #define UTRL_BYTES	(32 * 32)
 #define UTMRL_BYTES	(32 * 8)
-#define UCD_BYTES	(96 + 16 * UFS_MAX_BLOCKS)
+#define UCD_BYTES	(96 + 16 * UFS_XFER_BLOCKS)
 static u8 q_utrl[UTRL_BYTES] __attribute__((aligned(1024)));
 static u8 q_utmrl[UTMRL_BYTES] __attribute__((aligned(1024)));
 static u8 q_ucd[UCD_BYTES] __attribute__((aligned(128)));
@@ -174,6 +178,8 @@ static u8 q_ucd[UCD_BYTES] __attribute__((aligned(128)));
 static u8 iobuf[UFS_MAX_BLOCKS * UFS_BLOCK] __attribute__((aligned(4096)));
 static u32 mclk_hz, unipro_prd, lanes = 2;
 static int hs_ok;			/* the link is in HS gear */
+static int sw_flushed;			/* dc_all_sw() done with the D-cache off: reads need no maintenance of their buffer */
+static u64 busy_ticks;			/* spent waiting for the device (request()), for the load's timing line */
 static u32 super_lun_g = 0xff;		/* where ufs_read_test() found super */
 static u64 super_lba_g, super_blocks_g;
 
@@ -221,6 +227,44 @@ static void dc_civac(const void *p, u64 n)
 	for (; a < end; a += 64)
 		__asm__ volatile("dc civac, %0" :: "r"(a) : "memory");
 	dsb_sy();
+}
+
+/*
+ * Every level of this processor's data caches (CLIDR: L1, L2 and the cluster's L3) cleaned and invalidated by set
+ * and way, as firmware does before it runs with the D-cache off: no line the bootloader left dirty is written back
+ * later over what the device writes. With the D-cache off nothing makes a new line, so once is enough.
+ */
+static void dc_all_sw(void)
+{
+	u64 clidr = read_sysreg(clidr_el1);
+	u32 level;
+
+	for (level = 0; level < 7; level++) {
+		u32 ctype = (clidr >> (level * 3)) & 7, ways, sets, way, set, wshift, lshift;
+		u64 ccsidr;
+
+		if (ctype < 2)			/* no data cache here (or no cache at all from here on) */
+			continue;
+		__asm__ volatile("msr csselr_el1, %0; isb" :: "r"((u64)level << 1));
+		ccsidr = read_sysreg(ccsidr_el1);
+		lshift = (u32)(ccsidr & 7) + 4;
+		ways = (u32)((ccsidr >> 3) & 0x3ff) + 1;
+		sets = (u32)((ccsidr >> 13) & 0x7fff) + 1;
+		wshift = ways > 1 ? (u32)__builtin_clz(ways - 1) : 0;
+		for (way = 0; way < ways; way++)
+			for (set = 0; set < sets; set++)
+				__asm__ volatile("dc cisw, %0" :: "r"(((u64)way << wshift) | ((u64)set << lshift) |
+								     (level << 1)) : "memory");
+	}
+	dsb_sy();
+	isb();
+}
+
+static int dcache_on(void)
+{
+	u64 sctlr = (read_sysreg(CurrentEL) >> 2 & 3) == 2 ? read_sysreg(sctlr_el2) : read_sysreg(sctlr_el1);
+
+	return (sctlr & 4) != 0;
 }
 
 static u32 rd_or(u64 a, u32 dflt)
@@ -526,6 +570,7 @@ static int request(u32 dd, u32 nblocks, u32 ms)
 			return -3;
 		}
 	}
+	busy_ticks += timer_ticks() - start;
 	dc_civac(q_utrl, 32);
 	dc_civac(q_ucd, UCD_BYTES);
 	return (utrd[2] & 0xff) ? -4 : 0;
@@ -611,7 +656,7 @@ static int ufs_read(u32 lun, u32 lba, u32 nblocks, u64 dst)
 	u32 i, len = nblocks * UFS_BLOCK;
 	int r = -1, tries;
 
-	if (!nblocks || nblocks > UFS_MAX_BLOCKS)
+	if (!nblocks || nblocks > UFS_XFER_BLOCKS)
 		return -1;
 	for (tries = 0; tries < 3; tries++) {
 		upiu_header(0x01, 0x40, (u8)lun);	/* COMMAND, R */
@@ -629,9 +674,15 @@ static int ufs_read(u32 lun, u32 lba, u32 nblocks, u64 dst)
 			put_le32(e + 8, 0);
 			put_le32(e + 12, UFS_BLOCK - 1);
 		}
-		dc_civac((const void *)(uptr)dst, len);
+		/*
+		 * Before: no dirty line of the bootloader's may be written back over what the device writes. After: only
+		 * when this processor's D-cache is on (it is not in the loader: the reads that follow go to memory).
+		 */
+		if (!sw_flushed)
+			dc_civac((const void *)(uptr)dst, len);
 		r = request(2, nblocks, 2000);
-		dc_civac((const void *)(uptr)dst, len);
+		if (dcache_on())
+			dc_civac((const void *)(uptr)dst, len);
 		if (r)
 			return r;
 		if (q_ucd[32] == 0x21 && !q_ucd[32 + 5] && !q_ucd[32 + 7])
@@ -1024,8 +1075,8 @@ static u64 read_extents(u32 lun, const struct lp_extent *ext, int n, u64 dst)
 	for (i = 0; i < n; i++) {
 		u64 done;
 
-		for (done = 0; done < ext[i].blocks; done += UFS_MAX_BLOCKS) {
-			u32 cnt = ext[i].blocks - done < UFS_MAX_BLOCKS ? (u32)(ext[i].blocks - done) : UFS_MAX_BLOCKS;
+		for (done = 0; done < ext[i].blocks; done += UFS_XFER_BLOCKS) {
+			u32 cnt = ext[i].blocks - done < UFS_XFER_BLOCKS ? (u32)(ext[i].blocks - done) : UFS_XFER_BLOCKS;
 
 			wdt_kick();
 			if (ufs_read(lun, (u32)(ext[i].lba + done), cnt, dst + total * UFS_BLOCK)) {
@@ -1081,11 +1132,17 @@ u64 ufs_load_lp(const char *name, u64 dst, u64 max)
 		return 0;
 	}
 	start = timer_ticks();
+	busy_ticks = 0;
+	if (!dcache_on()) {
+		dc_all_sw();
+		sw_flushed = 1;
+	}
 	if (!read_extents(super_lun_g, ext, n, dst))
 		return 0;
 	us = (timer_ticks() - start) * 1000000 / timer_freq();
-	pr("ufs: %s: %llu bytes to 0x%llx in %llu ms (%llu KB/s)\n", name, bytes, dst, us / 1000,
-	   us ? bytes * 1000 / us : 0);
+	pr("ufs: %s: %llu bytes to 0x%llx in %llu ms (%llu KB/s; %llu ms of it waiting for the device, %u KiB a"
+	   " request)\n", name, bytes, dst, us / 1000, us ? bytes * 1000 / us : 0,
+	   busy_ticks * 1000 / timer_freq(), UFS_XFER_BLOCKS * UFS_BLOCK / 1024);
 	return bytes;
 }
 

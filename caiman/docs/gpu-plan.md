@@ -455,3 +455,17 @@ completion, the GLB power-off timer.
    Metal back end.
 7. Simple jobs (a fill, a copy), then a triangle; then a Metal back end (HackiOS's hakios-metal, for
    Adreno today) with a Valhall shader compiler.
+
+### Step 19 (cont.): stale CPU lines, and a faster loader (2026-11-18, ws42-ws46)
+
+- **One stale cache line in m2v_test happens with surfaces uncached on the GPU too** (ws45: 65520/65536, default
+  settings). The CPU can fetch a line again between the cleaning before a submission and the GPU's writes. Fix
+  (kernel): `IOSurfaceLock`/`Unlock` clean+invalidate the surface's pixels, and the framebuffer does the same for
+  the rows it reads (`MiniIOSurfaceFromGPU` in `drawLayer`), whenever `mali=1` (`surf_lock_out=0` turns it off).
+  Cost: ~0.2 ms a frame in the framebuffer. ws46: m2v_test PASS, 50/50 clean pictures, 34-39 fps while swiping.
+- **`mali_shared_cached=1`** (surfaces cached on the GPU) with the above: m2v_test PASS and 37-43 fps, but 2 of 100
+  pictures had shifted rows (widgets/dock; ws42, ws43) against 0 of 150 uncached (ws40, ws44, ws46). It stays off.
+- **Loader UFS** (`probe/ufs.c`): 1 MiB READ(10)s (`UFS_XFER_BLOCKS`), and one set/way clean+invalidate of every
+  data-cache level before an image load instead of `dc civac` over the buffer for each request (with the D-cache
+  off, the per-line maintenance was 15.5 s of the 17 s; the device itself waits 0.9 s). xnusys 1.9 GB: 32 s ->
+  1.4 s (1.3 GB/s); the kernel starts 24 s after the payload instead of 56 s.

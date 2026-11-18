@@ -5557,7 +5557,7 @@ index c390093..de72f4d 100755
  		log "downloading the macOS 13.3 SDK for its DriverKit headers"
  		curl -L --fail --retry 3 -s -o macos-sdk.tar.xz "$MACOS_SDK_URL" || die "download failed: $MACOS_SDK_URL"
 diff --git a/xnu/files/iokit/Kernel/MiniIOMobileFramebuffer.cpp b/xnu/files/iokit/Kernel/MiniIOMobileFramebuffer.cpp
-index 724e156..4bcd7f4 100644
+index 724e156..7057f7c 100644
 --- a/xnu/files/iokit/Kernel/MiniIOMobileFramebuffer.cpp
 +++ b/xnu/files/iokit/Kernel/MiniIOMobileFramebuffer.cpp
 @@ -261,6 +261,7 @@ static TUNABLE(uint32_t, gMeasure, "fb_measure", 0);
@@ -5623,7 +5623,16 @@ index 724e156..4bcd7f4 100644
  	fWidth = gFBWidth ? gFBWidth : fPanelWidth;
  	fHeight = gFBHeight ? gFBHeight : fPanelHeight;
  	if (gFBScale != 0 && gFBScale != kFBDefaultScale) {
-@@ -1396,6 +1422,89 @@ IOMobileFramebuffer::presenter(void)
+@@ -1168,6 +1194,8 @@ IOMobileFramebuffer::drawLayer(MiniIOSurface * s, const int32_t * src, const int
+ 			fColumn[x] = (uint32_t) (sx + (int64_t) (x - px0) * sw / (px1 - px0));
+ 		}
+ 	}
++	/* what the Mali drew may still be older in this processor's cache: the rows read, out of it */
++	MiniIOSurfaceFromGPU(s, s->info.offset + (uint64_t) sy * s->info.bytesPerRow, (uint64_t) sh * s->info.bytesPerRow);
+ 	job.pixels = s->pixels();
+ 	job.stride = s->info.bytesPerRow;
+ 	job.sx = sx;
+@@ -1396,6 +1424,89 @@ IOMobileFramebuffer::presenter(void)
  	}
  }
  
@@ -5713,7 +5722,7 @@ index 724e156..4bcd7f4 100644
  /*
   * The frame on the panel once more, filtered (fb_filter=2): the same layers from the same surfaces where show() put
   * them, nothing else (no turn to wait for, no swap to hand on, nothing counted). Its surfaces were held since.
-@@ -1409,6 +1518,7 @@ IOMobileFramebuffer::settle(const uint8_t * swap, MiniIOSurface ** surfaces)
+@@ -1409,6 +1520,7 @@ IOMobileFramebuffer::settle(const uint8_t * swap, MiniIOSurface ** surfaces)
  		return;
  	}
  	fSettling = true;
@@ -5721,7 +5730,7 @@ index 724e156..4bcd7f4 100644
  	for (unsigned layer = 0; layer < SWAP_LAYERS; layer++) {
  		MiniIOSurface * s = surfaces[layer];
  
-@@ -1419,6 +1529,7 @@ IOMobileFramebuffer::settle(const uint8_t * swap, MiniIOSurface ** surfaces)
+@@ -1419,6 +1531,7 @@ IOMobileFramebuffer::settle(const uint8_t * swap, MiniIOSurface ** surfaces)
  		memcpy(dst, swap + SWAP_DEST(layer), sizeof(dst));
  		drawLayer(s, src, dst);
  	}
@@ -5729,7 +5738,7 @@ index 724e156..4bcd7f4 100644
  	fSettling = false;
  	fStatSettled++;
  }
-@@ -1494,6 +1605,7 @@ IOMobileFramebuffer::show(const uint8_t * swap, MiniIOSurface ** surfaces)
+@@ -1494,6 +1607,7 @@ IOMobileFramebuffer::show(const uint8_t * swap, MiniIOSurface ** surfaces)
  		    swapWord(swap, SWAP_ID), fSwapsShown, swapWord(swap, SWAP_SURFACE(0)), swapWord(swap, SWAP_SURFACE(1)),
  		    swapWord(swap, SWAP_SURFACE(2)), swapWord(swap, SWAP_SURFACE(3)), set, swapWord(swap, SWAP_LAYERS_CLEARED));
  	}
@@ -5737,7 +5746,7 @@ index 724e156..4bcd7f4 100644
  	for (unsigned layer = 0; layer < SWAP_LAYERS; layer++) {
  		uint32_t sid = swapWord(swap, SWAP_SURFACE(layer));
  		int32_t src[4], dst[4];
-@@ -1543,6 +1655,7 @@ IOMobileFramebuffer::show(const uint8_t * swap, MiniIOSurface ** surfaces)
+@@ -1543,6 +1657,7 @@ IOMobileFramebuffer::show(const uint8_t * swap, MiniIOSurface ** surfaces)
  			}
  		}
  	}
@@ -5745,7 +5754,7 @@ index 724e156..4bcd7f4 100644
  	drawn = mach_absolute_time();
  	if (recorded != NULL) {
  		record(recorded);
-@@ -2024,7 +2137,12 @@ publishAccelerator(IOService * provider)
+@@ -2024,7 +2139,12 @@ publishAccelerator(IOService * provider)
  		 * Metal for the screen; until that device can draw, a screen drawn without it is the working one.
  		 */
  		if (PE_parse_boot_argn("metal", &metal, sizeof(metal)) && metal != 0) {
@@ -5759,6 +5768,91 @@ index 724e156..4bcd7f4 100644
  			accelerator->setProperty("MetalPluginClassName", "HakiosMetalDevice");
  			IOLog("MiniIOMobileFramebuffer: metal=1: the accelerator names HakiosMetal as its Metal plug-in\n");
  		}
+diff --git a/xnu/files/iokit/Kernel/MiniIOSurface.cpp b/xnu/files/iokit/Kernel/MiniIOSurface.cpp
+index 5413c2b..ca8abab 100644
+--- a/xnu/files/iokit/Kernel/MiniIOSurface.cpp
++++ b/xnu/files/iokit/Kernel/MiniIOSurface.cpp
+@@ -30,6 +30,8 @@
+ 
+ #include "MiniIOSurface.h"
+ 
++extern "C" void flush_dcache(vm_offset_t addr, unsigned count, int phys);
++
+ static_assert(sizeof(struct minisurf_plane) == 0x80, "plane layout");
+ static_assert(sizeof(struct minisurf_result) == 0x68, "result layout");
+ static_assert(offsetof(struct minisurf_shared, attachments) == 0x30, "shared layout");
+@@ -153,6 +155,7 @@ static uint32_t         gSurfacesGivenAgain;    /* for MiniIOSurfaceCost() */
+ static TUNABLE(uint32_t, gSurfaceClear, "surf_clear", 1);
+ /* boot-arg surf_wrap=0: surfaces around the client's pictures refused, as before methodWrapClientImage (for comparing) */
+ static TUNABLE(uint32_t, gSurfaceWrap, "surf_wrap", 1);
++static uint32_t         gSurfaceLockOut = 2;    /* a lock takes the pixels out of this processor's cache (2: not asked yet) */
+ 
+ void
+ MiniIOSurfaceClearKept(void)
+@@ -1862,6 +1865,31 @@ IOSurfaceRootUserClient::trapDecrementUseCount(void * p1, void * p2, void * p3,
+  * Lock and unlock do not exclude anybody: the memory is shared and always mapped.
+  * What matters is the seed, which tells readers that the pixels may have changed.
+  */
++bool
++MiniIOSurfaceGPUCached(void)
++{
++	if (gSurfaceLockOut == 2) {
++		uint32_t mali = 0, out = 1;
++
++		/*
++		 * whenever the Mali draws (mali=1), cached or not: this processor can fetch a line again between the cleaning
++		 * before a submission and the GPU's writes (one stale line in m2v_test with surfaces uncached on the GPU, ws45).
++		 * boot-arg surf_lock_out=0: not (for comparing).
++		 */
++		PE_parse_boot_argn("surf_lock_out", &out, sizeof(out));
++		gSurfaceLockOut = out && PE_parse_boot_argn("mali", &mali, sizeof(mali)) && mali != 0;
++	}
++	return gSurfaceLockOut != 0;
++}
++
++void
++MiniIOSurfaceFromGPU(MiniIOSurface * s, uint64_t offset, uint64_t length)
++{
++	if (MiniIOSurfaceGPUCached() && offset < s->info.allocSize) {
++		flush_dcache((vm_offset_t) (s->kpixels + offset), (unsigned) MIN(length, s->info.allocSize - offset), FALSE);
++	}
++}
++
+ IOReturn
+ IOSurfaceRootUserClient::lockCommon(uint32_t sid, uint32_t options, user_addr_t seedOut)
+ {
+@@ -1877,6 +1905,13 @@ IOSurfaceRootUserClient::lockCommon(uint32_t sid, uint32_t options, user_addr_t
+ 			sh->seed++;
+ 		}
+ 		seed = sh->seed;
++		/*
++		 * What the Mali wrote reaches memory at the end of each submission, but this processor may still hold the
++		 * lines from before: out of its cache, once a program says it is about to look at the pixels.
++		 */
++		if (MiniIOSurfaceGPUCached()) {
++			flush_dcache((vm_offset_t) ref->surface->kpixels, ref->surface->info.allocSize, FALSE);
++		}
+ 	}
+ 	IOLockUnlock(gSurfaceLock);
+ 	if (ref == NULL) {
+diff --git a/xnu/files/iokit/Kernel/MiniIOSurface.h b/xnu/files/iokit/Kernel/MiniIOSurface.h
+index 30539e5..2946854 100644
+--- a/xnu/files/iokit/Kernel/MiniIOSurface.h
++++ b/xnu/files/iokit/Kernel/MiniIOSurface.h
+@@ -156,6 +156,13 @@ public:
+  * A surface found or made here is held until MiniIOSurfaceDrop().
+  */
+ MiniIOSurface * MiniIOSurfaceCopy(uint32_t sid);
++/*
++ * With the Mali drawing (boot-arg mali=1; the GPU sees no processor cache), this processor may hold lines of a
++ * surface from before what it drew. MiniIOSurfaceFromGPU() takes those bytes of the pixels out of this processor's cache
++ * before the kernel reads them (the framebuffer); IOSurfaceLock does the same for programs.
++ */
++bool MiniIOSurfaceGPUCached(void);
++void MiniIOSurfaceFromGPU(MiniIOSurface * s, uint64_t offset, uint64_t length);
+ /*
+  * What making and freeing surfaces has cost since this was last asked: how many, microseconds
+  * each; how many got memory that was kept from one before.
 diff --git a/xnu/files/osfmk/arm64/psci_smp.c b/xnu/files/osfmk/arm64/psci_smp.c
 index 221defa..94452e6 100644
 --- a/xnu/files/osfmk/arm64/psci_smp.c
