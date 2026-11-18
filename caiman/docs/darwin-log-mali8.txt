@@ -1,0 +1,7 @@
+mali_test: query 0: GPU_ID 0xb8a21030, shader cores 0x1110055, tiler 0x1, L2 0x1mali_test: query 0: GPU_ID 0xb8a21030, shader cores 0x1110055, tiler 0x1, L2 0x1; CSF 0x4100412; 8 C; CSF 0x4100412; 8 CSG slots, 3 streams, 96 registers (4 the kernel's), 16 scoreboards, timestamp 24SG slots, 3 streams, 96 registers (4 the kernel's), 16 scoreboards, timestamp 24576000 Hz
+mali_test: buffer 1: 0, GPU address 0x100a20000, mapped here at 0x100c9c000 (655mali_test: buffer 1: 0, GPU address 0x100a20000, mapped here at 0x100c9c000 (65536 bytes)
+mali_test: clocks: CLOCK_MONOTONIC 0.622019000 s, mach_continuous_time 203444925mali_test: clocks: CLOCK_MONOTONIC 0.622019000 s, mach_continuous_time 2034449258, mach_absolute_tim8, mach_absolute_time 2034449259, timebase 15625/384
+mali_test: stream 0: submit and wait 0, fence 5; the word is 0x5e70000: USER SPAmali_test: stream 0: submit and wait 0, fence 5; the word is 0x5e70000: USER SPACE DROVE THE GPU
+mali_test: stream 1: submit and wait 0, fence 6; the word is 0x5e70001: USER SPAmali_test: stream 1: submit and wait 0, fence 6; the word is 0x5e70001: USER SPACE DROVE THE GPU
+mali_test: stream 2: submit and wait 0, fence 7; the word is 0x5e70002: USER SPAmali_test: stream 2: submit and wait 0, fence 7; the word is 0x5e70002: USER SPACE DROVE THE GPU
+mali_test: tiler heap 0: context 0x100a30000, first chunk 0x100a40000

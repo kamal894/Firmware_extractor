@@ -237,6 +237,11 @@ caiman, probably when the wall clock is first set). A deadline of now + 1 s is "
 (darwin-mali6). hakios-drm, and so PanVK through the shim, computes deadlines from CLOCK_MONOTONIC: fix
 boottime (or have the kernel read the same clock) before PanVK.
 
+**Fixed (run darwin-mali8):** HakiosGPU reads msm times by user space's CLOCK_MONOTONIC (calendar time less
+boot time, `monotonicNow()` in hakios.gpu.cpp) instead of mach_continuous_time, which on the Pixel has run
+some 80 s longer (the phone's boot loaders and ours count). A now + 1 s wait now waits: all three streams
+pass with Mesa-style deadlines.
+
 ## Next
 
 8. User space: a Mali back end for hakios-metal (today Adreno PM4 + ir3) emitting CSF command buffers and

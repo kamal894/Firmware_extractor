@@ -604,7 +604,7 @@ index 3f1f97a..a077cee 100644
  		display_probe();
  	}
 diff --git a/drivers/gpu/hakios.gpu.cpp b/drivers/gpu/hakios.gpu.cpp
-index 633b419..41257cd 100644
+index 633b419..5ea32d1 100644
 --- a/drivers/gpu/hakios.gpu.cpp
 +++ b/drivers/gpu/hakios.gpu.cpp
 @@ -56,6 +56,9 @@ void hakios_gpu_mapped(void);
@@ -650,7 +650,50 @@ index 633b419..41257cd 100644
  };
  
  struct msm_timespec {
-@@ -1216,6 +1245,9 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
+@@ -256,6 +285,24 @@ slowWait(const char * kind, uint64_t began)
+ 	}
+ }
+ 
++/*
++ * Now, in ns, by the clock user space calls CLOCK_MONOTONIC (Libc: the calendar time less the boot time), which
++ * is the clock msm's times are of. Not mach_continuous_time: on the Pixel the counter has run since the phone's
++ * own boot loaders and ours, some 80 s before this kernel set its boot time, and the two differ by that much.
++ */
++static uint64_t
++monotonicNow(void)
++{
++	clock_sec_t secs, bootSecs;
++	clock_nsec_t nsecs, bootNsecs;
++	int64_t now;
++
++	clock_get_calendar_nanotime(&secs, &nsecs);
++	clock_get_boottime_nanotime(&bootSecs, &bootNsecs);
++	now = ((int64_t) secs - (int64_t) bootSecs) * (int64_t) NSEC_PER_SEC + (int64_t) nsecs - (int64_t) bootNsecs;
++	return now > 0 ? (uint64_t) now : 0;
++}
++
+ /* How long from now a time of msm's is, in milliseconds; 0: now or past. */
+ static uint64_t
+ millisecondsUntil(const struct msm_timespec * when)
+@@ -263,7 +310,7 @@ millisecondsUntil(const struct msm_timespec * when)
+ 	uint64_t now;
+ 	int64_t left, end;
+ 
+-	absolutetime_to_nanoseconds(mach_continuous_time(), &now);
++	now = monotonicNow();
+ 	/* the seconds are the caller's: a number too big to be nanoseconds is a time far ahead (or far behind), not a wrapped one */
+ 	if (__builtin_mul_overflow(when->seconds, (int64_t) NSEC_PER_SEC, &end) || __builtin_add_overflow(end, when->nanoseconds, &end)) {
+ 		return when->seconds > 0 && when->nanoseconds >= 0 ? GPU_PATIENCE_MS : 0;
+@@ -292,7 +339,7 @@ waitOver(const struct msm_timespec * when, uint32_t fence)
+ 	gGPUStat.over++;
+ 	if (told < 4) {
+ 		told++;
+-		absolutetime_to_nanoseconds(mach_continuous_time(), &now);
++		now = monotonicNow();
+ 		IOLog("HakiosGPU: a wait for submission %u, which is not done, until %lld.%09lld s, asked for at %llu.%09llu s: "
+ 		    "over before it began\n", fence, when->seconds, when->nanoseconds, now / NSEC_PER_SEC, now % NSEC_PER_SEC);
+ 	}
+@@ -1216,6 +1263,9 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
  		struct hakios_surface surface;
  		struct hakios_user_memory user;
  		struct hakios_show show;
@@ -660,7 +703,7 @@ index 633b419..41257cd 100644
  	} r;
  	size_t size = args->structureInputSize;
  	struct gpu_buffer * b;
-@@ -1311,6 +1343,21 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
+@@ -1311,6 +1361,21 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
  	case kHakiosShow:
  		ret = show(&r.show);
  		break;
@@ -1254,10 +1297,10 @@ index 0000000..dcf51ef
 +/redwood/bin/mali_test
 diff --git a/userland/src/mali_test.c b/userland/src/mali_test.c
 new file mode 100644
-index 0000000..f801d3b
+index 0000000..3988555
 --- /dev/null
 +++ b/userland/src/mali_test.c
-@@ -0,0 +1,142 @@
+@@ -0,0 +1,143 @@
 +/*
 + * The Pixel 9 Pro's Mali from user space, through HakiosGPU (drivers/gpu/hakios.gpu.cpp) with boot-arg mali=1:
 + * what a Panthor stand-in for PanVK will do (caiman repo docs/panvk-uapi.md), in the smallest steps. The GPU's
@@ -1378,7 +1421,8 @@ index 0000000..f801d3b
 +
 +		clock_gettime(CLOCK_MONOTONIC, &now);   /* the request's timeout is a time of this clock, not a length */
 +		w.fence = s.fence;
-+		w.seconds = INT64_MAX / 4;              /* far ahead: the kernel's patience (the clocks disagree, see below) */
++		w.seconds = now.tv_sec + 1;             /* a second from now, as Mesa's waits are made */
++		w.nanoseconds = now.tv_nsec;
 +		if (st == 0) {
 +			mach_timebase_info_data_t tb;
 +
