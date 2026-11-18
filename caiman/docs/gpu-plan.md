@@ -195,6 +195,13 @@ mali: self test, stream 1: ... fence 2 done; it wrote 0xc0ffee11: OK
 mali: self test, stream 2: ... fence 3 done; it wrote 0xc0ffee12: OK
 ```
 
+## Step 11: a tiler heap in kbase's format with HEAP_SET (PROBE_GPU=8, run gpu26)
+
+The triangle's 1 MiB heap as four 256 KiB chunks, each with a 64-byte header whose first u64 points at the
+next ((address & ~0xfff) | size >> 12), a 32-byte heap context pointing at the first, and HEAP_SET (opcode
+48) with the context before the draw, as PanVK does at queue start; the Tiler Heap descriptor names the first
+chunk. The triangle comes out the same (1152 red, 2944 green), no faults: the firmware takes the format.
+
 ## Next
 
 8. User space: a Mali back end for hakios-metal (today Adreno PM4 + ir3) emitting CSF command buffers and

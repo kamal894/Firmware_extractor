@@ -467,6 +467,7 @@ static void gpu_service(void)
 #define TRI_FB_VA	0x00800000u	/* 64 x 64 x 4 */
 #define TRI_HEAP_VA	0x01000000u	/* one tiler heap chunk, 1 MiB */
 #define TRI_HEAP_SIZE	0x100000u
+#define TRI_CHUNK	0x40000u	/* step 11: four chunks of the heap */
 
 static u64 tri_desc, tri_geom, tri_code, tri_fb, tri_heap;
 
@@ -522,12 +523,37 @@ static u32 triangle_prepare(u64 *ring, u32 n)
 	for (i = 0; i < 64 * 64; i++)
 		fb[i] = 0xdeadbeef;
 
+#if PROBE_GPU >= 8
+	/*
+	 * Step 11 (PROBE_GPU=8): the heap as kbase builds it (csf/mali_kbase_csf_tiler_heap*.c, docs/panvk-uapi.md):
+	 * TRI_HEAP split into 4 chunks of 256 KiB, each starting with a 64-byte header whose first u64 points at the
+	 * next ((address & ~0xfff) | size >> 12, 0 for the last); a 32-byte heap context (descriptor page +0x300)
+	 * pointing at the first; HEAP_SET with the context before the draw, as PanVK does at queue start.
+	 */
+	for (i = 0; i < 4; i++) {
+		volatile u64 *hdr = (volatile u64 *)(uptr)(tri_heap + i * TRI_CHUNK);
+		u32 w;
+
+		for (w = 0; w < 8; w++)
+			hdr[w] = 0;
+		hdr[0] = i < 3 ? ((TRI_HEAP_VA + (i + 1) * TRI_CHUNK) | (TRI_CHUNK >> 12)) : 0;
+	}
+	d[0x300 / 4] = TRI_HEAP_VA | (TRI_CHUNK >> 12);
+	d[0x304 / 4] = d[0x308 / 4] = d[0x30c / 4] = 0;
+	d[0x310 / 4] = d[0x314 / 4] = d[0x318 / 4] = d[0x31c / 4] = 0;
+	heap[0] = 9 | (2u << 4);
+	heap[1] = TRI_CHUNK;
+	heap[2] = TRI_HEAP_VA;
+	heap[4] = TRI_HEAP_VA + 64;
+	heap[6] = TRI_HEAP_VA + TRI_CHUNK;
+#else
 	/* tiler heap: buffer (9) of type tiler heap (2); one chunk, its 64-byte header zero */
 	heap[0] = 9 | (2u << 4);
 	heap[1] = TRI_HEAP_SIZE;
 	heap[2] = TRI_HEAP_VA;
 	heap[4] = TRI_HEAP_VA + 64;
 	heap[6] = TRI_HEAP_VA + TRI_HEAP_SIZE;
+#endif
 	/* tiler context: hierarchy mask 0xff (TILER_FEATURES 0x809), 64 x 64, one layer, heap, geometry buffer */
 	tc[2] = 0xff;
 	tc[3] = 63 | (63u << 16);
@@ -566,6 +592,10 @@ static u32 triangle_prepare(u64 *ring, u32 n)
 	dsb_sy();
 
 	ring[n++] = (0x22ULL << 56) | 0xe;			/* REQ_RESOURCE fragment, tiler, IDVS */
+#if PROBE_GPU >= 8
+	ring[n++] = cs_move48(92, TRI_DESC_VA + 0x300);		/* the heap context */
+	ring[n++] = (0x30ULL << 56) | (92ULL << 40);		/* HEAP_SET (opcode 48) */
+#endif
 	ring[n++] = cs_move48(0, 0);				/* vertex SRT */
 	ring[n++] = cs_move48(4, 0);				/* fragment SRT */
 	ring[n++] = cs_move48(8, 0);				/* vertex FAU */
