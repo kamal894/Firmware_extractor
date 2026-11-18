@@ -619,6 +619,12 @@ Run darwin-fast1 (`LOADER=1 ... PROBE_DVFS=2`, `cpus=5`): 5 of 5 processors, 8-1
 framebuffer (11-20 with the boot clocks), up to 40 frames a second, touch's first move after 41 ms.
 With `cpus=7` (run smp3) only 5 of 7 came up; the two small cores are not looked into yet.
 
+Later (run ws59, 2026-11-18): nothing is wrong with the two small cores. HackiOS's `GenericARMPE.cpp` starts
+the cores with an L2 access penalty (the loader's `small-core`: 0x300, 0x200) 28 seconds after the others on
+purpose (boot-arg `small_cores_after=S`, 0 for at once), so the early `5 of 7 processors are running` is
+followed by `the slower cores started too: 7 processors running`. `cpus=7` is the default from now on (the
+watcher keeps 0x100); swipe speed is the same (35-42 a second, m2v_test PASS).
+
 ## Memory clock, and the black frames (2026-11-17)
 
 The boot loader leaves the memory (ACPM domain 0, MIF) at its lowest step, **421 MHz** (max 3744; Android
