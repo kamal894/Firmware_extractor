@@ -1,0 +1,22 @@
+  -rwxr-xr-x  1    50368 /redwood/bin/vk_test  -rwxr-xr-x  1    50368 /redwood/bin/vk_test
+$ /redwood/bin/vk_test /redwood/bin/vk_test
+map_with_linking_np: [21(vk_test)]: region 0, not code signed
+vk_test: loader interface version 5
+MESA: info: panvk_debug: startup
+MESA: info: Created an instance
+vk_test: instance madevk_test: instance made
+hakios-panthor: device list: the Mali 61: ok
+hakios-panthor: version: panthor 1.2 63: ok
+hakios-panthor: Panthor request 0: ok
+MESA: info: Found compatible device '/dev/null'.
+MESA: info: panvk (Mali-G715 MC7) Mesa 27.0.0-devel (git-da2d473159)
+vk_test: device "Mali-G715 MC7", Vulkan 1.4.368, driver 0x6863063, vendor 0x13b5vk_test: device "Mali-G715 MC7", Vulkan 1.4.368, driver 0x6863063, vendor 0x13b5 device 0xb8a21030
+vk_test: 2 queue families
+hakios-panthor: Panthor request 1: ok
+hakios-panthor: Panthor request 5: ok
+hakios-panthor: Panthor request 6: ok
+hakios-panthor: Panthor request 3: Invalid argument
+MESA: error: DRM_IOCTL_PANTHOR_VM_BIND failed (err=22)
+MESA: warning: ../mesa/src/panfrost/vulkan/panvk_priv_bo.c:81: VK_ERROR_OUT_OF_DMESA: warning: ../mesa/src/panfrost/vulkan/panvk_priv_bo.c:81: VK_ERROR_OUT_OF_DEVICE_MEMORY
+hakios-panthor: Panthor request 2: ok
+vk_test: vkCreateDevice failed: VkResult -2

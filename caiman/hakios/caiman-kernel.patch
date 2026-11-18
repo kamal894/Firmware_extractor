@@ -1418,10 +1418,10 @@ index 8d69400..f6ebbf9 100644
  		if (tm_va[b] == 0) {
 diff --git a/tools/mesa/hakios-panthor/hakios.panthor.c b/tools/mesa/hakios-panthor/hakios.panthor.c
 new file mode 100644
-index 0000000..7b29643
+index 0000000..a6702fe
 --- /dev/null
 +++ b/tools/mesa/hakios-panthor/hakios.panthor.c
-@@ -0,0 +1,881 @@
+@@ -0,0 +1,915 @@
 +/*
 + * The libdrm of xf86drm.h for PanVK: Linux's Panthor requests to the kernel's HakiosGPU on the Mali (boot-arg mali=1),
 + * the counterpart of hakios-drm (Adreno, msm). What the kernel has (caiman repo docs/gpu-plan.md, steps 10-14):
@@ -1536,6 +1536,29 @@ index 0000000..7b29643
 +	}
 +}
 +
++/* HAKIOS_PANTHOR_TRACE=1: the first few of every request and what came of it, on standard error */
++static bool
++tracing(void)
++{
++	static int on = -1;
++
++	if (on < 0) {
++		const char *v = getenv("HAKIOS_PANTHOR_TRACE");
++		on = v != NULL && *v != '0';
++	}
++	return on;
++}
++
++static void
++trace(const char *what, unsigned id, int error)
++{
++	static unsigned seen[64];
++
++	if (tracing() && seen[id & 63]++ < 8) {
++		fprintf(stderr, "hakios-panthor: %s %u: %s\n", what, id, error ? strerror(error) : "ok");
++	}
++}
++
 +static int
 +fail(int error)
 +{
@@ -1581,8 +1604,10 @@ index 0000000..7b29643
 +
 +	(void)fd;
 +	if (!connect_once() || (version = calloc(1, sizeof(*version))) == NULL) {
++		trace("version: no HakiosGPU", 62, ENODEV);
 +		return NULL;
 +	}
++	trace("version: panthor 1.2", 63, 0);
 +	version->version_major = 1;
 +	version->version_minor = 2;
 +	version->name = strdup("panthor");
@@ -1604,12 +1629,12 @@ index 0000000..7b29643
 +	}
 +}
 +
++/* the syncobjs here have timelines (PanVK needs them on the CSF Malis); nothing else is claimed */
 +int
 +drmGetCap(int fd, uint64_t capability, uint64_t *value)
 +{
 +	(void)fd;
-+	(void)capability;
-+	*value = 0;
++	*value = capability == DRM_CAP_SYNCOBJ || capability == DRM_CAP_SYNCOBJ_TIMELINE;
 +	return 0;
 +}
 +
@@ -1956,8 +1981,10 @@ index 0000000..7b29643
 +{
 +	(void)flags;
 +	if (!connect_once()) {
++		trace("device list: no HakiosGPU", 60, ENODEV);
 +		return 0;
 +	}
++	trace("device list: the Mali", 61, 0);
 +	if (devices != NULL && max_devices > 0) {
 +		devices[0] = &panthor_device;
 +	}
@@ -2143,6 +2170,12 @@ index 0000000..7b29643
 +			} else {
 +				error = call(REQ_MALI_BIND, &k, sizeof(k));
 +			}
++			if (tracing() && (error != 0 || i < 4)) {
++				fprintf(stderr, "hakios-panthor: bind op %u: %s handle %u flags %#x va %#llx offset %#llx size %#llx: %s\n", i,
++				    type == DRM_PANTHOR_VM_BIND_OP_TYPE_MAP ? "map" : "unmap", op->bo_handle, op->flags,
++				    (unsigned long long)op->va, (unsigned long long)op->bo_offset, (unsigned long long)op->size,
++				    error ? strerror(error) : "ok");
++			}
 +			if (error != 0) {
 +				b->ops.count = i;
 +				return error;
@@ -2287,6 +2320,7 @@ index 0000000..7b29643
 +		return fail(ENOSYS);
 +	}
 +	error = panthor(nr - DRM_COMMAND_BASE, arg);
++	trace("Panthor request", nr - DRM_COMMAND_BASE, error);
 +	return error ? fail(error) : 0;
 +}
 +
@@ -2345,10 +2379,10 @@ index 0000000..d2a4da7
 +#endif
 diff --git a/tools/mesa/panvk-darwin.patch b/tools/mesa/panvk-darwin.patch
 new file mode 100644
-index 0000000..a9f66b9
+index 0000000..e949a3d
 --- /dev/null
 +++ b/tools/mesa/panvk-darwin.patch
-@@ -0,0 +1,187 @@
+@@ -0,0 +1,401 @@
 +diff --git a/src/panfrost/lib/kmod/meson.build b/src/panfrost/lib/kmod/meson.build
 +index 20ee6db..b8d4060 100644
 +--- a/src/panfrost/lib/kmod/meson.build
@@ -2447,6 +2481,149 @@ index 0000000..a9f66b9
 +   link_depends: vulkan_icd_link_depends,
 +   gnu_symbol_visibility : 'hidden',
 +   install : true,
++diff --git a/src/panfrost/vulkan/panvk_instance.c b/src/panfrost/vulkan/panvk_instance.c
++index b519885..fe20a14 100644
++--- a/src/panfrost/vulkan/panvk_instance.c
+++++ b/src/panfrost/vulkan/panvk_instance.c
++@@ -11,6 +11,34 @@
++  */
++ 
++ #include "util/build_id.h"
+++#ifdef __APPLE__
+++#include <dlfcn.h>
+++#include <mach-o/loader.h>
+++#include <string.h>
+++
+++/* HackiOS: a Mach-O has no ELF build-id note; its LC_UUID (16 bytes, the rest zero) identifies the build instead */
+++static bool
+++panvk_darwin_build_sha(uint8_t *sha, size_t size)
+++{
+++   Dl_info info;
+++
+++   if (!dladdr((const void *)panvk_darwin_build_sha, &info) || info.dli_fbase == NULL)
+++      return false;
+++
+++   const struct mach_header_64 *header = info.dli_fbase;
+++   const struct load_command *lc = (const void *)(header + 1);
+++
+++   for (uint32_t i = 0; i < header->ncmds; i++) {
+++      if (lc->cmd == LC_UUID) {
+++         memset(sha, 0, size);
+++         memcpy(sha, ((const struct uuid_command *)lc)->uuid, size < 16 ? size : 16);
+++         return true;
+++      }
+++      lc = (const void *)((const char *)lc + lc->cmdsize);
+++   }
+++   return false;
+++}
+++#endif
++ #include "panvk_drirc.h"
++ #include "util/mesa-blake3.h"
++ #include "util/os_misc.h"
++@@ -215,6 +243,14 @@ panvk_CreateInstance(const VkInstanceCreateInfo *pCreateInfo,
++    panvk_debug_init();
++    pan_trace_init();
++ 
+++#ifdef __APPLE__
+++   uint8_t darwin_sha[BLAKE3_KEY_LEN];
+++
+++   if (!panvk_darwin_build_sha(darwin_sha, sizeof(darwin_sha))) {
+++      return panvk_errorf(NULL, VK_ERROR_INITIALIZATION_FAILED,
+++                          "Failed to find the Mach-O UUID");
+++   }
+++#else
++    const struct build_id_note *note =
++       build_id_find_nhdr_for_addr(panvk_CreateInstance);
++    if (!note) {
++@@ -227,6 +263,7 @@ panvk_CreateInstance(const VkInstanceCreateInfo *pCreateInfo,
++       return panvk_errorf(NULL, VK_ERROR_INITIALIZATION_FAILED,
++                           "build-id too short.  It needs to be a SHA");
++    }
+++#endif
++ 
++    pAllocator = pAllocator ?: vk_default_allocator();
++    instance = vk_zalloc(pAllocator, sizeof(*instance), 8,
++@@ -259,13 +296,20 @@ panvk_CreateInstance(const VkInstanceCreateInfo *pCreateInfo,
++       panvk_physical_device_try_create;
++    instance->vk.physical_devices.destroy = panvk_destroy_physical_device;
++ 
++-   if (PANVK_DEBUG(STARTUP))
+++   if (PANVK_DEBUG(STARTUP)) {
+++      /* (the runtime's vk_errorf() messages too: why a device was turned down, which is otherwise silent) */
+++      instance->vk.enable_debug_logging = true;
++       mesa_logi("Created an instance");
+++   }
++ 
++    VG(VALGRIND_CREATE_MEMPOOL(instance, 0, false));
++ 
++    STATIC_ASSERT(sizeof(instance->driver_build_sha) == BLAKE3_KEY_LEN);
+++#ifdef __APPLE__
+++   memcpy(instance->driver_build_sha, darwin_sha, sizeof(instance->driver_build_sha));
+++#else
++    copy_build_id_to_sha1(instance->driver_build_sha, note);
+++#endif
++ 
++    *pInstance = panvk_instance_to_handle(instance);
++ 
++diff --git a/src/panfrost/vulkan/panvk_physical_device.c b/src/panfrost/vulkan/panvk_physical_device.c
++index 3cba853..e80f45f 100644
++--- a/src/panfrost/vulkan/panvk_physical_device.c
+++++ b/src/panfrost/vulkan/panvk_physical_device.c
++@@ -90,6 +90,8 @@ create_kmod_dev(struct panvk_physical_device *device,
++ 
++    device->kmod.dev = pan_kmod_dev_create(fd, flags, &instance->kmod.allocator);
++    if (!device->kmod.dev) {
+++      if (PANVK_DEBUG(STARTUP))
+++         mesa_logi("panvk: no kmod device on '%s' (errno %d)", path, errno);
++       close(fd);
++ 
++       if (errno != -ENOMEM)
++@@ -478,7 +480,7 @@ panvk_physical_device_init(struct panvk_physical_device *device,
++ 
++    result = get_drm_device_ids(device, instance, drm_device);
++    if (result != VK_SUCCESS)
++-      goto fail;
+++      { if (PANVK_DEBUG(STARTUP)) mesa_logi("panvk: physical device init stage 1 failed: %d", result); goto fail; }
++ 
++    device->formats.all = pan_format_table(arch);
++    device->formats.blendable = pan_blendable_format_table(arch);
++@@ -487,15 +489,15 @@ panvk_physical_device_init(struct panvk_physical_device *device,
++ 
++    result = get_core_masks(device, instance);
++    if (result != VK_SUCCESS)
++-      goto fail;
+++      { if (PANVK_DEBUG(STARTUP)) mesa_logi("panvk: physical device init stage 2 failed: %d", result); goto fail; }
++ 
++    result = get_device_heaps(device, instance);
++    if (result != VK_SUCCESS)
++-      goto fail;
+++      { if (PANVK_DEBUG(STARTUP)) mesa_logi("panvk: physical device init stage 3 failed: %d", result); goto fail; }
++ 
++    result = get_device_sync_types(device, instance);
++    if (result != VK_SUCCESS)
++-      goto fail;
+++      { if (PANVK_DEBUG(STARTUP)) mesa_logi("panvk: physical device init stage 4 failed: %d", result); goto fail; }
++ 
++    if (arch >= 10) {
++       /* XXX: Make dri options for thoses */
++@@ -526,7 +528,7 @@ panvk_physical_device_init(struct panvk_physical_device *device,
++                               &supported_features, NULL, &dispatch_table);
++ 
++    if (result != VK_SUCCESS)
++-      goto fail;
+++      { if (PANVK_DEBUG(STARTUP)) mesa_logi("panvk: physical device init stage 5 failed: %d", result); goto fail; }
++ 
++    /* initialize disk cache after vk_physical_device_init */
++    init_shader_caches(device, instance);
++@@ -539,7 +541,7 @@ panvk_physical_device_init(struct panvk_physical_device *device,
++ 
++    result = panvk_wsi_init(device);
++    if (result != VK_SUCCESS)
++-      goto fail;
+++      { if (PANVK_DEBUG(STARTUP)) mesa_logi("panvk: physical device init stage 6 failed: %d", result); goto fail; }
++ 
++    return VK_SUCCESS;
++ 
 +diff --git a/src/panfrost/vulkan/panvk_vX_physical_device.c b/src/panfrost/vulkan/panvk_vX_physical_device.c
 +index 5a3962f..9b60537 100644
 +--- a/src/panfrost/vulkan/panvk_vX_physical_device.c
@@ -2464,6 +2641,45 @@ index 0000000..a9f66b9
 + 
 + #include "git_sha1.h"
 + 
++diff --git a/src/util/cache_ops_aarch64.c b/src/util/cache_ops_aarch64.c
++index d56ab8a..9c6b56a 100644
++--- a/src/util/cache_ops_aarch64.c
+++++ b/src/util/cache_ops_aarch64.c
++@@ -26,6 +26,26 @@
++ #include "util/macros.h"
++ #include "util/u_atomic.h"
++ 
+++#ifdef __APPLE__
+++#include <sys/sysctl.h>
+++
+++/* Darwin does not let user space read CTR_EL0 (SCTLR_EL1.UCT clear: SIGILL); it tells the cache line size instead.
+++ * The CTR_EL0 fields used here, CWG [27:24] and DminLine [19:16], made of it (log2 of the line in words). */
+++static uint32_t
+++get_ctr_el0(void)
+++{
+++   uint64_t line = 0;
+++   size_t size = sizeof(line);
+++   uint32_t log2_words = 4;                           /* 64 bytes, if the system does not say */
+++
+++   if (sysctlbyname("hw.cachelinesize", &line, &size, NULL, 0) == 0 && line >= 16) {
+++      log2_words = 0;
+++      while ((4u << log2_words) < line)
+++         log2_words++;
+++   }
+++   return (log2_words << 24) | (log2_words << 16);
+++}
+++#else
++ static uint32_t
++ get_ctr_el0(void)
++ {
++@@ -33,6 +53,7 @@ get_ctr_el0(void)
++    __asm("mrs\t%x0, ctr_el0" : "=r"(ctr_el0));
++    return ctr_el0;
++ }
+++#endif
++ 
++ static uint32_t
++ get_ctr_cwg(void)
 +diff --git a/src/util/libdrm.h b/src/util/libdrm.h
 +index 8876ebe..acb442f 100644
 +--- a/src/util/libdrm.h
@@ -2478,6 +2694,38 @@ index 0000000..a9f66b9
 + #include <xf86drm.h>
 + #else
 + 
++diff --git a/src/util/meson.build b/src/util/meson.build
++index 2062966..1ad58ec 100644
++--- a/src/util/meson.build
+++++ b/src/util/meson.build
++@@ -322,6 +322,9 @@ deps_for_libmesa_util = [
++ if dep_libdrm.found()
++   files_mesa_util += files('u_sync_provider.c', 'u_sync_provider.h')
++   deps_for_libmesa_util += dep_libdrm
+++elif host_machine.system() == 'darwin' and host_machine.subsystem() == 'ios'
+++  # HackiOS: the syncobjs of hakios-panthor (see u_sync_provider.h)
+++  files_mesa_util += files('u_sync_provider.c', 'u_sync_provider.h')
++ endif
++ 
++ if with_platform_android
++diff --git a/src/util/u_sync_provider.h b/src/util/u_sync_provider.h
++index 1b556be..787db0e 100644
++--- a/src/util/u_sync_provider.h
+++++ b/src/util/u_sync_provider.h
++@@ -37,7 +37,12 @@ struct util_sync_provider {
++    struct util_sync_provider * (*clone)(struct util_sync_provider *p);
++ };
++ 
++-#if HAVE_LIBDRM
+++#if defined(__APPLE__)
+++#include <TargetConditionals.h>
+++#endif
+++
+++/* (HackiOS: on iOS the DRM syncobjs are hakios-panthor's, and PanVK needs this provider to have a device at all) */
+++#if HAVE_LIBDRM || (defined(__APPLE__) && TARGET_OS_IPHONE)
++ struct util_sync_provider * util_sync_provider_drm(int drm_fd);
++ #else
++ static inline struct util_sync_provider *
 +diff --git a/src/vulkan/runtime/meson.build b/src/vulkan/runtime/meson.build
 +index 506b6cb..ee4770b 100644
 +--- a/src/vulkan/runtime/meson.build
@@ -2823,15 +3071,19 @@ index 0000000..ea4d4a1
 +	return 0;
 +}
 diff --git a/userland/src/vk_test.c b/userland/src/vk_test.c
-index 622ca30..1f4882e 100644
+index 622ca30..14f306e 100644
 --- a/userland/src/vk_test.c
 +++ b/userland/src/vk_test.c
-@@ -84,10 +84,14 @@ main(void)
+@@ -84,10 +84,18 @@ main(void)
  	setvbuf(stdout, NULL, _IONBF, 0);
  	dup2(1, 2);                     /* Mesa's own messages (stderr) beside ours */
  	setenv("TU_DEBUG", "startup", 0);
 -	void *driver = dlopen(DRIVER, RTLD_NOW | RTLD_LOCAL);
 +	setenv("PANVK_DEBUG", "startup", 0);
++	/* PanVK: the Pixel 9 Pro's G715 is v11, which Mesa calls "not well-tested" and leaves out unless asked for */
++	setenv("PAN_I_WANT_A_BROKEN_VULKAN_DRIVER", "1", 0);
++	setenv("HAKIOS_PANTHOR_TRACE", "1", 0);
++	setenv("MESA_LOG_LEVEL", "debug", 0);
 +	/* the driver: Turnip by default, another by its path (PanVK on the Pixel: /redwood/lib/libvulkan_panfrost.dylib) */
 +	const char *path = getenv("VK_TEST_DRIVER") != NULL ? getenv("VK_TEST_DRIVER") :
 +	    access(DRIVER, R_OK) == 0 ? DRIVER : "/redwood/lib/libvulkan_panfrost.dylib";
