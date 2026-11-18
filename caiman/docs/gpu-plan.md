@@ -358,6 +358,46 @@ whole 240 s on its one Metal device over PanVK with no restart and no GPU hang; 
 wallpaper is black and the widgets are white boxes (blur and materials, and the iPhone functions that stand-in
 copies replace, still to be looked at).
 
+The wallpaper and widgets are the same on the processor's path (docs/m4-home-screen.png): nothing set as
+wallpaper, no widget extensions running. Not the GPU's.
+
+## Step 19: speed (runs darwin-ws20..28)
+
+Kernel `touch_demo=N` (hakios.goodix.c): N seconds after start, a finger of its own swipes the home screen a
+page and back every 2 s, 30 times, so frames can be timed with nobody at the phone. MiniIOMobileFramebuffer's
+5-second lines count frames; the kernel's `HakiosGPU: Mali:` line counts submissions, cache work and waits, and
+`mali: stream N: submission to done` gives each stream's times by power of two; `m2v_telemetry=1` prints
+metal2vulkan's own (commit to completion, pipeline creation).
+
+| run | path | frames a second while swiping | an idle frame on the GPU |
+|---|---|---|---|
+| darwin-cpu20 | processor (no `mali`) | 38-42 | - |
+| darwin-ws20 | Mali, PanVK memory non-cacheable | 29-35 | 8-16 ms |
+| darwin-ws25 | Mali, all PanVK memory through the GPU's L2 | 39-45 | 4-8 ms |
+| darwin-ws28 | Mali, cached except IOSurfaces and client pages | 34-40 | 8-16 ms |
+
+What was found:
+
+- every Mali mapping was MEMATTR slot 5 (0x4c, non-cacheable): each texel and tile write went to DRAM. PanVK's
+  memory is now slot 0 (0x88) unless bound MAP_UNCACHED (which hakios-panthor now passes), and the tiler heap
+  too; each kernel ring submission ends with WAIT all and an L2/LSC clean before its fence is written. The
+  kernel's own rings and fence words stay slot 5. Boot-arg `mali_cached` (bit 0 PanVK, bit 1 heaps).
+- with IOSurfaces and client pages (processor-cached memory shared with other processes) also cached by the
+  GPU, the screen showed wrong geometry after swiping (darwin-ws26/27: a stray triangle, an icon missing).
+  They are mapped non-cacheable for now (`mali_shared_cached=1` to cache them, to find the cause); the cause
+  is not known yet.
+- the 3 subqueues of a frame are done together; while swiping, frames queue behind each other (64-256 ms
+  from commit to completion) because the GPU takes longer than a frame per frame.
+- metal2vulkan creates 71 pipelines at every boot, 91 s in all (the longest 11 s): the shader cache is in
+  RAM. A cache kept on the phone's storage is the fix (with the step that writes there).
+- GPU buffers no longer grow without end in these runs (about 580-690).
+- m2v_test: a GPU-cleared IOSurface read by the processor had 32 stale pixels once (darwin-ws23); nothing
+  invalidates the processor's caches after the GPU is done. It passed in ws25 and ws28.
+
+Codex's review of the CSF back end (to do): service CS/CSG events (tiler OOM bit 26, faults), grow the tiler
+heap on OOM, skip the per-submission L2 flush with Panthor's LATEST_FLUSH id, a poller or interrupts for
+completion, the GLB power-off timer.
+
 ## Next
 
 8. User space: a Mali back end for hakios-metal (today Adreno PM4 + ir3) emitting CSF command buffers and

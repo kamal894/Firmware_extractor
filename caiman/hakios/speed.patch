@@ -1,0 +1,36 @@
+--- a/xnu/files/iokit/Kernel/MiniIOMobileFramebuffer.cpp
++++ b/xnu/files/iokit/Kernel/MiniIOMobileFramebuffer.cpp
+@@ -161,6 +161,8 @@
+  * panel is worked out from the four of the picture around where it falls (bilinear).
+  */
+ static TUNABLE(uint32_t, gFilter, "fb_filter", 2);
++/* Stage scaled pixels in cache before sequential writes to the framebuffer. */
++static TUNABLE(uint32_t, gRowStage, "fb_rowstage", 0);
+ /*
+  * fb_filter=2 (the default): nearest neighbour while frames come, bilinear once they stop. Bilinear costs: a frame
+  * took 3.6 ms to scale onto the panel as a rule and 11 ms for one in ten, at any priority (fb_pri), against 1.7 and
+@@ -880,6 +882,24 @@
+ 				}
+ 			}
+ 		}
++		if (gRowStage) {
++			/* Small per-thread cached tile; also works for clipped and filtered layers. */
++			uint32_t tile[256];
++			for (int32_t start = cx0; start < cx1; start += 256) {
++				int32_t count = cx1 - start < 256 ? cx1 - start : 256;
++				for (int32_t i = 0; i < count; i++) {
++					uint32_t c = fColumn[start + i];
++					if (filter) {
++						uint32_t w = fColumnWeight[start + i], a = from[c];
++						tile[i] = w == 0 || a == from[c + 1] ? a : blend(a, from[c + 1], w);
++					} else {
++						tile[i] = from[c];
++					}
++				}
++				memcpy(to + start, tile, (size_t) count * sizeof(tile[0]));
++			}
++			continue;
++		}
+ 		if (filter) {
+ 			const uint32_t * __restrict column = fColumn + cx0;
+ 			const uint16_t * __restrict weights = fColumnWeight + cx0;
