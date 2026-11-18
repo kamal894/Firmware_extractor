@@ -285,6 +285,22 @@ on iOS (without it pan_kmod_dev_init() gives up silently: found by Codex); CTR_E
 (user space may not read it on Darwin: SIGILL); drmGetCap saying syncobj timelines are there; VM binds of
 part of a page rounded up to the page, as Panthor does.
 
+## Step 16: Vulkan compute and a Vulkan triangle through PanVK (run darwin-vktri1)
+
+userland/src/vk_tri.c (shaders: GLSL in src/vk_tri/, SPIR-V by glslangValidator on the Mac): a compute shader
+writing i * 3 + 7 into 4 MB, then a render pass clearing 256 x 256 RGBA8 to green and drawing a red triangle from
+the vertex index, copied out and counted. PanVK's own compiler (Valhall) built both pipelines on the phone:
+
+```
+vk_tri: compute pipeline made (the shader compiled for the Mali) in 9.4 ms
+vk_tri: compute: 1048576 of 1048576 words right in 1.24 ms: THE MALI RAN A VULKAN COMPUTE SHADER
+vk_tri: graphics pipeline made in 2.5 ms
+vk_tri: triangle: 18432 red, 47104 green, 0 other of 65536 pixels (28% red; 28% by geometry) in 1.26 ms
+```
+
+Nothing new was needed in the kernel or hakios-panthor: the vertex/tiler, fragment and compute streams, the
+tiler heap and the binds all work as PanVK uses them.
+
 ## Next
 
 8. User space: a Mali back end for hakios-metal (today Adreno PM4 + ir3) emitting CSF command buffers and

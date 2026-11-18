@@ -2889,6 +2889,14 @@ index 0000000..dcf51ef
 +# The Pixel 9 Pro's Mali from user space through HakiosGPU (src/mali_test.c), with the kernel's mali=1:
 +#   EXTRA=obj/mali_test RC_JOBS=rc.jobs.malitest userland/build.sh
 +/redwood/bin/mali_test
+diff --git a/userland/rc.jobs.vktri b/userland/rc.jobs.vktri
+new file mode 100644
+index 0000000..607d0b8
+--- /dev/null
++++ b/userland/rc.jobs.vktri
+@@ -0,0 +1,2 @@
++# Commands run by the launchd job com.hakios.demo: PanVK, compute and a triangle (src/vk_tri.c), with mali=1
++/redwood/bin/vk_tri
 diff --git a/userland/src/mali_test.c b/userland/src/mali_test.c
 new file mode 100644
 index 0000000..ea4d4a1
@@ -3096,6 +3104,568 @@ index 622ca30..14f306e 100644
  		return 1;
  	}
  	gipa = (PFN_vkGetInstanceProcAddr)dlsym(driver, "vk_icdGetInstanceProcAddr");
+diff --git a/userland/src/vk_tri.c b/userland/src/vk_tri.c
+new file mode 100644
+index 0000000..241b72d
+--- /dev/null
++++ b/userland/src/vk_tri.c
+@@ -0,0 +1,422 @@
++/*
++ * PanVK on the Pixel 9 Pro's Mali, past vk_test's fill: the two kinds of work a Metal on Vulkan needs.
++ *   1. compute: a shader (src/vk_tri/fill.comp) writes every word of a 4 MB storage buffer (i * 3 + 7); all checked;
++ *   2. graphics: a render pass clears a 256 x 256 RGBA8 image to green and draws a red triangle in it from the vertex
++ *      index alone (tri.vert, tri.frag: the triangle probe/gpu.c drew by hand), copied into a host-visible buffer;
++ *      the red, green and other pixels counted (by geometry the triangle is 28% of the image).
++ * The shaders are SPIR-V made on the Mac (glslangValidator -V; src/vk_tri/*.h). The driver: argument 1, or PanVK.
++ * RC_JOBS=rc.jobs.vktri runs it with the kernel's mali=1.
++ */
++#include <dlfcn.h>
++#include <signal.h>
++#include <stdint.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <sys/ucontext.h>
++#include <time.h>
++#include <unistd.h>
++
++#define VK_NO_PROTOTYPES
++#include <vulkan/vulkan.h>
++
++#include "vk_tri/fill.comp.h"
++#include "vk_tri/tri.vert.h"
++#include "vk_tri/tri.frag.h"
++
++typedef VkResult (VKAPI_PTR *PFN_vkNegotiateLoaderICDInterfaceVersion)(uint32_t *pVersion);
++
++#define DRIVER  "/redwood/lib/libvulkan_panfrost.dylib"
++#define WORDS   (1u << 20)
++#define SIDE    256u
++
++static PFN_vkGetInstanceProcAddr gipa;
++static VkInstance instance;
++static VkDevice device;
++static VkPhysicalDevice gpu;
++
++#define I(name) PFN_##name name = (PFN_##name)gipa(instance, #name)
++#define CHECK(what, call) do { VkResult r_ = (call); if (r_ != VK_SUCCESS) { \
++	printf("vk_tri: %s failed: VkResult %d\n", what, r_); return 1; } } while (0)
++
++static void
++where(const char *what, uintptr_t a)
++{
++	Dl_info info;
++
++	if (dladdr((void *)a, &info) && info.dli_fname != NULL)
++		printf("vk_tri:   %s %#lx = %s+%#lx (%s+%#lx)\n", what, (unsigned long)a, info.dli_fname,
++		    (unsigned long)(a - (uintptr_t)info.dli_fbase), info.dli_sname ? info.dli_sname : "?",
++		    (unsigned long)(a - (uintptr_t)info.dli_saddr));
++	else
++		printf("vk_tri:   %s %#lx\n", what, (unsigned long)a);
++}
++
++static void
++crashed(int sig, siginfo_t *si, void *context)
++{
++	ucontext_t *uc = context;
++
++	printf("vk_tri: signal %d at address %p\n", sig, si->si_addr);
++	where("pc", (uintptr_t)uc->uc_mcontext->__ss.__pc);
++	where("lr", (uintptr_t)uc->uc_mcontext->__ss.__lr);
++	uintptr_t fp = (uintptr_t)uc->uc_mcontext->__ss.__fp;
++	for (int i = 0; i < 16 && fp != 0 && (fp & 7) == 0; i++) {
++		where("frame", ((uintptr_t *)fp)[1]);
++		fp = ((uintptr_t *)fp)[0];
++	}
++	fflush(stdout);
++	_exit(128 + sig);
++}
++
++static double
++now_ms(void)
++{
++	struct timespec t;
++
++	clock_gettime(CLOCK_MONOTONIC, &t);
++	return t.tv_sec * 1e3 + t.tv_nsec / 1e6;
++}
++
++/* a buffer in host-visible coherent memory, mapped */
++static int
++host_buffer(VkDeviceSize size, VkBufferUsageFlags usage, VkBuffer *buffer, VkDeviceMemory *memory, void **cpu)
++{
++	I(vkCreateBuffer);
++	I(vkGetBufferMemoryRequirements);
++	I(vkGetPhysicalDeviceMemoryProperties);
++	I(vkAllocateMemory);
++	I(vkBindBufferMemory);
++	I(vkMapMemory);
++	VkBufferCreateInfo bci = { .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO, .size = size, .usage = usage };
++	VkMemoryRequirements req;
++	VkPhysicalDeviceMemoryProperties mp;
++	uint32_t type = UINT32_MAX;
++
++	CHECK("vkCreateBuffer", vkCreateBuffer(device, &bci, NULL, buffer));
++	vkGetBufferMemoryRequirements(device, *buffer, &req);
++	vkGetPhysicalDeviceMemoryProperties(gpu, &mp);
++	for (uint32_t i = 0; i < mp.memoryTypeCount; i++) {
++		const VkMemoryPropertyFlags want = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
++		if ((req.memoryTypeBits & (1u << i)) && (mp.memoryTypes[i].propertyFlags & want) == want) {
++			type = i;
++			break;
++		}
++	}
++	if (type == UINT32_MAX) {
++		printf("vk_tri: no host-visible coherent memory\n");
++		return 1;
++	}
++	VkMemoryAllocateInfo mai = { .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, .allocationSize = req.size,
++	    .memoryTypeIndex = type };
++	CHECK("vkAllocateMemory", vkAllocateMemory(device, &mai, NULL, memory));
++	CHECK("vkBindBufferMemory", vkBindBufferMemory(device, *buffer, *memory, 0));
++	CHECK("vkMapMemory", vkMapMemory(device, *memory, 0, VK_WHOLE_SIZE, 0, cpu));
++	return 0;
++}
++
++static int
++shader(const uint32_t *code, size_t size, VkShaderModule *module)
++{
++	I(vkCreateShaderModule);
++	VkShaderModuleCreateInfo info = { .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, .codeSize = size, .pCode = code };
++
++	CHECK("vkCreateShaderModule", vkCreateShaderModule(device, &info, NULL, module));
++	return 0;
++}
++
++int
++main(int argc, char **argv)
++{
++	struct sigaction sa = { .sa_sigaction = crashed, .sa_flags = SA_SIGINFO };
++	sigaction(SIGSEGV, &sa, NULL);
++	sigaction(SIGBUS, &sa, NULL);
++	sigaction(SIGILL, &sa, NULL);
++	sigaction(SIGABRT, &sa, NULL);
++	sigaction(SIGTRAP, &sa, NULL);
++	setvbuf(stdout, NULL, _IONBF, 0);
++	dup2(1, 2);
++	setenv("PAN_I_WANT_A_BROKEN_VULKAN_DRIVER", "1", 0);   /* (the G715 is v11: see vk_test.c) */
++
++	const char *path = argc > 1 ? argv[1] : DRIVER;
++	void *driver = dlopen(path, RTLD_NOW | RTLD_LOCAL);
++	if (driver == NULL) {
++		printf("vk_tri: %s does not load: %s\n", path, dlerror());
++		return 1;
++	}
++	gipa = (PFN_vkGetInstanceProcAddr)dlsym(driver, "vk_icdGetInstanceProcAddr");
++	PFN_vkNegotiateLoaderICDInterfaceVersion negotiate =
++	    (PFN_vkNegotiateLoaderICDInterfaceVersion)dlsym(driver, "vk_icdNegotiateLoaderICDInterfaceVersion");
++	if (gipa == NULL) {
++		printf("vk_tri: no vk_icdGetInstanceProcAddr in the driver\n");
++		return 1;
++	}
++	if (negotiate != NULL) {
++		uint32_t version = 5;
++		negotiate(&version);
++	}
++
++	I(vkCreateInstance);
++	VkApplicationInfo app = { .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO, .pApplicationName = "vk_tri",
++	    .apiVersion = VK_API_VERSION_1_1 };
++	VkInstanceCreateInfo ici = { .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO, .pApplicationInfo = &app };
++	CHECK("vkCreateInstance", vkCreateInstance(&ici, NULL, &instance));
++	I(vkEnumeratePhysicalDevices);
++	uint32_t count = 1;
++	VkResult er = vkEnumeratePhysicalDevices(instance, &count, &gpu);
++	if ((er != VK_SUCCESS && er != VK_INCOMPLETE) || count == 0) {
++		printf("vk_tri: no physical device (VkResult %d)\n", er);
++		return 1;
++	}
++	float priority = 1.0f;
++	VkDeviceQueueCreateInfo qci = { .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO, .queueFamilyIndex = 0,
++	    .queueCount = 1, .pQueuePriorities = &priority };
++	VkDeviceCreateInfo dci = { .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO, .queueCreateInfoCount = 1,
++	    .pQueueCreateInfos = &qci };
++	I(vkCreateDevice);
++	CHECK("vkCreateDevice", vkCreateDevice(gpu, &dci, NULL, &device));
++	printf("vk_tri: device made\n");
++
++	I(vkGetDeviceQueue);
++	I(vkCreateCommandPool);
++	I(vkAllocateCommandBuffers);
++	I(vkBeginCommandBuffer);
++	I(vkEndCommandBuffer);
++	I(vkResetCommandBuffer);
++	I(vkCreateFence);
++	I(vkResetFences);
++	I(vkQueueSubmit);
++	I(vkWaitForFences);
++	VkQueue queue;
++	vkGetDeviceQueue(device, 0, 0, &queue);
++	VkCommandPoolCreateInfo pci = { .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
++	    .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, .queueFamilyIndex = 0 };
++	VkCommandPool pool;
++	CHECK("vkCreateCommandPool", vkCreateCommandPool(device, &pci, NULL, &pool));
++	VkCommandBufferAllocateInfo cai = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO, .commandPool = pool,
++	    .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY, .commandBufferCount = 1 };
++	VkCommandBuffer cb;
++	CHECK("vkAllocateCommandBuffers", vkAllocateCommandBuffers(device, &cai, &cb));
++	VkFenceCreateInfo fci = { .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
++	VkFence fence;
++	CHECK("vkCreateFence", vkCreateFence(device, &fci, NULL, &fence));
++	VkCommandBufferBeginInfo begin = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
++	VkSubmitInfo si = { .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO, .commandBufferCount = 1, .pCommandBuffers = &cb };
++
++	/* ---- 1. compute ---- */
++	{
++		I(vkCreateDescriptorSetLayout);
++		I(vkCreatePipelineLayout);
++		I(vkCreateComputePipelines);
++		I(vkCreateDescriptorPool);
++		I(vkAllocateDescriptorSets);
++		I(vkUpdateDescriptorSets);
++		I(vkCmdBindPipeline);
++		I(vkCmdBindDescriptorSets);
++		I(vkCmdDispatch);
++		VkBuffer buffer;
++		VkDeviceMemory memory;
++		uint32_t *words;
++		VkShaderModule module;
++		double t0, t1;
++
++		if (host_buffer(WORDS * 4, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, &buffer, &memory, (void **)&words) ||
++		    shader(spv_fill_comp, sizeof(spv_fill_comp), &module)) {
++			return 1;
++		}
++		memset(words, 0, WORDS * 4);
++		VkDescriptorSetLayoutBinding binding = { .binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
++		    .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT };
++		VkDescriptorSetLayoutCreateInfo dsli = { .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
++		    .bindingCount = 1, .pBindings = &binding };
++		VkDescriptorSetLayout dsl;
++		CHECK("vkCreateDescriptorSetLayout", vkCreateDescriptorSetLayout(device, &dsli, NULL, &dsl));
++		VkPipelineLayoutCreateInfo pli = { .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, .setLayoutCount = 1,
++		    .pSetLayouts = &dsl };
++		VkPipelineLayout layout;
++		CHECK("vkCreatePipelineLayout", vkCreatePipelineLayout(device, &pli, NULL, &layout));
++		VkComputePipelineCreateInfo cpi = { .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
++		    .stage = { .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .stage = VK_SHADER_STAGE_COMPUTE_BIT,
++		        .module = module, .pName = "main" }, .layout = layout };
++		VkPipeline pipeline;
++		t0 = now_ms();
++		CHECK("vkCreateComputePipelines", vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &cpi, NULL, &pipeline));
++		printf("vk_tri: compute pipeline made (the shader compiled for the Mali) in %.1f ms\n", now_ms() - t0);
++		VkDescriptorPoolSize ps = { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1 };
++		VkDescriptorPoolCreateInfo dpi = { .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO, .maxSets = 1,
++		    .poolSizeCount = 1, .pPoolSizes = &ps };
++		VkDescriptorPool dp;
++		CHECK("vkCreateDescriptorPool", vkCreateDescriptorPool(device, &dpi, NULL, &dp));
++		VkDescriptorSetAllocateInfo dsai = { .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO, .descriptorPool = dp,
++		    .descriptorSetCount = 1, .pSetLayouts = &dsl };
++		VkDescriptorSet set;
++		CHECK("vkAllocateDescriptorSets", vkAllocateDescriptorSets(device, &dsai, &set));
++		VkDescriptorBufferInfo dbi = { buffer, 0, VK_WHOLE_SIZE };
++		VkWriteDescriptorSet wds = { .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, .dstSet = set, .dstBinding = 0,
++		    .descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, .pBufferInfo = &dbi };
++		vkUpdateDescriptorSets(device, 1, &wds, 0, NULL);
++
++		CHECK("vkBeginCommandBuffer", vkBeginCommandBuffer(cb, &begin));
++		vkCmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
++		vkCmdBindDescriptorSets(cb, VK_PIPELINE_BIND_POINT_COMPUTE, layout, 0, 1, &set, 0, NULL);
++		vkCmdDispatch(cb, WORDS / 64, 1, 1);
++		CHECK("vkEndCommandBuffer", vkEndCommandBuffer(cb));
++		t0 = now_ms();
++		CHECK("vkQueueSubmit", vkQueueSubmit(queue, 1, &si, fence));
++		CHECK("vkWaitForFences", vkWaitForFences(device, 1, &fence, VK_TRUE, 2000000000ull));
++		t1 = now_ms();
++		uint32_t right = 0, first_wrong = UINT32_MAX;
++		for (uint32_t i = 0; i < WORDS; i++) {
++			if (words[i] == i * 3 + 7) right++;
++			else if (first_wrong == UINT32_MAX) first_wrong = i;
++		}
++		printf("vk_tri: compute: %u of %u words right in %.2f ms%s\n", right, WORDS, t1 - t0,
++		    right == WORDS ? ": THE MALI RAN A VULKAN COMPUTE SHADER" : "");
++		if (first_wrong != UINT32_MAX) printf("vk_tri: word %u is %#x\n", first_wrong, words[first_wrong]);
++		CHECK("vkResetFences", vkResetFences(device, 1, &fence));
++		CHECK("vkResetCommandBuffer", vkResetCommandBuffer(cb, 0));
++	}
++
++	/* ---- 2. a triangle ---- */
++	{
++		I(vkCreateImage);
++		I(vkGetImageMemoryRequirements);
++		I(vkGetPhysicalDeviceMemoryProperties);
++		I(vkAllocateMemory);
++		I(vkBindImageMemory);
++		I(vkCreateImageView);
++		I(vkCreateRenderPass);
++		I(vkCreateFramebuffer);
++		I(vkCreatePipelineLayout);
++		I(vkCreateGraphicsPipelines);
++		I(vkCmdBeginRenderPass);
++		I(vkCmdBindPipeline);
++		I(vkCmdDraw);
++		I(vkCmdEndRenderPass);
++		I(vkCmdCopyImageToBuffer);
++		VkShaderModule vs, fs;
++		VkBuffer readback;
++		VkDeviceMemory readback_memory;
++		uint8_t *pixels;
++		double t0, t1;
++
++		if (shader(spv_tri_vert, sizeof(spv_tri_vert), &vs) || shader(spv_tri_frag, sizeof(spv_tri_frag), &fs) ||
++		    host_buffer(SIDE * SIDE * 4, VK_BUFFER_USAGE_TRANSFER_DST_BIT, &readback, &readback_memory, (void **)&pixels)) {
++			return 1;
++		}
++		memset(pixels, 0, SIDE * SIDE * 4);
++		VkImageCreateInfo imi = { .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, .imageType = VK_IMAGE_TYPE_2D,
++		    .format = VK_FORMAT_R8G8B8A8_UNORM, .extent = { SIDE, SIDE, 1 }, .mipLevels = 1, .arrayLayers = 1,
++		    .samples = VK_SAMPLE_COUNT_1_BIT, .tiling = VK_IMAGE_TILING_OPTIMAL,
++		    .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
++		    .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED };
++		VkImage image;
++		CHECK("vkCreateImage", vkCreateImage(device, &imi, NULL, &image));
++		VkMemoryRequirements req;
++		vkGetImageMemoryRequirements(device, image, &req);
++		VkPhysicalDeviceMemoryProperties mp;
++		vkGetPhysicalDeviceMemoryProperties(gpu, &mp);
++		uint32_t type = 0;
++		while (type < mp.memoryTypeCount && !(req.memoryTypeBits & (1u << type))) type++;
++		VkMemoryAllocateInfo mai = { .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, .allocationSize = req.size,
++		    .memoryTypeIndex = type };
++		VkDeviceMemory image_memory;
++		CHECK("vkAllocateMemory (image)", vkAllocateMemory(device, &mai, NULL, &image_memory));
++		CHECK("vkBindImageMemory", vkBindImageMemory(device, image, image_memory, 0));
++		VkImageViewCreateInfo ivi = { .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, .image = image,
++		    .viewType = VK_IMAGE_VIEW_TYPE_2D, .format = VK_FORMAT_R8G8B8A8_UNORM,
++		    .subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 } };
++		VkImageView view;
++		CHECK("vkCreateImageView", vkCreateImageView(device, &ivi, NULL, &view));
++
++		VkAttachmentDescription att = { .format = VK_FORMAT_R8G8B8A8_UNORM, .samples = VK_SAMPLE_COUNT_1_BIT,
++		    .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR, .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
++		    .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
++		    .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED, .finalLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL };
++		VkAttachmentReference ref = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
++		VkSubpassDescription sub = { .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS, .colorAttachmentCount = 1,
++		    .pColorAttachments = &ref };
++		VkSubpassDependency dep = { .srcSubpass = 0, .dstSubpass = VK_SUBPASS_EXTERNAL,
++		    .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, .dstStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT,
++		    .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, .dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT };
++		VkRenderPassCreateInfo rpi = { .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO, .attachmentCount = 1,
++		    .pAttachments = &att, .subpassCount = 1, .pSubpasses = &sub, .dependencyCount = 1, .pDependencies = &dep };
++		VkRenderPass pass;
++		CHECK("vkCreateRenderPass", vkCreateRenderPass(device, &rpi, NULL, &pass));
++		VkFramebufferCreateInfo fbi = { .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, .renderPass = pass,
++		    .attachmentCount = 1, .pAttachments = &view, .width = SIDE, .height = SIDE, .layers = 1 };
++		VkFramebuffer fb;
++		CHECK("vkCreateFramebuffer", vkCreateFramebuffer(device, &fbi, NULL, &fb));
++
++		VkPipelineShaderStageCreateInfo stages[2] = {
++			{ .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .stage = VK_SHADER_STAGE_VERTEX_BIT,
++			    .module = vs, .pName = "main" },
++			{ .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
++			    .module = fs, .pName = "main" },
++		};
++		VkPipelineVertexInputStateCreateInfo vin = { .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
++		VkPipelineInputAssemblyStateCreateInfo ia = { .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
++		    .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST };
++		VkViewport vp = { 0, 0, SIDE, SIDE, 0, 1 };
++		VkRect2D sc = { { 0, 0 }, { SIDE, SIDE } };
++		VkPipelineViewportStateCreateInfo vps = { .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
++		    .viewportCount = 1, .pViewports = &vp, .scissorCount = 1, .pScissors = &sc };
++		VkPipelineRasterizationStateCreateInfo rs = { .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
++		    .polygonMode = VK_POLYGON_MODE_FILL, .cullMode = VK_CULL_MODE_NONE, .lineWidth = 1 };
++		VkPipelineMultisampleStateCreateInfo ms = { .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
++		    .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT };
++		VkPipelineColorBlendAttachmentState cba = { .colorWriteMask = 0xf };
++		VkPipelineColorBlendStateCreateInfo cb_state = { .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
++		    .attachmentCount = 1, .pAttachments = &cba };
++		VkPipelineLayoutCreateInfo pli = { .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
++		VkPipelineLayout layout;
++		CHECK("vkCreatePipelineLayout", vkCreatePipelineLayout(device, &pli, NULL, &layout));
++		VkGraphicsPipelineCreateInfo gpi = { .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO, .stageCount = 2,
++		    .pStages = stages, .pVertexInputState = &vin, .pInputAssemblyState = &ia, .pViewportState = &vps,
++		    .pRasterizationState = &rs, .pMultisampleState = &ms, .pColorBlendState = &cb_state, .layout = layout,
++		    .renderPass = pass, .subpass = 0 };
++		VkPipeline pipeline;
++		t0 = now_ms();
++		CHECK("vkCreateGraphicsPipelines", vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &gpi, NULL, &pipeline));
++		printf("vk_tri: graphics pipeline made in %.1f ms\n", now_ms() - t0);
++
++		VkClearValue clear = { .color = { .float32 = { 0.0f, 1.0f, 0.0f, 1.0f } } };
++		VkRenderPassBeginInfo rbi = { .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO, .renderPass = pass,
++		    .framebuffer = fb, .renderArea = { { 0, 0 }, { SIDE, SIDE } }, .clearValueCount = 1, .pClearValues = &clear };
++		VkBufferImageCopy copy = { .bufferRowLength = SIDE, .bufferImageHeight = SIDE,
++		    .imageSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 }, .imageExtent = { SIDE, SIDE, 1 } };
++		CHECK("vkBeginCommandBuffer", vkBeginCommandBuffer(cb, &begin));
++		vkCmdBeginRenderPass(cb, &rbi, VK_SUBPASS_CONTENTS_INLINE);
++		vkCmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
++		vkCmdDraw(cb, 3, 1, 0, 0);
++		vkCmdEndRenderPass(cb);
++		vkCmdCopyImageToBuffer(cb, image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, readback, 1, &copy);
++		CHECK("vkEndCommandBuffer", vkEndCommandBuffer(cb));
++		t0 = now_ms();
++		CHECK("vkQueueSubmit", vkQueueSubmit(queue, 1, &si, fence));
++		CHECK("vkWaitForFences", vkWaitForFences(device, 1, &fence, VK_TRUE, 2000000000ull));
++		t1 = now_ms();
++
++		uint32_t red = 0, green = 0, other = 0;
++		for (uint32_t i = 0; i < SIDE * SIDE; i++) {
++			const uint8_t *p = pixels + 4 * i;
++			if (p[0] > 200 && p[1] < 50 && p[2] < 50) red++;
++			else if (p[0] < 50 && p[1] > 200 && p[2] < 50) green++;
++			else other++;
++		}
++		printf("vk_tri: triangle: %u red, %u green, %u other of %u pixels (%u%% red; 28%% by geometry) in %.2f ms%s\n",
++		    red, green, other, SIDE * SIDE, red * 100 / (SIDE * SIDE), t1 - t0,
++		    red > SIDE * SIDE / 5 && red < SIDE * SIDE / 3 && other < SIDE * SIDE / 50 ?
++		    ": THE MALI DREW A VULKAN TRIANGLE" : "");
++		for (uint32_t y = 0; y < SIDE; y += SIDE / 16) {
++			char row[17];
++			for (uint32_t x = 0; x < 16; x++) {
++				const uint8_t *p = pixels + 4 * (y * SIDE + x * SIDE / 16 + SIDE / 32);
++				row[x] = p[0] > 200 && p[1] < 50 ? '#' : p[1] > 200 && p[0] < 50 ? '.' : '?';
++			}
++			row[16] = 0;
++			printf("vk_tri:   %s\n", row);
++		}
++	}
++	return 0;
++}
+diff --git a/userland/src/vk_tri/fill.comp b/userland/src/vk_tri/fill.comp
+new file mode 100644
+index 0000000..9486be6
+--- /dev/null
++++ b/userland/src/vk_tri/fill.comp
+@@ -0,0 +1,5 @@
++#version 450
++// vk_tri's compute: every word of the buffer gets its own index times 3, plus 7
++layout(local_size_x = 64) in;
++layout(std430, set = 0, binding = 0) buffer Words { uint w[]; };
++void main() { uint i = gl_GlobalInvocationID.x; w[i] = i * 3u + 7u; }
+diff --git a/userland/src/vk_tri/fill.comp.h b/userland/src/vk_tri/fill.comp.h
+new file mode 100644
+index 0000000..5167b4f
+--- /dev/null
++++ b/userland/src/vk_tri/fill.comp.h
+@@ -0,0 +1,32 @@
++	// 1116.6.0
++	 #pragma once
++const uint32_t spv_fill_comp[] = {
++	0x07230203,0x00010300,0x0008000b,0x00000021,0x00000000,0x00020011,0x00000001,0x0006000b,
++	0x00000001,0x4c534c47,0x6474732e,0x3035342e,0x00000000,0x0003000e,0x00000000,0x00000001,
++	0x0006000f,0x00000005,0x00000004,0x6e69616d,0x00000000,0x0000000b,0x00060010,0x00000004,
++	0x00000011,0x00000040,0x00000001,0x00000001,0x00030003,0x00000002,0x000001c2,0x00040005,
++	0x00000004,0x6e69616d,0x00000000,0x00030005,0x00000008,0x00000069,0x00080005,0x0000000b,
++	0x475f6c67,0x61626f6c,0x766e496c,0x7461636f,0x496e6f69,0x00000044,0x00040005,0x00000011,
++	0x64726f57,0x00000073,0x00040006,0x00000011,0x00000000,0x00000077,0x00030005,0x00000013,
++	0x00000000,0x00040047,0x0000000b,0x0000000b,0x0000001c,0x00040047,0x00000010,0x00000006,
++	0x00000004,0x00030047,0x00000011,0x00000002,0x00050048,0x00000011,0x00000000,0x00000023,
++	0x00000000,0x00040047,0x00000013,0x00000021,0x00000000,0x00040047,0x00000013,0x00000022,
++	0x00000000,0x00040047,0x00000020,0x0000000b,0x00000019,0x00020013,0x00000002,0x00030021,
++	0x00000003,0x00000002,0x00040015,0x00000006,0x00000020,0x00000000,0x00040020,0x00000007,
++	0x00000007,0x00000006,0x00040017,0x00000009,0x00000006,0x00000003,0x00040020,0x0000000a,
++	0x00000001,0x00000009,0x0004003b,0x0000000a,0x0000000b,0x00000001,0x0004002b,0x00000006,
++	0x0000000c,0x00000000,0x00040020,0x0000000d,0x00000001,0x00000006,0x0003001d,0x00000010,
++	0x00000006,0x0003001e,0x00000011,0x00000010,0x00040020,0x00000012,0x0000000c,0x00000011,
++	0x0004003b,0x00000012,0x00000013,0x0000000c,0x00040015,0x00000014,0x00000020,0x00000001,
++	0x0004002b,0x00000014,0x00000015,0x00000000,0x0004002b,0x00000006,0x00000018,0x00000003,
++	0x0004002b,0x00000006,0x0000001a,0x00000007,0x00040020,0x0000001c,0x0000000c,0x00000006,
++	0x0004002b,0x00000006,0x0000001e,0x00000040,0x0004002b,0x00000006,0x0000001f,0x00000001,
++	0x0006002c,0x00000009,0x00000020,0x0000001e,0x0000001f,0x0000001f,0x00050036,0x00000002,
++	0x00000004,0x00000000,0x00000003,0x000200f8,0x00000005,0x0004003b,0x00000007,0x00000008,
++	0x00000007,0x00050041,0x0000000d,0x0000000e,0x0000000b,0x0000000c,0x0004003d,0x00000006,
++	0x0000000f,0x0000000e,0x0003003e,0x00000008,0x0000000f,0x0004003d,0x00000006,0x00000016,
++	0x00000008,0x0004003d,0x00000006,0x00000017,0x00000008,0x00050084,0x00000006,0x00000019,
++	0x00000017,0x00000018,0x00050080,0x00000006,0x0000001b,0x00000019,0x0000001a,0x00060041,
++	0x0000001c,0x0000001d,0x00000013,0x00000015,0x00000016,0x0003003e,0x0000001d,0x0000001b,
++	0x000100fd,0x00010038
++};
+diff --git a/userland/src/vk_tri/tri.frag b/userland/src/vk_tri/tri.frag
+new file mode 100644
+index 0000000..fa9a828
+--- /dev/null
++++ b/userland/src/vk_tri/tri.frag
+@@ -0,0 +1,3 @@
++#version 450
++layout(location = 0) out vec4 colour;
++void main() { colour = vec4(1.0, 0.0, 0.0, 1.0); }
+diff --git a/userland/src/vk_tri/tri.frag.h b/userland/src/vk_tri/tri.frag.h
+new file mode 100644
+index 0000000..45dc22b
+--- /dev/null
++++ b/userland/src/vk_tri/tri.frag.h
+@@ -0,0 +1,15 @@
++	// 1116.6.0
++	 #pragma once
++const uint32_t spv_tri_frag[] = {
++	0x07230203,0x00010300,0x0008000b,0x0000000d,0x00000000,0x00020011,0x00000001,0x0006000b,
++	0x00000001,0x4c534c47,0x6474732e,0x3035342e,0x00000000,0x0003000e,0x00000000,0x00000001,
++	0x0006000f,0x00000004,0x00000004,0x6e69616d,0x00000000,0x00000009,0x00030010,0x00000004,
++	0x00000007,0x00030003,0x00000002,0x000001c2,0x00040005,0x00000004,0x6e69616d,0x00000000,
++	0x00040005,0x00000009,0x6f6c6f63,0x00007275,0x00040047,0x00000009,0x0000001e,0x00000000,
++	0x00020013,0x00000002,0x00030021,0x00000003,0x00000002,0x00030016,0x00000006,0x00000020,
++	0x00040017,0x00000007,0x00000006,0x00000004,0x00040020,0x00000008,0x00000003,0x00000007,
++	0x0004003b,0x00000008,0x00000009,0x00000003,0x0004002b,0x00000006,0x0000000a,0x3f800000,
++	0x0004002b,0x00000006,0x0000000b,0x00000000,0x0007002c,0x00000007,0x0000000c,0x0000000a,
++	0x0000000b,0x0000000b,0x0000000a,0x00050036,0x00000002,0x00000004,0x00000000,0x00000003,
++	0x000200f8,0x00000005,0x0003003e,0x00000009,0x0000000c,0x000100fd,0x00010038
++};
+diff --git a/userland/src/vk_tri/tri.vert b/userland/src/vk_tri/tri.vert
+new file mode 100644
+index 0000000..940444c
+--- /dev/null
++++ b/userland/src/vk_tri/tri.vert
+@@ -0,0 +1,4 @@
++#version 450
++// vk_tri's triangle, from the vertex index alone (no vertex buffer): the one probe/gpu.c draws by hand
++const vec2 p[3] = vec2[](vec2(0.0, -0.75), vec2(0.75, 0.75), vec2(-0.75, 0.75));
++void main() { gl_Position = vec4(p[gl_VertexIndex], 0.0, 1.0); }
+diff --git a/userland/src/vk_tri/tri.vert.h b/userland/src/vk_tri/tri.vert.h
+new file mode 100644
+index 0000000..297a3c2
+--- /dev/null
++++ b/userland/src/vk_tri/tri.vert.h
+@@ -0,0 +1,39 @@
++	// 1116.6.0
++	 #pragma once
++const uint32_t spv_tri_vert[] = {
++	0x07230203,0x00010300,0x0008000b,0x00000028,0x00000000,0x00020011,0x00000001,0x0006000b,
++	0x00000001,0x4c534c47,0x6474732e,0x3035342e,0x00000000,0x0003000e,0x00000000,0x00000001,
++	0x0007000f,0x00000000,0x00000004,0x6e69616d,0x00000000,0x0000000d,0x0000001b,0x00030003,
++	0x00000002,0x000001c2,0x00040005,0x00000004,0x6e69616d,0x00000000,0x00060005,0x0000000b,
++	0x505f6c67,0x65567265,0x78657472,0x00000000,0x00060006,0x0000000b,0x00000000,0x505f6c67,
++	0x7469736f,0x006e6f69,0x00070006,0x0000000b,0x00000001,0x505f6c67,0x746e696f,0x657a6953,
++	0x00000000,0x00070006,0x0000000b,0x00000002,0x435f6c67,0x4470696c,0x61747369,0x0065636e,
++	0x00070006,0x0000000b,0x00000003,0x435f6c67,0x446c6c75,0x61747369,0x0065636e,0x00030005,
++	0x0000000d,0x00000000,0x00060005,0x0000001b,0x565f6c67,0x65747265,0x646e4978,0x00007865,
++	0x00050005,0x0000001e,0x65646e69,0x6c626178,0x00000065,0x00030047,0x0000000b,0x00000002,
++	0x00050048,0x0000000b,0x00000000,0x0000000b,0x00000000,0x00050048,0x0000000b,0x00000001,
++	0x0000000b,0x00000001,0x00050048,0x0000000b,0x00000002,0x0000000b,0x00000003,0x00050048,
++	0x0000000b,0x00000003,0x0000000b,0x00000004,0x00040047,0x0000001b,0x0000000b,0x0000002a,
++	0x00020013,0x00000002,0x00030021,0x00000003,0x00000002,0x00030016,0x00000006,0x00000020,
++	0x00040017,0x00000007,0x00000006,0x00000004,0x00040015,0x00000008,0x00000020,0x00000000,
++	0x0004002b,0x00000008,0x00000009,0x00000001,0x0004001c,0x0000000a,0x00000006,0x00000009,
++	0x0006001e,0x0000000b,0x00000007,0x00000006,0x0000000a,0x0000000a,0x00040020,0x0000000c,
++	0x00000003,0x0000000b,0x0004003b,0x0000000c,0x0000000d,0x00000003,0x00040015,0x0000000e,
++	0x00000020,0x00000001,0x0004002b,0x0000000e,0x0000000f,0x00000000,0x00040017,0x00000010,
++	0x00000006,0x00000002,0x0004002b,0x00000008,0x00000011,0x00000003,0x0004001c,0x00000012,
++	0x00000010,0x00000011,0x0004002b,0x00000006,0x00000013,0x00000000,0x0004002b,0x00000006,
++	0x00000014,0xbf400000,0x0005002c,0x00000010,0x00000015,0x00000013,0x00000014,0x0004002b,
++	0x00000006,0x00000016,0x3f400000,0x0005002c,0x00000010,0x00000017,0x00000016,0x00000016,
++	0x0005002c,0x00000010,0x00000018,0x00000014,0x00000016,0x0006002c,0x00000012,0x00000019,
++	0x00000015,0x00000017,0x00000018,0x00040020,0x0000001a,0x00000001,0x0000000e,0x0004003b,
++	0x0000001a,0x0000001b,0x00000001,0x00040020,0x0000001d,0x00000007,0x00000012,0x00040020,
++	0x0000001f,0x00000007,0x00000010,0x0004002b,0x00000006,0x00000022,0x3f800000,0x00040020,
++	0x00000026,0x00000003,0x00000007,0x00050036,0x00000002,0x00000004,0x00000000,0x00000003,
++	0x000200f8,0x00000005,0x0004003b,0x0000001d,0x0000001e,0x00000007,0x0004003d,0x0000000e,
++	0x0000001c,0x0000001b,0x0003003e,0x0000001e,0x00000019,0x00050041,0x0000001f,0x00000020,
++	0x0000001e,0x0000001c,0x0004003d,0x00000010,0x00000021,0x00000020,0x00050051,0x00000006,
++	0x00000023,0x00000021,0x00000000,0x00050051,0x00000006,0x00000024,0x00000021,0x00000001,
++	0x00070050,0x00000007,0x00000025,0x00000023,0x00000024,0x00000013,0x00000022,0x00050041,
++	0x00000026,0x00000027,0x0000000d,0x0000000f,0x0003003e,0x00000027,0x00000025,0x000100fd,
++	0x00010038
++};
 diff --git a/xnu-deps/setup.sh b/xnu-deps/setup.sh
 index c390093..de72f4d 100755
 --- a/xnu-deps/setup.sh
