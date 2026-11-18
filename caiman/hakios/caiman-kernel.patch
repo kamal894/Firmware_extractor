@@ -1224,7 +1224,7 @@ index 3f1f97a..56879cd 100644
  		display_probe();
  	}
 diff --git a/drivers/gpu/hakios.gpu.cpp b/drivers/gpu/hakios.gpu.cpp
-index 633b419..e8ee18b 100644
+index 633b419..80531ef 100644
 --- a/drivers/gpu/hakios.gpu.cpp
 +++ b/drivers/gpu/hakios.gpu.cpp
 @@ -56,6 +56,13 @@ void hakios_gpu_mapped(void);
@@ -1297,7 +1297,7 @@ index 633b419..e8ee18b 100644
  static bool gGPUCached;                         /* boot-arg gpu_cached=1 */
 +static bool gMaliAfter;                         /* boot-arg mali_after=1: and again after a Mali fence is waited for */
 +static bool gMaliNoSeed;                        /* boot-arg mali_noseed=1: no IOSurface passed over for an unchanged seed */
-+static uint32_t gMaliCachedShared;              /* boot-arg mali_shared_cached: 1 IOSurfaces, 2 client pages cached by the Mali too */
++static uint32_t gMaliCachedShared;              /* boot-arg mali_shared_cached: 1 IOSurfaces (the default), 2 client pages cached by the Mali too */
  
  /* What the last seconds' submissions were and cost here, for the log. */
  static struct {
@@ -1383,11 +1383,16 @@ index 633b419..e8ee18b 100644
  		IOLog("HakiosGPU: a wait for submission %u, which is not done, until %lld.%09lld s, asked for at %llu.%09llu s: "
  		    "over before it began\n", fence, when->seconds, when->nanoseconds, now / NSEC_PER_SEC, now % NSEC_PER_SEC);
  	}
-@@ -330,6 +408,13 @@ HakiosGPUStart(void)
+@@ -330,6 +408,18 @@ HakiosGPUStart(void)
  	uint32_t cached = 0;
  
  	gGPUCached = PE_parse_boot_argn("gpu_cached", &cached, sizeof(cached)) && cached != 0;
-+	cached = 0;
++	/*
++	 * IOSurfaces cached by the Mali by default: uncached, a frame's work took 8-16 ms on the GPU, cached 4-8 (the
++	 * GPU's timestamps, ws55/ws56); what a processor reads of them is taken out of its cache first (IOSurfaceLock,
++	 * the framebuffer: MiniIOSurfaceFromGPU). 100 of 100 pictures clean (ws56, ws57). mali_shared_cached=0: not.
++	 */
++	cached = 1;
 +	PE_parse_boot_argn("mali_shared_cached", &cached, sizeof(cached));
 +	gMaliCachedShared = cached;
 +	cached = 0;
@@ -1397,7 +1402,7 @@ index 633b419..e8ee18b 100644
  	gGPULock = IOLockAlloc();
  	gpu = OSTypeAlloc(HakiosGPU);
  	if (gpu == NULL || provider == NULL || !gpu->init() || !gpu->attach(provider)) {
-@@ -418,6 +503,8 @@ class HakiosGPUUserClient : public IOUserClient
+@@ -418,6 +508,8 @@ class HakiosGPUUserClient : public IOUserClient
  	uint32_t                fNextQueue;
  	uint32_t                fNextBuffer;            /* where the search for a free handle starts: one given back is not the next given */
  	uint32_t                fBufferCount;
@@ -1406,7 +1411,7 @@ index 633b419..e8ee18b 100644
  	uint64_t                fBufferBytes;
  	uint32_t                fSubmits;
  	uint32_t                fStrangers;             /* requests that named a buffer the client does not have */
-@@ -433,6 +520,9 @@ class HakiosGPUUserClient : public IOUserClient
+@@ -433,6 +525,9 @@ class HakiosGPUUserClient : public IOUserClient
  	void dropKept(struct gpu_kept * k);
  	void reap(void);
  	IOReturn gemNew(struct msm_gem_new * request);
@@ -1416,7 +1421,7 @@ index 633b419..e8ee18b 100644
  	IOReturn surfaceBuffer(struct hakios_surface * request);
  	IOReturn userBuffer(struct hakios_user_memory * request);
  	IOReturn gemInfo(struct msm_gem_info * request);
-@@ -944,6 +1034,119 @@ HakiosGPUUserClient::userBuffer(struct hakios_user_memory * request)
+@@ -944,6 +1039,119 @@ HakiosGPUUserClient::userBuffer(struct hakios_user_memory * request)
  	return kIOReturnSuccess;
  }
  
@@ -1536,7 +1541,7 @@ index 633b419..e8ee18b 100644
  IOReturn
  HakiosGPUUserClient::gemInfo(struct msm_gem_info * request)
  {
-@@ -1216,6 +1419,11 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
+@@ -1216,6 +1424,11 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
  		struct hakios_surface surface;
  		struct hakios_user_memory user;
  		struct hakios_show show;
@@ -1548,7 +1553,7 @@ index 633b419..e8ee18b 100644
  	} r;
  	size_t size = args->structureInputSize;
  	struct gpu_buffer * b;
-@@ -1276,6 +1484,11 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
+@@ -1276,6 +1489,11 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
  			if (patience == 0) {
  				waitOver(&r.waitFence.timeout, r.waitFence.fence);
  			}
@@ -1560,7 +1565,7 @@ index 633b419..e8ee18b 100644
  		}
  		IOLockUnlock(gGPULock);
  		slowWait("fence", waitBegan);
-@@ -1298,6 +1511,7 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
+@@ -1298,6 +1516,7 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
  			ret = kIOReturnBadArgument;
  		} else {
  			freeBuffer(b);
@@ -1568,7 +1573,7 @@ index 633b419..e8ee18b 100644
  			reap();
  		}
  		IOLockUnlock(gGPULock);
-@@ -1311,6 +1525,32 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
+@@ -1311,6 +1530,32 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
  	case kHakiosShow:
  		ret = show(&r.show);
  		break;

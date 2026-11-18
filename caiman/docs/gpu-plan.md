@@ -482,3 +482,8 @@ completion, the GLB power-off timer.
   screen included. With surfaces GPU-cached (`mali_shared_cached=1`) the same work is **4-8 ms** and swipes go
   37-42 fps: the GPU is slow on uncached IOSurfaces (the blur's taps from DRAM each time), not on its clock.
 - ws56 (cached, with the lock/framebuffer invalidation always on): 50/50 clean pictures, m2v_test PASS.
+- **Default now: IOSurfaces cached by the Mali** (`mali_shared_cached` defaults to 1; `=0` for uncached). ws56,
+  ws57 (with the boot-arg) and ws58 (the default): 150/150 clean pictures, m2v_test PASS, swipes 36-43 fps (was
+  34-38), frames under 8 ms from commit to completion appear (900-970 of ~2200).
+- Battery status: CHG_DTLS 4 (the charger done) is reported as full; the kernel's `action=` in its battery line is
+  that status, not CHG_DTLS.
