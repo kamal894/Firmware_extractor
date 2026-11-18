@@ -242,6 +242,29 @@ boot time, `monotonicNow()` in hakios.gpu.cpp) instead of mach_continuous_time, 
 some 80 s longer (the phone's boot loaders and ours count). A now + 1 s wait now waits: all three streams
 pass with Mesa-style deadlines.
 
+## Step 14: PanVK built for iOS; the kernel's address split and VM bind (run darwin-mali9)
+
+**PanVK for iOS.** tools/mk-panvk.sh (kernel tree): Mesa main (da2d473; 25.0.7 has no v11 PanVK) with
+tools/mesa/panvk-darwin.patch, two builds: native host tools (mesa_clc, vtn_bindgen2, panfrost_compile, from
+Homebrew's LLVM 23, SPIRV-LLVM-Translator, SPIRV-Tools, libclc) and the iOS one with xnu-clang and the
+iPhoneOS 16.5 SDK. Out: libvulkan_panfrost.dylib, 13.8 MB, arm64. The patch: Panfrost's job-manager kmod
+left out on Darwin (eventfd, timerfd); vk_image's DRM modifier field and vk_drm_syncobj.c on Darwin;
+sys/sysmacros.h; `-undefined dynamic_lookup` (weak entrypoints, as turnip-darwin.patch). It wants 15 libdrm
+functions from hakios-panthor (drmIoctl, drmGetVersion, the syncobj ones, ...).
+
+**Address split, as Panthor's:** the lower half of the 48-bit GPU space is the user's (PanVK takes 32 MiB up),
+the kernel's own allocations moved to 0x800000000000 (the loader's first 32 MiB stay). Page tables are found by
+their 16 KiB chunk of the loader's pool (the 512-entry list was too slow and too small for PanVK).
+
+**VM bind (request 0x93):** a buffer's pages at a user address, or nothing there. mali_test binds its buffer
+at 0x40000000, runs a command stream from there that stores through that address, then unbinds:
+
+```
+mali: self test, stream 0: ... at GPU address 0x800000000000, fence 1 done; it wrote 0xc0ffee10: OK
+mali_test: bound at 0x40000000: bind 0, submit and wait 0; the word is 0xb19d0001: THE GPU RAN FROM A USER-CHOSEN ADDRESS
+mali_test: unbound: 0
+```
+
 ## Next
 
 8. User space: a Mali back end for hakios-metal (today Adreno PM4 + ir3) emitting CSF command buffers and

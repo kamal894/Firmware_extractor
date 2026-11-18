@@ -1,5 +1,5 @@
 diff --git a/drivers/gpu/hakios.adreno.c b/drivers/gpu/hakios.adreno.c
-index 3f1f97a..a077cee 100644
+index 3f1f97a..2cf163e 100644
 --- a/drivers/gpu/hakios.adreno.c
 +++ b/drivers/gpu/hakios.adreno.c
 @@ -100,6 +100,7 @@
@@ -127,7 +127,7 @@ index 3f1f97a..a077cee 100644
  	for (int i = 0; i < 20000; i++) {
  		room = (rd(gpu.base + CP_RB_RPTR) + RING_WORDS - ring_at - 1) % RING_WORDS;
  		if (room >= wanted) {
-@@ -3753,6 +3805,463 @@ start_by_itself(void)
+@@ -3753,6 +3805,508 @@ start_by_itself(void)
   * as long as the steps and the watch after them last, nothing else writes to the log, so that
   * its end -- all that the loader's notes keep -- is about what is being done here.
   */
@@ -157,8 +157,10 @@ index 3f1f97a..a077cee 100644
 +#define MALI_AS1                0x2440u
 +#define MALI_RING_SIZE          0x1000u
 +#define MALI_FENCE_VA           0x200c00u
-+#define MALI_VA_START           0x100000000ull
-+#define MALI_VA_SIZE            0x700000000ull
++/* the kernel's addresses: the upper half of the 48-bit space, as Panthor keeps it; the lower is PanVK's (VM bind) */
++#define MALI_VA_START           0x800000000000ull
++#define MALI_VA_SIZE            0x1000000000ull
++#define MALI_USER_VA_END        0x800000000000ull
 +#define MALI_TABLES             512
 +
 +static vm_offset_t mali_regs, mali_bell0;
@@ -191,9 +193,26 @@ index 3f1f97a..a077cee 100644
 +}
 +
 +/* a table page of AS1 by its physical address: the loader's, or one taken from the free pool */
++/*
++ * Tables in the loader's pool (all but none: the pool is where they all come from) are found by their 16 KiB chunk
++ * of it, each chunk mapped once: a list searched one by one was too slow, and too short, for PanVK's address space.
++ */
++#define MALI_POOL_CHUNKS        4096
++static uint64_t mali_pool_base;
++static vm_offset_t mali_pool_chunk[MALI_POOL_CHUNKS];
++
 +static volatile uint64_t *
 +mali_table_va(uint64_t pa)
 +{
++	if (mali_pool_base != 0 && pa >= mali_pool_base && pa < mali_pool_end &&
++	    (pa - mali_pool_base) >> 14 < MALI_POOL_CHUNKS) {
++		uint64_t c = (pa - mali_pool_base) >> 14;
++
++		if (mali_pool_chunk[c] == 0) {
++			mali_pool_chunk[c] = ml_io_map((vm_offset_t)(mali_pool_base + (c << 14)), 0x4000);
++		}
++		return (volatile uint64_t *)(mali_pool_chunk[c] + (pa & 0x3fff));
++	}
 +	for (unsigned i = 0; i < mali_tables; i++) {
 +		if (mali_table[i].pa == pa) {
 +			return (volatile uint64_t *)mali_table[i].va;
@@ -530,6 +549,31 @@ index 3f1f97a..a077cee 100644
 +	return mali_submit_on(queue, &address, &words, 1);
 +}
 +
++/*
++ * Panthor's VM_BIND for PanVK, one page at a time: `phys` at the user address `va` (below MALI_USER_VA_END, where
++ * the kernel never puts anything of its own above the loader's first 32 MiB), or nothing there (phys 0). Then
++ * hakios_mali_bound() to make the GPU see the changes.
++ */
++bool hakios_mali_bind_page(uint64_t va, uint64_t phys, bool read_only);
++void hakios_mali_bound(void);
++
++bool
++hakios_mali_bind_page(uint64_t va, uint64_t phys, bool read_only)
++{
++	if (!mali_kept || va < 0x2000000 || va >= MALI_USER_VA_END || (va & 0xfff)) {
++		return false;
++	}
++	return phys ? mali_map(va, phys, read_only) : mali_space_map(va, 0, 0);
++}
++
++void
++hakios_mali_bound(void)
++{
++	if (mali_kept) {
++		mali_as1_flush();
++	}
++}
++
 +uint64_t
 +hakios_mali_tiler_heap(uint32_t chunk_size, uint32_t chunks, uint64_t *first_chunk)
 +{
@@ -575,6 +619,7 @@ index 3f1f97a..a077cee 100644
 +	mali_as1_root = h[5];
 +	mali_pool_next = h[6];
 +	mali_pool_end = h[7];
++	mali_pool_base = h[6] & ~0x1ffffffull;          /* the loader's pool: 32 MiB at a 32 MiB boundary */
 +	mali_glb_in = (volatile uint32_t *)(shared + (*(volatile uint32_t *)(shared + 8) - 0x04000000));
 +	mali_glb_out = (volatile uint32_t *)(shared + (*(volatile uint32_t *)(shared + 0xc) - 0x04000000));
 +	mali_csg_in = (volatile uint32_t *)(shared + (*(volatile uint32_t *)(shared + 0x1004) - 0x04000000));
@@ -591,7 +636,7 @@ index 3f1f97a..a077cee 100644
  void
  hakios_adreno_init(void)
  {
-@@ -3765,6 +4274,11 @@ hakios_adreno_init(void)
+@@ -3765,6 +4319,11 @@ hakios_adreno_init(void)
  	uint32_t only = 0, done = 0, failed = 0, keep = 0;
  	bool by_itself = false;
  
@@ -604,20 +649,22 @@ index 3f1f97a..a077cee 100644
  		display_probe();
  	}
 diff --git a/drivers/gpu/hakios.gpu.cpp b/drivers/gpu/hakios.gpu.cpp
-index 633b419..5ea32d1 100644
+index 633b419..b064996 100644
 --- a/drivers/gpu/hakios.gpu.cpp
 +++ b/drivers/gpu/hakios.gpu.cpp
-@@ -56,6 +56,9 @@ void hakios_gpu_mapped(void);
+@@ -56,6 +56,11 @@ void hakios_gpu_mapped(void);
  void hakios_gpu_unmap(uint64_t address, uint64_t size);
  void hakios_gpu_to_memory(void * start, uint64_t size);
  uint32_t hakios_gpu_submit(const uint64_t * addresses, const uint32_t * words, uint32_t count);
 +bool hakios_mali_query(uint32_t * words32, uint64_t * words64);
 +uint32_t hakios_mali_submit(uint32_t queue, uint64_t address, uint32_t bytes);
 +uint64_t hakios_mali_tiler_heap(uint32_t chunk_size, uint32_t chunks, uint64_t * first_chunk);
++bool hakios_mali_bind_page(uint64_t va, uint64_t phys, bool read_only);
++void hakios_mali_bound(void);
  extern uint32_t gpu_log;
  bool hakios_gpu_done(uint32_t fence);
  uint32_t hakios_gpu_last(void);
-@@ -86,6 +89,32 @@ enum {
+@@ -86,6 +91,38 @@ enum {
  	kHakiosUserMemory      = 0x7d,         /* ours: pages of the caller's own as a buffer (Linux's userptr) */
  	kHakiosSurface         = 0x7e,         /* ours: an IOSurface's memory as a buffer */
  	kHakiosShow            = 0x7f,         /* ours: pixels of the caller's onto the panel, to see a test's result */
@@ -629,6 +676,7 @@ index 633b419..5ea32d1 100644
 +	kMaliQuery             = 0x90,
 +	kMaliSubmit            = 0x91,
 +	kMaliTilerHeap         = 0x92,
++	kMaliBind              = 0x93,         /* Panthor's VM_BIND: a buffer's pages at user addresses, or none there */
 +};
 +
 +struct mali_query {
@@ -643,6 +691,11 @@ index 633b419..5ea32d1 100644
 +	uint32_t fence;                         /* out: wait for it with the fence request */
 +	uint32_t pad;
 +};
++struct mali_bind {
++	uint32_t handle;                        /* 0: unmap */
++	uint32_t flags;                         /* 1: read only */
++	uint64_t va, offset, size;              /* page-aligned; offset into the buffer */
++};
 +struct mali_tiler_heap {
 +	uint32_t chunk_size, chunks;
 +	uint64_t context;                       /* out: for HEAP_SET */
@@ -650,7 +703,7 @@ index 633b419..5ea32d1 100644
  };
  
  struct msm_timespec {
-@@ -256,6 +285,24 @@ slowWait(const char * kind, uint64_t began)
+@@ -256,6 +293,24 @@ slowWait(const char * kind, uint64_t began)
  	}
  }
  
@@ -675,7 +728,7 @@ index 633b419..5ea32d1 100644
  /* How long from now a time of msm's is, in milliseconds; 0: now or past. */
  static uint64_t
  millisecondsUntil(const struct msm_timespec * when)
-@@ -263,7 +310,7 @@ millisecondsUntil(const struct msm_timespec * when)
+@@ -263,7 +318,7 @@ millisecondsUntil(const struct msm_timespec * when)
  	uint64_t now;
  	int64_t left, end;
  
@@ -684,7 +737,7 @@ index 633b419..5ea32d1 100644
  	/* the seconds are the caller's: a number too big to be nanoseconds is a time far ahead (or far behind), not a wrapped one */
  	if (__builtin_mul_overflow(when->seconds, (int64_t) NSEC_PER_SEC, &end) || __builtin_add_overflow(end, when->nanoseconds, &end)) {
  		return when->seconds > 0 && when->nanoseconds >= 0 ? GPU_PATIENCE_MS : 0;
-@@ -292,7 +339,7 @@ waitOver(const struct msm_timespec * when, uint32_t fence)
+@@ -292,7 +347,7 @@ waitOver(const struct msm_timespec * when, uint32_t fence)
  	gGPUStat.over++;
  	if (told < 4) {
  		told++;
@@ -693,17 +746,68 @@ index 633b419..5ea32d1 100644
  		IOLog("HakiosGPU: a wait for submission %u, which is not done, until %lld.%09lld s, asked for at %llu.%09llu s: "
  		    "over before it began\n", fence, when->seconds, when->nanoseconds, now / NSEC_PER_SEC, now % NSEC_PER_SEC);
  	}
-@@ -1216,6 +1263,9 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
+@@ -433,6 +488,7 @@ class HakiosGPUUserClient : public IOUserClient
+ 	void dropKept(struct gpu_kept * k);
+ 	void reap(void);
+ 	IOReturn gemNew(struct msm_gem_new * request);
++	IOReturn maliBind(const struct mali_bind * request);
+ 	IOReturn surfaceBuffer(struct hakios_surface * request);
+ 	IOReturn userBuffer(struct hakios_user_memory * request);
+ 	IOReturn gemInfo(struct msm_gem_info * request);
+@@ -944,6 +1000,41 @@ HakiosGPUUserClient::userBuffer(struct hakios_user_memory * request)
+ 	return kIOReturnSuccess;
+ }
+ 
++/*
++ * Panthor's VM_BIND (kMaliBind): the pages of buffer `handle` from `offset` at the user addresses from `va`, or, with
++ * handle 0, nothing at them. PanVK chooses its addresses itself; the buffer stays at the kernel's address as well.
++ * Only a buffer of its own memory (from GEM_NEW): a surface's or the client's pages are not bound here yet.
++ */
++IOReturn
++HakiosGPUUserClient::maliBind(const struct mali_bind * request)
++{
++	struct gpu_buffer * b = NULL;
++	bool ok = true;
++
++	if (((request->va | request->offset | request->size) & 4095) || request->size == 0) {
++		return kIOReturnBadArgument;
++	}
++	if (request->handle != 0) {
++		b = buffer(request->handle);
++		if (b == NULL || b->surface != NULL || b->client || request->offset + request->size > b->size) {
++			return kIOReturnBadArgument;
++		}
++	}
++	for (uint64_t at = 0; at < request->size && ok; at += 4096) {
++		addr64_t phys = 0;
++
++		if (b != NULL) {
++			IOByteCount length = 0;
++
++			phys = b->memory->getPhysicalSegment(request->offset + at, &length, kIOMemoryMapperNone);
++			ok = phys != 0;
++		}
++		ok = ok && hakios_mali_bind_page(request->va + at, phys, b != NULL && (request->flags & 1));
++	}
++	hakios_mali_bound();
++	return ok ? kIOReturnSuccess : kIOReturnBadArgument;
++}
++
+ IOReturn
+ HakiosGPUUserClient::gemInfo(struct msm_gem_info * request)
+ {
+@@ -1216,6 +1307,10 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
  		struct hakios_surface surface;
  		struct hakios_user_memory user;
  		struct hakios_show show;
 +		struct mali_query maliQuery;
 +		struct mali_submit maliSubmit;
 +		struct mali_tiler_heap maliHeap;
++		struct mali_bind maliBind;
  	} r;
  	size_t size = args->structureInputSize;
  	struct gpu_buffer * b;
-@@ -1311,6 +1361,21 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
+@@ -1311,6 +1406,26 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
  	case kHakiosShow:
  		ret = show(&r.show);
  		break;
@@ -715,6 +819,11 @@ index 633b419..5ea32d1 100644
 +		r.maliSubmit.fence = hakios_mali_submit(r.maliSubmit.queue, r.maliSubmit.address, r.maliSubmit.size);
 +		IOLockUnlock(gGPULock);
 +		ret = r.maliSubmit.fence ? kIOReturnSuccess : kIOReturnBadArgument;
++		break;
++	case kMaliBind:
++		IOLockLock(gGPULock);
++		ret = maliBind(&r.maliBind);
++		IOLockUnlock(gGPULock);
 +		break;
 +	case kMaliTilerHeap:
 +		IOLockLock(gGPULock);
@@ -1285,6 +1394,245 @@ index 8d69400..f6ebbf9 100644
  	for (unsigned b = 0; b < 2; b++) {
  		tm_va[b] = ml_io_map(tm_pa[b], TM_SIZE);
  		if (tm_va[b] == 0) {
+diff --git a/tools/mesa/panvk-darwin.patch b/tools/mesa/panvk-darwin.patch
+new file mode 100644
+index 0000000..21fa792
+--- /dev/null
++++ b/tools/mesa/panvk-darwin.patch
+@@ -0,0 +1,142 @@
++diff --git a/src/panfrost/lib/kmod/meson.build b/src/panfrost/lib/kmod/meson.build
++index 20ee6db..b8d4060 100644
++--- a/src/panfrost/lib/kmod/meson.build
+++++ b/src/panfrost/lib/kmod/meson.build
++@@ -6,10 +6,17 @@ libpankmod_lib_link_with = []
++ libpankmod_lib_inc = []
++ libpankmod_lib_code = [
++   'pan_kmod.c',
++-  'panfrost_kmod.c',
++   'panthor_kmod.c',
++ ]
++ 
+++# HackiOS (Darwin): only Panthor's interface, which hakios-panthor gives over the kernel's HakiosGPU; Panfrost's
+++# (the job-manager Malis') uses eventfd, timerfd and sched_setscheduler, which Darwin has not got
+++if host_machine.system() == 'darwin'
+++  libpankmod_lib_args += '-DPAN_KMOD_NO_PANFROST'
+++else
+++  libpankmod_lib_code += 'panfrost_kmod.c'
+++endif
+++
++ if with_panfrost_vdrm
++   libpankmod_lib_inc += [inc_virtio_gpu, inc_virtio_vdrm, include_directories('virtio')]
++   libpankmod_lib_args += '-DHAVE_PANFROST_VDRM'
++diff --git a/src/panfrost/lib/kmod/pan_kmod.c b/src/panfrost/lib/kmod/pan_kmod.c
++index 141bb49..31bcf37 100644
++--- a/src/panfrost/lib/kmod/pan_kmod.c
+++++ b/src/panfrost/lib/kmod/pan_kmod.c
++@@ -12,7 +12,9 @@
++ #include "pan_kmod.h"
++ #include "pan_kmod_backend.h"
++ 
+++#ifndef PAN_KMOD_NO_PANFROST
++ extern const struct pan_kmod_ops panfrost_kmod_ops;
+++#endif
++ extern const struct pan_kmod_ops panthor_kmod_ops;
++ #ifdef HAVE_PANFROST_VDRM
++ extern const struct pan_kmod_ops panfrost_virtio_gpu_ops;
++@@ -23,10 +25,12 @@ static const struct backend {
++    const char *name;
++    const struct pan_kmod_ops *ops;
++ } backends[] = {
+++#ifndef PAN_KMOD_NO_PANFROST
++    {
++       "panfrost",
++       &panfrost_kmod_ops,
++    },
+++#endif
++    {
++       "panthor",
++       &panthor_kmod_ops,
++diff --git a/src/panfrost/vulkan/meson.build b/src/panfrost/vulkan/meson.build
++index 588ba0e..0fd95c8 100644
++--- a/src/panfrost/vulkan/meson.build
+++++ b/src/panfrost/vulkan/meson.build
++@@ -235,7 +235,11 @@ libvulkan_panfrost = shared_library(
++     idep_mesautil,
++   ],
++   c_args : [no_override_init_args, panvk_flags, soong_compat_c_args],
++-  link_args : [vulkan_icd_link_args, ld_args_bsymbolic, ld_args_gc_sections, ld_args_build_id],
+++  # (HackiOS, Darwin: the entrypoint tables' weak references to what PanVK leaves to the common runtime are
+++  # allowed undefined, as ELF lets them be, and come out NULL, as in turnip-darwin.patch; libdrm's functions come
+++  # from hakios-panthor, linked by tools/mk-panvk.sh)
+++  link_args : [vulkan_icd_link_args, ld_args_bsymbolic, ld_args_gc_sections, ld_args_build_id,
+++               host_machine.system() == 'darwin' ? ['-Wl,-undefined,dynamic_lookup'] : []],
++   link_depends: vulkan_icd_link_depends,
++   gnu_symbol_visibility : 'hidden',
++   install : true,
++diff --git a/src/panfrost/vulkan/panvk_vX_physical_device.c b/src/panfrost/vulkan/panvk_vX_physical_device.c
++index 5a3962f..9b60537 100644
++--- a/src/panfrost/vulkan/panvk_vX_physical_device.c
+++++ b/src/panfrost/vulkan/panvk_vX_physical_device.c
++@@ -9,7 +9,12 @@
++  * SPDX-License-Identifier: MIT
++  */
++ 
+++#include "util/detect_os.h"
+++#if DETECT_OS_APPLE
+++#include <sys/types.h>       /* major(), minor() */
+++#else
++ #include <sys/sysmacros.h>
+++#endif
++ 
++ #include "git_sha1.h"
++ 
++diff --git a/src/vulkan/runtime/meson.build b/src/vulkan/runtime/meson.build
++index 506b6cb..ee4770b 100644
++--- a/src/vulkan/runtime/meson.build
+++++ b/src/vulkan/runtime/meson.build
++@@ -59,6 +59,9 @@ vulkan_lite_runtime_deps = [
++ if dep_libdrm.found()
++   vulkan_lite_runtime_files += files('vk_drm_syncobj.c')
++   vulkan_lite_runtime_deps += dep_libdrm
+++elif host_machine.system() == 'darwin'
+++  # HackiOS: DRM sync objects come from hakios-panthor (PanVK's fences and semaphores), not libdrm
+++  vulkan_lite_runtime_files += files('vk_drm_syncobj.c')
++ endif
++ 
++ if with_platform_android
++diff --git a/src/vulkan/runtime/vk_image.c b/src/vulkan/runtime/vk_image.c
++index 474cd41..a43eeed 100644
++--- a/src/vulkan/runtime/vk_image.c
+++++ b/src/vulkan/runtime/vk_image.c
++@@ -23,7 +23,7 @@
++ 
++ #include "vk_image.h"
++ 
++-#if DETECT_OS_LINUX || DETECT_OS_BSD
+++#if DETECT_OS_LINUX || DETECT_OS_BSD || DETECT_OS_APPLE /* HackiOS: PanVK lays images out by DRM modifier */
++ #include <drm-uapi/drm_fourcc.h>
++ #endif
++ 
++@@ -111,7 +111,7 @@ vk_image_init(struct vk_device *device,
++       vk_find_struct_const(pCreateInfo->pNext, WSI_IMAGE_CREATE_INFO_MESA);
++    image->wsi_legacy_scanout = wsi_info && wsi_info->scanout;
++ 
++-#if DETECT_OS_LINUX || DETECT_OS_BSD
+++#if DETECT_OS_LINUX || DETECT_OS_BSD || DETECT_OS_APPLE /* HackiOS: PanVK lays images out by DRM modifier */
++    image->drm_format_mod = ((1ULL << 56) - 1) /* DRM_FORMAT_MOD_INVALID */;
++ #endif
++ 
++@@ -196,7 +196,7 @@ vk_image_destroy(struct vk_device *device,
++    vk_object_free(device, alloc, image);
++ }
++ 
++-#if DETECT_OS_LINUX || DETECT_OS_BSD
+++#if DETECT_OS_LINUX || DETECT_OS_BSD || DETECT_OS_APPLE /* HackiOS: PanVK lays images out by DRM modifier */
++ VKAPI_ATTR VkResult VKAPI_CALL
++ vk_common_GetImageDrmFormatModifierPropertiesEXT(UNUSED VkDevice device,
++                                                  VkImage _image,
++diff --git a/src/vulkan/runtime/vk_image.h b/src/vulkan/runtime/vk_image.h
++index 4518281..8efd9ff 100644
++--- a/src/vulkan/runtime/vk_image.h
+++++ b/src/vulkan/runtime/vk_image.h
++@@ -80,7 +80,7 @@ struct vk_image {
++    /* wsi_image_create_info::scanout */
++    bool wsi_legacy_scanout;
++ 
++-#if DETECT_OS_LINUX || DETECT_OS_BSD
+++#if DETECT_OS_LINUX || DETECT_OS_BSD || DETECT_OS_APPLE /* HackiOS: PanVK lays images out by DRM modifier */
++    /* VK_EXT_drm_format_modifier
++     *
++     * Initialized by vk_image_create/init() to DRM_FORMAT_MOD_INVALID.  It's
+diff --git a/tools/mk-panvk.sh b/tools/mk-panvk.sh
+new file mode 100755
+index 0000000..240d4ba
+--- /dev/null
++++ b/tools/mk-panvk.sh
+@@ -0,0 +1,85 @@
++#!/bin/bash
++# Build PanVK, Mesa's Vulkan driver for the Mali (CSF: v10 and up; the Pixel 9 Pro's G715 is v11), for the Darwin
++# userland: the Mali's counterpart of tools/mk-turnip.sh, for metal2vulkan on the Pixel (caiman repo
++# docs/metal-mali-plan.md). PanVK's Panthor interface talks to the kernel's HakiosGPU (mali=1) through
++# tools/mesa/hakios-panthor, the stand-in for libdrm.
++#
++# Mesa main is needed (25.0.7, mk-mesa.sh's, has no v11 PanVK), so this tree is its own: ~/caiman-work/panvk-build
++# or $PANVK_BUILD, with tools/mesa/panvk-darwin.patch on. Two builds:
++#   native  for this Mac: mesa_clc, vtn_bindgen2 and panfrost_compile, which compile PanVK's OpenCL C helpers
++#           (Homebrew: meson ninja pkg-config glslang spirv-tools spirv-llvm-translator libclc llvm);
++#   ios     PanVK itself, with xnu-clang and the iPhoneOS SDK, those three tools taken from native.
++# The native build needs libdrm's headers only to compile: hoststub/ gives them (never run on the Mac).
++#
++# What comes out: $PANVK_BUILD/out/libvulkan_panfrost.dylib (install name /redwood/lib/libvulkan_panfrost.dylib).
++set -e
++ROOT=$(cd "$(dirname "$0")/.." && pwd)
++COMMIT=${MESA_COMMIT:-da2d473}
++B=${PANVK_BUILD:-$HOME/caiman-work/panvk-build}
++SDK=$ROOT/xnu-deps/theos-mac/sdks/iPhoneOS16.5.sdk
++export PATH=$B/hostbin:$B/venv/bin:/opt/homebrew/opt/llvm/bin:/opt/homebrew/bin:$ROOT/xnu-deps/host/bin:$PATH
++export PKG_CONFIG_PATH=/opt/homebrew/lib/pkgconfig:/opt/homebrew/opt/llvm/lib/pkgconfig
++mkdir -p "$B/out" "$B/hostbin" "$B/hoststub/sys"
++cd "$B"
++
++if [ ! -d mesa ]; then
++	git clone -q https://gitlab.freedesktop.org/mesa/mesa.git mesa
++	git -C mesa checkout -q "$COMMIT"
++fi
++if ! git -C mesa diff --quiet; then
++	:       # already patched (by this script, or by hand while working on it)
++else
++	git -C mesa apply "$ROOT/tools/mesa/panvk-darwin.patch"
++fi
++if [ ! -x venv/bin/python3 ]; then
++	python3 -m venv venv
++	venv/bin/pip -q install mako pyyaml packaging pycparser
++fi
++
++# libdrm's headers for the native build (see above)
++cat > hoststub/xf86drm.h <<H
++#include "$ROOT/tools/mesa/hakios-drm/xf86drm.h"
++#ifndef HOSTSTUB_DRM_EXTRA
++#define HOSTSTUB_DRM_EXTRA
++int drmCloseBufferHandle(int fd, uint32_t handle);
++#endif
++H
++
++OFF="-Dplatforms= -Dgallium-drivers= -Dvulkan-drivers=panfrost -Dpanfrost-rust=false -Dopengl=false -Dgles1=disabled
++	-Dgles2=disabled -Dglx=disabled -Degl=disabled -Dgbm=disabled -Dzstd=disabled -Dxmlconfig=disabled -Dexpat=disabled
++	-Dvalgrind=disabled -Dlibunwind=disabled -Dvideo-codecs= -Dbuild-tests=false"
++[ -f native/build.ninja ] || meson setup native mesa --buildtype=release $OFF -Dmesa-clc=enabled -Dinstall-mesa-clc=true \
++	-Dprecomp-compiler=enabled -Dinstall-precomp-compiler=true -Dllvm=enabled -Dshared-llvm=enabled \
++	-Dc_args="-I$B/hoststub" -Dcpp_args="-I$B/hoststub" > native-setup.log
++ninja -C native src/compiler/clc/mesa_clc src/compiler/spirv/vtn_bindgen2 src/panfrost/clc/panfrost_compile > native-ninja.log
++ln -sf "$B/native/src/compiler/clc/mesa_clc" "$B/native/src/compiler/spirv/vtn_bindgen2" \
++	"$B/native/src/panfrost/clc/panfrost_compile" hostbin/
++
++cat > cross.ini <<INI
++[binaries]
++c = ['$ROOT/xnu-deps/host/bin/xnu-clang', '-arch', 'arm64', '-isysroot', '$SDK']
++cpp = ['$ROOT/xnu-deps/host/bin/xnu-clang++', '-arch', 'arm64', '-isysroot', '$SDK', '-fuse-cxa-atexit']
++objc = ['$ROOT/xnu-deps/host/bin/xnu-clang', '-arch', 'arm64', '-isysroot', '$SDK']
++ar = 'llvm-ar'
++ranlib = 'llvm-ranlib'
++strip = 'llvm-strip'
++pkg-config = 'false'
++
++[host_machine]
++system = 'darwin'
++subsystem = 'ios'
++cpu_family = 'aarch64'
++cpu = 'arm64'
++endian = 'little'
++
++[properties]
++needs_exe_wrapper = true
++INI
++[ -f ios/build.ninja ] || meson setup ios mesa --cross-file cross.ini --wrap-mode=nofallback --prefix=/redwood \
++	--libdir=lib --buildtype=release -Db_ndebug=true $OFF -Dmesa-clc=system -Dprecomp-compiler=system -Dllvm=disabled \
++	-Dshader-cache=disabled -Dglvnd=disabled -Dtools= -Dc_args="-I$B/hoststub" -Dcpp_args="-I$B/hoststub" > ios-setup.log
++ninja -C ios src/panfrost/vulkan/libvulkan_panfrost.dylib > ios-ninja.log
++cp ios/src/panfrost/vulkan/libvulkan_panfrost.dylib out/
++install_name_tool -id /redwood/lib/libvulkan_panfrost.dylib out/libvulkan_panfrost.dylib
++echo "mk-panvk.sh: PanVK (Mesa $COMMIT): $B/out/libvulkan_panfrost.dylib ($(stat -f %z out/libvulkan_panfrost.dylib) bytes);" \
++	"libdrm's functions it wants from hakios-panthor: $(nm -u out/libvulkan_panfrost.dylib | grep -c '^_drm')"
 diff --git a/userland/rc.jobs.malitest b/userland/rc.jobs.malitest
 new file mode 100644
 index 0000000..dcf51ef
@@ -1297,10 +1645,10 @@ index 0000000..dcf51ef
 +/redwood/bin/mali_test
 diff --git a/userland/src/mali_test.c b/userland/src/mali_test.c
 new file mode 100644
-index 0000000..3988555
+index 0000000..ea4d4a1
 --- /dev/null
 +++ b/userland/src/mali_test.c
-@@ -0,0 +1,143 @@
+@@ -0,0 +1,176 @@
 +/*
 + * The Pixel 9 Pro's Mali from user space, through HakiosGPU (drivers/gpu/hakios.gpu.cpp) with boot-arg mali=1:
 + * what a Panthor stand-in for PanVK will do (caiman repo docs/panvk-uapi.md), in the smallest steps. The GPU's
@@ -1436,6 +1784,39 @@ index 0000000..3988555
 +		}
 +		printf("mali_test: stream %u: submit and wait %#x, fence %u; the word is %#x%s\n", st, kr, s.fence, *word,
 +		    *word == 0x05e70000 + st ? ": USER SPACE DROVE THE GPU" : "");
++	}
++
++	/* Panthor's VM_BIND (0x93): the buffer at an address of our own choosing, as PanVK chooses them, and used there */
++	{
++		struct { uint32_t handle, flags; uint64_t va, offset, size; } bind = { bo.handle, 0, 0x40000000, 0, 0x10000 };
++		const uint64_t va = 0x40000000;
++		volatile uint64_t *cs = (volatile uint64_t *)(uintptr_t)cpu;
++		volatile uint32_t *word = (volatile uint32_t *)(uintptr_t)(cpu + 0x800);
++		struct mali_submit s = { .queue = 2, .size = 5 * 8, .address = va };
++		struct msm_wait_fence w = { 0 };
++		struct timespec now;
++		kern_return_t kb = call(0x93, &bind, sizeof(bind));
++
++		*word = 0;
++		cs[0] = (0x01ULL << 56) | (0ULL << 48) | (va + 0x800);
++		cs[1] = (0x02ULL << 56) | (2ULL << 48) | 0xb19d0001;
++		cs[2] = (0x1cULL << 56) | (1ULL << 32);
++		cs[3] = (0x15ULL << 56) | (2ULL << 48) | (0ULL << 40) | (1ULL << 16);
++		cs[4] = (0x03ULL << 56) | (1ULL << 16);
++		__asm__ volatile("dsb sy" ::: "memory");
++		kr = kb == KERN_SUCCESS ? call(0x91, &s, sizeof(s)) : kb;
++		clock_gettime(CLOCK_MONOTONIC, &now);
++		w.fence = s.fence;
++		w.seconds = now.tv_sec + 1;
++		w.nanoseconds = now.tv_nsec;
++		if (kr == KERN_SUCCESS) {
++			kr = call(0x47, &w, sizeof(w));
++		}
++		printf("mali_test: bound at %#llx: bind %#x, submit and wait %#x; the word is %#x%s\n", (unsigned long long)va, kb, kr,
++		    *word, *word == 0xb19d0001 ? ": THE GPU RAN FROM A USER-CHOSEN ADDRESS" : "");
++		bind.handle = 0;
++		kb = call(0x93, &bind, sizeof(bind));
++		printf("mali_test: unbound: %#x\n", kb);
 +	}
 +
 +	struct mali_tiler_heap h = { .chunk_size = 2 * 1024 * 1024, .chunks = 5 };

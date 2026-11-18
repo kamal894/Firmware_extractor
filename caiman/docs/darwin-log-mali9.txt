@@ -1,0 +1,14 @@
+mali: GPU_ID 0xb8a21030, MCU_STATUS 1; firmware interface 0x2080000; stream 0 insert 576, extract 576; streams 1, 2 rings 65536, 65536 bytes; AS1 tables at 0xf0130000, 30260 KiB of DRAM for more
+mali: self test, stream 0: a command buffer in kernel memory (phys 0x8fc540000) at GPU address 0x800000000000, fence 1 done; it wrote 0xc0ffee10: OK
+mali: self test, stream 1: a command buffer in kernel memory (phys 0x8fc540000) at GPU address 0x800000000000, fence 2 done; it wrote 0xc0ffee11: OK
+mali: self test, stream 2: fence 3 done, wrote 0xc0ffee12: OK
+mali: self test, tiler heap: context at GPU 0x800000010000, first chunk 0x800000020000 (5 x 2 MiB); HEAP_SET then a store: 0x4ea90001: OK
+mali_test: query 0: GPU_ID 0xb8a21030, shader cores 0x1110055, tiler 0x1, L2 0x1mali_test: query 0: GPU_ID 0xb8a21030, shader cores 0x1110055, tiler 0x1, L2 0x1; CSF 0x4100412; 8 C; CSF 0x4100412; 8 CSG slots, 3 streams, 96 registers (4 the kernel's), 16 scoreboards, timestamp 24SG slots, 3 streams, 96 registers (4 the kernel's), 16 scoreboards, timestamp 24576000 Hz
+mali_test: buffer 1: 0, GPU address 0x800000a20000, mapped here at 0x101078000 (mali_test: buffer 1: 0, GPU address 0x800000a20000, mapped here at 0x101078000 (65536 bytes)
+mali_test: clocks: CLOCK_MONOTONIC 0.604836000 s, mach_continuous_time 202962515mali_test: clocks: CLOCK_MONOTONIC 0.604836000 s, mach_continuous_time 2029625150, mach_absolute_tim0, mach_absolute_time 2029625152, timebase 15625/384
+mali_test: stream 0: submit and wait 0, fence 5; the word is 0x5e70000: USER SPAmali_test: stream 0: submit and wait 0, fence 5; the word is 0x5e70000: USER SPACE DROVE THE GPU
+mali_test: stream 1: submit and wait 0, fence 6; the word is 0x5e70001: USER SPAmali_test: stream 1: submit and wait 0, fence 6; the word is 0x5e70001: USER SPACE DROVE THE GPU
+mali_test: stream 2: submit and wait 0, fence 7; the word is 0x5e70002: USER SPAmali_test: stream 2: submit and wait 0, fence 7; the word is 0x5e70002: USER SPACE DROVE THE GPU
+mali_test: bound at 0x40000000: bind 0, submit and wait 0; the word is 0xb19d000mali_test: bound at 0x40000000: bind 0, submit and wait 0; the word is 0xb19d0001: THE GPU RAN FROM 1: THE GPU RAN FROM A USER-CHOSEN ADDRESS
+mali_test: unbound: 0
+mali_test: tiler heap 0: context 0x800000a30000, first chunk 0x800000a40000
