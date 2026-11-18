@@ -1,5 +1,5 @@
 diff --git a/drivers/gpu/hakios.adreno.c b/drivers/gpu/hakios.adreno.c
-index 3f1f97a..0df2e35 100644
+index 3f1f97a..797ce69 100644
 --- a/drivers/gpu/hakios.adreno.c
 +++ b/drivers/gpu/hakios.adreno.c
 @@ -100,6 +100,7 @@
@@ -127,11 +127,12 @@ index 3f1f97a..0df2e35 100644
  	for (int i = 0; i < 20000; i++) {
  		room = (rd(gpu.base + CP_RB_RPTR) + RING_WORDS - ring_at - 1) % RING_WORDS;
  		if (room >= wanted) {
-@@ -3505,10 +3557,17 @@ hakios_gpu_submit(const uint64_t *addresses, const uint32_t *words, uint32_t cou
+@@ -3505,10 +3557,18 @@ hakios_gpu_submit(const uint64_t *addresses, const uint32_t *words, uint32_t cou
  	return gpu_fence;
  }
  
 +static void mali_report(const char *why);
++static vm_offset_t mali_shared;         /* the firmware's interface pages (the loader's handoff) */
 +
  /* A submission does not come back: what the 3D core and its SMMU context say. */
  void
@@ -145,7 +146,7 @@ index 3f1f97a..0df2e35 100644
  	uint32_t context = smmu_context(&core_space);
  
  	printf("adreno: gpu: %s: submission %u is the last, the core has done %u; ring: read up to %u, written up to %u; status "
-@@ -3753,6 +3812,539 @@ start_by_itself(void)
+@@ -3753,6 +3813,578 @@ start_by_itself(void)
   * as long as the steps and the watch after them last, nothing else writes to the log, so that
   * its end -- all that the loader's notes keep -- is about what is being done here.
   */
@@ -292,15 +293,32 @@ index 3f1f97a..0df2e35 100644
 +	return true;
 +}
 +
++/*
++ * AS1's page tables changed: the GPU's caches and TLBs over the whole space told, as Panthor does it (lock a region,
++ * flush, unlock). FLUSH_MEM alone acts on the locked region only, and with none locked a VA bound again to other
++ * pages kept its old translation: PanVK's second device, at its first one's addresses, waited forever on a sync
++ * object the other streams wrote through the old one (darwin-ws10).
++ */
++static void
++mali_as1_wait(void)
++{
++	for (int i = 0; i < 100000 && (mali_rd(MALI_AS1 + 0x28) & 1); i++) {      /* AS_STATUS active */
++	}
++}
++
 +static void
 +mali_as1_flush(void)
 +{
 +	__builtin_arm_dsb(0xf);
-+	for (int i = 0; i < 100000 && (mali_rd(MALI_AS1 + 0x28) & 1); i++) {
-+	}
++	mali_as1_wait();
++	mali_wr(MALI_AS1 + 0x10, 47);                   /* LOCKADDR: from 0, 2^(47+1) bytes: all of it */
++	mali_wr(MALI_AS1 + 0x14, 0);
++	mali_wr(MALI_AS1 + 0x18, 2);                    /* LOCK */
++	mali_as1_wait();
 +	mali_wr(MALI_AS1 + 0x18, 5);                    /* FLUSH_MEM */
-+	for (int i = 0; i < 100000 && (mali_rd(MALI_AS1 + 0x28) & 1); i++) {
-+	}
++	mali_as1_wait();
++	mali_wr(MALI_AS1 + 0x18, 3);                    /* UNLOCK */
++	mali_as1_wait();
 +}
 +
 +static uint64_t
@@ -403,6 +421,17 @@ index 3f1f97a..0df2e35 100644
 +	printf("mali: %s: fence %u is the last given; GPU_IRQ %#x, GPU_FAULT %#x @%#x, MMU_IRQ %#x, AS1 fault %#x @%#llx, "
 +	    "MCU_STATUS %u\n", why, mali_fence, mali_rd(0x20), mali_rd(0x3c), mali_rd(0x40), mali_rd(0x2000),
 +	    mali_rd(MALI_AS1 + 0x1c), (unsigned long long)mali_rd(MALI_AS1 + 0x24) << 32 | mali_rd(MALI_AS1 + 0x20), mali_rd(0x704));
++	/* a fresh status snapshot of group 0's streams first (CSG_REQ bit 5, kbase's status update), as the loader takes one */
++	mali_csg_in[0] = (mali_csg_in[0] & ~(1u << 5)) | ((mali_csg_out[0] ^ (1u << 5)) & (1u << 5));
++	mali_glb_in[2] = (mali_glb_in[2] & ~1u) | ((mali_glb_out[2] ^ 1u) & 1u);
++	__builtin_arm_dsb(0xf);
++	*(volatile uint32_t *)mali_bell0 = 1;
++	for (int i = 0; i < 1000 && ((mali_csg_in[0] ^ mali_csg_out[0]) & (1u << 5)); i++) {
++		delay(10);
++	}
++	if ((mali_csg_in[0] ^ mali_csg_out[0]) & (1u << 5)) {
++		printf("mali:   (no status update in 10 ms: the stream status below may be old)\n");
++	}
 +	for (unsigned st = 0; st < MALI_STREAMS; st++) {
 +		struct mali_stream *q = &mali_stream[st];
 +
@@ -411,6 +440,16 @@ index 3f1f97a..0df2e35 100644
 +		}
 +		printf("mali:   stream %u: fence word %u of %u; ring inserted to %llu, the GPU extracted to %llu\n", st,
 +		    *q->fence_word, q->last, q->insert, q->q_out[0]);
++		if (mali_shared != 0) {
++			/* the stream's output page (CS_STATUS_*, kbase's names): where it is and what it waits for */
++			volatile uint32_t *ctl = (volatile uint32_t *)(mali_shared + 0x1040 + st * *(volatile uint32_t *)(mali_shared + 0x1018));
++			volatile uint32_t *out = (volatile uint32_t *)(mali_shared + (ctl[2] - 0x04000000));
++
++			printf("mali:     CS status: cmd ptr %#llx, wait %#x, req resource %#x, wait sync %#llx value %#x%08x, "
++			    "scoreboards %#x, blocked %#x; fault %#x @%#x, fatal %#x\n", (unsigned long long)out[17] << 32 | out[16],
++			    out[18], out[19], (unsigned long long)out[21] << 32 | out[20], out[25], out[22], out[23], out[24],
++			    out[32], out[34], out[33]);
++		}
 +	}
 +}
 +
@@ -670,6 +709,7 @@ index 3f1f97a..0df2e35 100644
 +	mali_pool_end = h[7];
 +	mali_pool_base = h[6] & ~0x1ffffffull;          /* the loader's pool: 32 MiB at a 32 MiB boundary */
 +	mali_glb_in = (volatile uint32_t *)(shared + (*(volatile uint32_t *)(shared + 8) - 0x04000000));
++	mali_shared = shared;
 +	mali_glb_out = (volatile uint32_t *)(shared + (*(volatile uint32_t *)(shared + 0xc) - 0x04000000));
 +	mali_csg_in = (volatile uint32_t *)(shared + (*(volatile uint32_t *)(shared + 0x1004) - 0x04000000));
 +	mali_csg_out = (volatile uint32_t *)(shared + (*(volatile uint32_t *)(shared + 0x1008) - 0x04000000));
@@ -685,7 +725,7 @@ index 3f1f97a..0df2e35 100644
  void
  hakios_adreno_init(void)
  {
-@@ -3765,6 +4357,11 @@ hakios_adreno_init(void)
+@@ -3765,6 +4397,11 @@ hakios_adreno_init(void)
  	uint32_t only = 0, done = 0, failed = 0, keep = 0;
  	bool by_itself = false;
  
@@ -1454,12 +1494,41 @@ index 8d69400..f6ebbf9 100644
  	for (unsigned b = 0; b < 2; b++) {
  		tm_va[b] = ml_io_map(tm_pa[b], TM_SIZE);
  		if (tm_va[b] == 0) {
+diff --git a/tools/m2v/metal2vulkan-hakios.patch b/tools/m2v/metal2vulkan-hakios.patch
+index 3797eb7..458b2b2 100644
+--- a/tools/m2v/metal2vulkan-hakios.patch
++++ b/tools/m2v/metal2vulkan-hakios.patch
+@@ -33,3 +33,24 @@ index e07a3208..f677399f 100644
+      match error {
+          vk::Result::ERROR_INVALID_EXTERNAL_HANDLE | vk::Result::ERROR_UNKNOWN => not_importable(),
+          other => vulkan(other),
++diff --git a/crates/metal2vulkan/src/lower/fragment/mod.rs b/crates/metal2vulkan/src/lower/fragment/mod.rs
++index f9a7edbb7..34e89e1d8 100644
++--- a/crates/metal2vulkan/src/lower/fragment/mod.rs
+++++ b/crates/metal2vulkan/src/lower/fragment/mod.rs
++@@ -343,7 +343,15 @@ pub fn finish(cx: &mut SelectCx<'_>, m: &mut Meter) -> Result<(), Error> {
++     let storage = !cx.families.fragment.fetch.is_empty() || shadow;
++     let interlock =
++         if rog::declared(cx.entry) || cx.families.fragment.imageblock.is_some() || storage {
++-            Some(rog::mode(cx)?)
+++            match rog::mode(cx) {
+++                Ok(mode) => Some(mode),
+++                // (HackiOS) METAL2VULKAN_UNORDERED_ROG: on a device with no fragment interlock (PanVK on the
+++                // Mali-G715), the body runs unordered rather than the pipeline being refused: CoreAnimation
+++                // exits the window server on a refused pipeline, and an unordered access races only between
+++                // fragments overlapping one pixel within a draw.
+++                Err(_) if std::env::var_os("METAL2VULKAN_UNORDERED_ROG").is_some() => None,
+++                Err(e) => return Err(e),
+++            }
++         } else {
++             None
++         };
 diff --git a/tools/mesa/hakios-panthor/hakios.panthor.c b/tools/mesa/hakios-panthor/hakios.panthor.c
 new file mode 100644
-index 0000000..fff36e4
+index 0000000..fb7dce2
 --- /dev/null
 +++ b/tools/mesa/hakios-panthor/hakios.panthor.c
-@@ -0,0 +1,1109 @@
+@@ -0,0 +1,1210 @@
 +/*
 + * The libdrm of xf86drm.h for PanVK: Linux's Panthor requests to the kernel's HakiosGPU on the Mali (boot-arg mali=1),
 + * the counterpart of hakios-drm (Adreno, msm). What the kernel has (caiman repo docs/gpu-plan.md, steps 10-14):
@@ -1719,6 +1788,11 @@ index 0000000..fff36e4
 +		errno = ENOMEM;
 +		return MAP_FAILED;
 +	}
++	if (mapped < size) {
++		/* (the buffer is smaller than what is mapped of it: a write past its end would fault) */
++		fprintf(stderr, "hakios-panthor: buffer %u mapped %llu bytes of the %zu asked for\n",
++		    (uint32_t)((uint64_t)offset >> 32), (unsigned long long)mapped, size);
++	}
 +	return (void *)(uintptr_t)at;
 +}
 +
@@ -1754,6 +1828,7 @@ index 0000000..fff36e4
 +	pthread_mutex_lock(&ranges_lock);
 +	for (unsigned i = 0; i < HOST_RANGES; i++) {
 +		if (host_ranges[i].address != 0 && host_ranges[i].handle == handle) {
++			munmap((void *)host_ranges[i].address, host_ranges[i].size);
 +			host_ranges[i].address = 0;
 +		}
 +	}
@@ -2181,7 +2256,16 @@ index 0000000..fff36e4
 +	}
 +	trace(surface ? "IOSurface as a buffer" : "own pages as a buffer", 59, error);
 +	if (error == 0) {
-+		host_range_add(address, size, *handle);
++		/*
++		 * The caches are kept over a mapping of this library's own of the buffer (the same pages), not the program's:
++		 * the program unmaps an IOSurface while its buffer lives on, and a cache operation on an unmapped address
++		 * faults (backboardd: SIGSEGV in fence_done). This mapping lasts as long as the buffer (host_range_drop).
++		 */
++		void *own = hakios_panthor_mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, -1, (off_t)((uint64_t)*handle << 32));
++
++		if (own != MAP_FAILED) {
++			host_range_add((uintptr_t)own, size, *handle);
++		}
 +	}
 +	return error ? fail(error) : 0;
 +}
@@ -2441,12 +2525,91 @@ index 0000000..fff36e4
 +			fence = k.fence;
 +			__atomic_store_n(&last_fence, fence, __ATOMIC_RELEASE);
 +		}
++		if (tracing()) {
++			static unsigned told;
++
++			if (told++ < 64) {
++				fprintf(stderr, "hakios-panthor: submit queue %u, %u bytes at %#llx: fence %u; syncs:", q->queue_index,
++				    q->stream_size, (unsigned long long)q->stream_addr, fence);
++				for (uint32_t k2 = 0; k2 < q->syncs.count; k2++) {
++					const struct drm_panthor_sync_op *op =
++					    (const void *)(uintptr_t)(q->syncs.array + (uint64_t)k2 * q->syncs.stride);
++
++					fprintf(stderr, " %s %u@%llu", (op->flags & DRM_PANTHOR_SYNC_OP_SIGNAL) ? "signal" : "wait", op->handle,
++					    (unsigned long long)op->timeline_value);
++				}
++				fprintf(stderr, "\n");
++			}
++		}
 +		syncs_signal(&q->syncs, fence);
 +	}
 +	return 0;
 +}
 +
 +static uint32_t next_group = 1, next_heap = 1;
++
++/*
++ * A new group's streams start with their registers at zero (Panthor: every group is new; PanVK relies on it, its
++ * subqueues' "reference seqno registers are all zero at init time"). Here every group is the kernel's group 0, whose
++ * registers keep what the last group left (a second device in a process waited forever for a seqno past them): so
++ * each of its streams runs, before the group is handed out, a stream of MOVE48 rN = 0 for r0-r91 (r92-r95 are the
++ * kernel's), and is waited for.
++ */
++static int
++group_clear_registers(unsigned queues)
++{
++	static uint32_t handle;
++	static uint64_t gpu_va;
++	static volatile uint64_t *cs;
++	static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
++	uint32_t fence = 0;
++	int error = 0;
++
++	pthread_mutex_lock(&lock);
++	if (cs == NULL) {
++		struct k_gem_new bo = { .size = 0x4000, .flags = MSM_BO_WC };
++		struct { uint32_t handle, info; uint64_t value; uint32_t len, pad; } info = { 0 };
++		void *map;
++
++		if ((error = call(REQ_GEM_NEW, &bo, sizeof(bo))) == 0) {
++			info.handle = bo.handle;
++			info.info = 1;          /* MSM_INFO_GET_IOVA */
++			error = call(0x43, &info, sizeof(info));
++		}
++		if (error == 0 && (map = hakios_panthor_mmap(NULL, 0x4000, PROT_READ | PROT_WRITE, MAP_SHARED, -1,
++		    (off_t)((uint64_t)bo.handle << 32))) != MAP_FAILED) {
++			unsigned n = 0;
++
++			cs = map;
++			for (unsigned r = 0; r < 92; r += 2) {
++				cs[n++] = (0x01ULL << 56) | ((uint64_t)r << 48);        /* MOVE48 r(r):r(r+1) = 0 */
++			}
++			while (n % 8) {
++				cs[n++] = 0;                                            /* NOP to 64 bytes */
++			}
++			__asm__ volatile("dsb sy" ::: "memory");
++			handle = bo.handle;
++			gpu_va = info.value;
++		} else if (error == 0) {
++			error = ENOMEM;
++		}
++	}
++	for (unsigned q = 0; error == 0 && cs != NULL && q < queues; q++) {
++		struct k_submit k = { .queue = q, .size = 48 * 8, .address = gpu_va };
++
++		if ((error = call(REQ_MALI_SUBMIT, &k, sizeof(k))) == 0) {
++			fence = k.fence;
++			__atomic_store_n(&last_fence, fence, __ATOMIC_RELEASE);
++		}
++	}
++	pthread_mutex_unlock(&lock);
++	if (error == 0 && fence != 0 && !fence_done(fence, now_ns() + 1000000000LL)) {
++		error = ETIMEDOUT;
++	}
++	trace("a group's registers cleared", 58, error);
++	(void)handle;
++	return error;
++}
 +static uint32_t bo_flags[8192 + 1];
 +
 +static int
@@ -2491,6 +2654,13 @@ index 0000000..fff36e4
 +		if (c->queues.count > 3) {
 +			say_once("a group of more than 3 queues");
 +			return EINVAL;
++		}
++		{
++			int error = group_clear_registers(c->queues.count);
++
++			if (error != 0) {
++				return error;
++			}
 +		}
 +		c->group_handle = __atomic_fetch_add(&next_group, 1, __ATOMIC_RELAXED);
 +		return 0;
@@ -3330,6 +3500,199 @@ index 0000000..607d0b8
 @@ -0,0 +1,2 @@
 +# Commands run by the launchd job com.hakios.demo: PanVK, compute and a triangle (src/vk_tri.c), with mali=1
 +/redwood/bin/vk_tri
+diff --git a/userland/src/HakiosMetalCA.m b/userland/src/HakiosMetalCA.m
+index c6a7ff1..ca3a3ed 100644
+--- a/userland/src/HakiosMetalCA.m
++++ b/userland/src/HakiosMetalCA.m
+@@ -104,6 +104,8 @@
+ #include <stdlib.h>
+ #include <string.h>
+ #include <unistd.h>
++#include <signal.h>
++#include <sys/ucontext.h>
+ 
+ #include "hakios-metal/hakios_metal.h"
+ 
+@@ -153,6 +155,37 @@ hm_print(const char *fmt, ...)
+ 	}
+ }
+ 
++/* (hakios) metal_m2v=1: a crash of the window server's says where (pc, lr, the frames, as image+offset), as vk_test does */
++static void
++hm_where(const char *what, uintptr_t a)
++{
++	Dl_info info;
++
++	if (dladdr((void *)a, &info) && info.dli_fname != NULL)
++		hm_print("crash:   %s %#lx = %s+%#lx (%s+%#lx)\n", what, (unsigned long)a, info.dli_fname,
++			 (unsigned long)(a - (uintptr_t)info.dli_fbase), info.dli_sname ? info.dli_sname : "?",
++			 (unsigned long)(a - (uintptr_t)info.dli_saddr));
++	else
++		hm_print("crash:   %s %#lx\n", what, (unsigned long)a);
++}
++
++static void
++hm_crashed(int sig, siginfo_t *si, void *context)
++{
++	ucontext_t *uc = context;
++	uintptr_t fp = (uintptr_t)uc->uc_mcontext->__ss.__fp;
++
++	hm_print("crash: signal %d at address %p\n", sig, si->si_addr);
++	hm_where("pc", (uintptr_t)uc->uc_mcontext->__ss.__pc);
++	hm_where("lr", (uintptr_t)uc->uc_mcontext->__ss.__lr);
++	for (int i = 0; i < 24 && fp != 0 && (fp & 7) == 0; i++) {
++		hm_where("frame", ((uintptr_t *)fp)[1]);
++		fp = ((uintptr_t *)fp)[0];
++	}
++	signal(sig, SIG_DFL);
++	raise(sig);
++}
++
+ /* a sentence that is true every time and says nothing new after the first */
+ #define HM_ONCE(...)							\
+ 	do {								\
+@@ -2140,6 +2173,13 @@ hm_boot_arg_set(const char *what)
+ 	/* (hakios) metal_m2v=1: the device is UniXNU's Metal on Vulkan instead (AdrenoMetal's frontend over metal2vulkan
+ 	 * over Turnip, tools/mk-m2v.sh; linked in by userland/build.sh M2V=1): its own objects, from the device down */
+ 	if (native_bridge_metal_open != NULL && hm_boot_arg_set("metal_m2v=1")) {
++		{
++			struct sigaction sa = { .sa_sigaction = hm_crashed, .sa_flags = SA_SIGINFO };
++
++			sigaction(SIGSEGV, &sa, NULL);
++			sigaction(SIGBUS, &sa, NULL);
++			sigaction(SIGILL, &sa, NULL);
++		}
+ 		/* boot-arg tu_debug=FLAGS[,FLAGS]: Turnip's TU_DEBUG in the window server (sysmem, gmem, forcebin, ...) */
+ 		{
+ 			char args[1024] = "", value[64] = "";
+@@ -2199,10 +2239,19 @@ hm_boot_arg_set(const char *what)
+ 			native_bridge_metal_variant_hook = hm_m2v_variant;
+ 		}
+ 		mkdir("/private/var/db/m2v", 0700);
+-		id device = native_bridge_metal_open("/redwood/lib/libvulkan_freedreno.dylib",
++		/* the Vulkan driver: Turnip, or on the Pixel 9 Pro's Mali PanVK (its G715 is v11, which Mesa leaves out unasked) */
++		const char *vulkan = access("/redwood/lib/libvulkan_freedreno.dylib", R_OK) == 0 ?
++		    "/redwood/lib/libvulkan_freedreno.dylib" : "/redwood/lib/libvulkan_panfrost.dylib";
++		setenv("PAN_I_WANT_A_BROKEN_VULKAN_DRIVER", "1", 0);
++		/* (no transaction elimination for now: binding an image's memory zeroed its CRC area past the memory's end) */
++		setenv("PANVK_DEBUG", "no_crc", 0);
++		/* (no fragment interlock on the Mali through PanVK: raster order groups run unordered, not refused --
++		 * CoreAnimation exits the window server over a refused pipeline; tools/m2v/metal2vulkan-hakios.patch) */
++		setenv("METAL2VULKAN_UNORDERED_ROG", "1", 0);
++		id device = native_bridge_metal_open(vulkan,
+ 		    access("/private/var/db/m2v", W_OK) == 0 ? "/private/var/db/m2v" : "/private/var/tmp/m2v", 0, hm_m2v_missing);
+ 		if (device != nil) {
+-			hm_print("device: %s (metal2vulkan over Turnip, class %s)\n", [[device name] UTF8String],
++			hm_print("device: %s (metal2vulkan over %s, class %s)\n", [[device name] UTF8String], strrchr(vulkan, '/') + 1,
+ 				 object_getClassName(device));
+ 			/* QuartzCore's pipeline library opened as for hakios-metal's device (this class's method, onto the
+ 			 * metal2vulkan device's class: it calls _MTLDevice's own, both devices' base): its pipelines then
+@@ -2222,6 +2271,105 @@ hm_boot_arg_set(const char *what)
+ 				}
+ 				class_replaceMethod(nb, @selector(targetDeviceInfo),
+ 				    imp_implementationWithBlock(^const struct MTLTargetDeviceArch *(id me) { (void)me; return &target; }), "^v16@0:8");
++				/*
++				 * (hakios, caiman) QuartzCore opens the library a pipeline names by its index, at
++				 * QuartzCore.framework/default.metallib, which a trimmed system image has not got (getLibraryByIndex
++				 * aborts the window server): that one is the library of boot-arg ca_metallib= instead.
++				 */
++				{
++					SEL byURL = @selector(newLibraryWithURL:error:);
++					Method m = class_getInstanceMethod(nb, byURL);
++					static char metallib[512];
++					char args[1024] = "";
++					size_t size = sizeof(args) - 1;
++					const char *at;
++
++					if (m != NULL && sysctlbyname("kern.bootargs", args, &size, NULL, 0) == 0 &&
++					    (at = strstr(args, "ca_metallib=")) != NULL) {
++						size_t length = strcspn(at + 12, " ");
++
++						if (length < sizeof(metallib)) {
++							memcpy(metallib, at + 12, length);
++							metallib[length] = 0;
++							id (*original)(id, SEL, NSURL *, NSError **) =
++							    (id (*)(id, SEL, NSURL *, NSError **))method_getImplementation(m);
++
++							class_replaceMethod(nb, byURL, imp_implementationWithBlock(^id(id me, NSURL *url, NSError **error) {
++								NSString *path = [url path];
++
++								if ([path hasSuffix:@"/QuartzCore.framework/default.metallib"] &&
++								    ![[NSFileManager defaultManager] fileExistsAtPath:path]) {
++									url = [NSURL fileURLWithPath:@(metallib)];
++								}
++								return original(me, byURL, url, error);
++							}), method_getTypeEncoding(m));
++							/* ... and by its path (getLibraryByIndex opens it so) */
++							SEL byFile = @selector(newLibraryWithFile:error:);
++							Method f = class_getInstanceMethod(nb, byFile);
++
++							if (f != NULL) {
++								id (*originalFile)(id, SEL, NSString *, NSError **) =
++								    (id (*)(id, SEL, NSString *, NSError **))method_getImplementation(f);
++
++								class_replaceMethod(nb, byFile, imp_implementationWithBlock(^id(id me, NSString *path, NSError **error) {
++									if ([path hasSuffix:@"/QuartzCore.framework/default.metallib"] &&
++									    ![[NSFileManager defaultManager] fileExistsAtPath:path]) {
++										path = @(metallib);
++									}
++									return originalFile(me, byFile, path, error);
++								}), method_getTypeEncoding(f));
++							}
++							hm_print("QuartzCore's default.metallib is %s\n", metallib);
++							/*
++							 * The library of the Mac's CoreAnimation lacks the iPhone's display functions
++							 * (display_overdrive_lut_gen_lph: the OLED panel's overdrive): a function it
++							 * has stands in, as hm_stand_ins does for hakios-metal's device, so that
++							 * Metal's pipeline library finds one and does not abort the window server.
++							 */
++							Class library = NSClassFromString(@"NBLibrary");
++							Method byName = library ? class_getInstanceMethod(library, @selector(newFunctionWithName:)) : NULL;
++							Method byConstants = library ?
++							    class_getInstanceMethod(library, @selector(newFunctionWithName:constantValues:error:)) : NULL;
++							/* any fragment function of the iPhone's the library lacks (display_overdrive_*, harmony_* ...):
++							 * the copy of the same precision; each told once in the log by the hook below */
++							NSString *(^standIn)(NSString *) = ^NSString *(NSString *name) {
++								return [name hasSuffix:@"_lpf"] ? @"inplace_copy_lpf" :
++								    [name hasSuffix:@"_lph"] ? @"inplace_copy_lph" : nil;
++							};
++
++							if (byName != NULL) {
++								id (*origName)(id, SEL, NSString *) = (id (*)(id, SEL, NSString *))method_getImplementation(byName);
++
++								method_setImplementation(byName, imp_implementationWithBlock(^id(id me, NSString *name) {
++									id f = origName(me, @selector(newFunctionWithName:), name);
++
++									if (f == nil && standIn(name) != nil) {
++										hm_print("the library has no %s: %s stands in\n", [name UTF8String],
++											 [standIn(name) UTF8String]);
++										f = origName(me, @selector(newFunctionWithName:), standIn(name));
++									}
++									return f;
++								}));
++							}
++							if (byConstants != NULL) {
++								id (*origConstants)(id, SEL, NSString *, MTLFunctionConstantValues *, NSError **) =
++								    (id (*)(id, SEL, NSString *, MTLFunctionConstantValues *, NSError **))
++								    method_getImplementation(byConstants);
++
++								method_setImplementation(byConstants, imp_implementationWithBlock(^id(id me, NSString *name,
++								    MTLFunctionConstantValues *values, NSError **error) {
++									id f = origConstants(me, @selector(newFunctionWithName:constantValues:error:), name, values, error);
++
++									if (f == nil && standIn(name) != nil) {
++										f = origConstants(me, @selector(newFunctionWithName:constantValues:error:), standIn(name),
++										    values, error);
++									}
++									return f;
++								}));
++							}
++						}
++					}
++				}
+ 			}
+ 			/* what it did, every 5 s: commits, passes, draws, refusals; the textures and the surfaces imported */
+ 			dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
 diff --git a/userland/src/m2v_test.m b/userland/src/m2v_test.m
 index beaec62..7e70102 100644
 --- a/userland/src/m2v_test.m
@@ -4255,7 +4618,7 @@ index c390093..de72f4d 100755
  		log "downloading the macOS 13.3 SDK for its DriverKit headers"
  		curl -L --fail --retry 3 -s -o macos-sdk.tar.xz "$MACOS_SDK_URL" || die "download failed: $MACOS_SDK_URL"
 diff --git a/xnu/files/iokit/Kernel/MiniIOMobileFramebuffer.cpp b/xnu/files/iokit/Kernel/MiniIOMobileFramebuffer.cpp
-index 724e156..be98354 100644
+index 724e156..4bcd7f4 100644
 --- a/xnu/files/iokit/Kernel/MiniIOMobileFramebuffer.cpp
 +++ b/xnu/files/iokit/Kernel/MiniIOMobileFramebuffer.cpp
 @@ -261,6 +261,7 @@ static TUNABLE(uint32_t, gMeasure, "fb_measure", 0);
@@ -4443,6 +4806,20 @@ index 724e156..be98354 100644
  	drawn = mach_absolute_time();
  	if (recorded != NULL) {
  		record(recorded);
+@@ -2024,7 +2137,12 @@ publishAccelerator(IOService * provider)
+ 		 * Metal for the screen; until that device can draw, a screen drawn without it is the working one.
+ 		 */
+ 		if (PE_parse_boot_argn("metal", &metal, sizeof(metal)) && metal != 0) {
+-			accelerator->setProperty("MetalPluginName", "HakiosMetal");
++			/*
++			 * metal=2: the plug-in from the RAM disk (/redwood/lib/HakiosMetal.bundle), for a system image made before
++			 * it was there (caiman's xnu partition): Metal opens /System/Library/Extensions/<name>.bundle, and this
++			 * name leads from there to the RAM disk.
++			 */
++			accelerator->setProperty("MetalPluginName", metal == 2 ? "../../../redwood/lib/HakiosMetal" : "HakiosMetal");
+ 			accelerator->setProperty("MetalPluginClassName", "HakiosMetalDevice");
+ 			IOLog("MiniIOMobileFramebuffer: metal=1: the accelerator names HakiosMetal as its Metal plug-in\n");
+ 		}
 diff --git a/xnu/files/osfmk/arm64/psci_smp.c b/xnu/files/osfmk/arm64/psci_smp.c
 index 221defa..94452e6 100644
 --- a/xnu/files/osfmk/arm64/psci_smp.c

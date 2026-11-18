@@ -327,6 +327,29 @@ pan_access_tiled_image: to be found; copies through a submission work); the proc
 invalidated over imported ranges before each submission and after each wait (the Mali does not snoop: 32 to 646
 pixels were stale); the kernel's hang report for the Mali instead of the Adreno's registers (it panicked).
 
+## Step 18: the window server on Metal over PanVK (in progress; runs darwin-ws1..14)
+
+Boot-args `mali=1 metal=2 metal_m2v=1 ca_metallib=/redwood/share/ca/QuartzCore-default.metallib`. backboardd takes
+the Mali as its Metal device through HakiosMetal (userland/src/HakiosMetalCA.m built with metal2vulkan) and
+PanVK. What each run found, and the fix:
+
+- the system image on the phone has no HakiosMetal.bundle: kernel `metal=2` names it on the RAM disk
+  (`../../../redwood/lib/HakiosMetal`), no reflash;
+- the plug-in: Turnip's path made PanVK's; hakios-metal's functions left to dynamic lookup (the m2v path
+  never calls them); QuartzCore's default.metallib from tools/ca-metallib.py on the Mac; libhakios.dylib
+  rebuilt from source (the prebuilt one had no ca_metallib hook);
+- PanVK's CRC (transaction elimination) area zeroed past the image's memory: PANVK_DEBUG=no_crc;
+- QuartzCore opens default.metallib by index under a mirror directory: newLibraryWithURL/File redirected;
+- the iPhone's own fragment functions (display_overdrive_*, harmony, luma_boost, p3_clamp) missing from the
+  Mac's library: the copy of the same precision stands in (logged once each);
+- raster order groups without fragment interlock: unordered (metal2vulkan-hakios.patch,
+  METAL2VULKAN_UNORDERED_ROG), CoreAnimation exits the window server over a refused pipeline;
+- a GPU hang (stream 2 waiting forever for a seqno, CS status read after a CSG status update): PanVK relies on
+  a new group's CS registers being zero, and every group here is group 0: hakios-panthor clears r0-r91 on
+  each stream at GROUP_CREATE; AS1 flushes are now LOCK/FLUSH_MEM/UNLOCK over the whole space;
+- the kernel's hang report reads each stream's CS status; the plug-in prints a backtrace on a crash;
+- cache maintenance of imported memory over hakios-panthor's own mapping (the program's may be gone).
+
 ## Next
 
 8. User space: a Mali back end for hakios-metal (today Adreno PM4 + ir3) emitting CSF command buffers and
