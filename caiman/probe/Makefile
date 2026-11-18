@@ -12,6 +12,7 @@
 #   PROBE_CRASHTEST=1       fault on purpose at the end (tests the handler)
 #   PROBE_TOUCH=1           read-only look at the touch screen's power (PMIC through ACPM), pins, SPI
 #   PROBE_TOUCH=9           with LOADER=1: the touch chip powered, its SPI set up and the chip identified for XNU (touchscreen=2)
+#   PROBE_SHOTS=N           50 pictures of the panel, one a second from XNU's N-th, into pstore's pmsg zone (watcher.c)
 #   PROBE_DVFS=1|2          CPU cluster clocks through ACPM: 1 read them, 2 also raise them (dvfs.c)
 #   PROBE_GPU=1             the Mali GPU: power domains and its first registers, read only (gpu.c)
 #   LOADER=1                the M2 loader: probe, then start XNU from an appended payload
@@ -54,6 +55,9 @@ endif
 ifdef MALI_FW
 CFLAGS += -DMALI_FW_EMBEDDED=1 -DMALI_FW_PATH='"$(MALI_FW)"'
 SRCS_FW := gpu_fw.S
+endif
+ifdef PROBE_SHOTS
+CFLAGS += -DPROBE_SHOTS=$(PROBE_SHOTS)
 endif
 ifdef PROBE_DVFS
 CFLAGS += -DPROBE_DVFS=$(PROBE_DVFS)

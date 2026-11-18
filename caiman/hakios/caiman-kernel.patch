@@ -1,5 +1,100 @@
+diff --git a/drivers/core/hakios.platform.c b/drivers/core/hakios.platform.c
+index 85fd700..f40b5b3 100644
+--- a/drivers/core/hakios.platform.c
++++ b/drivers/core/hakios.platform.c
+@@ -14,6 +14,7 @@
+ #include <kern/locks.h>
+ #include <kern/startup.h>
+ #include <libkern/libkern.h>
++#include <pexpert/pexpert.h>
+ #include <sys/sysctl.h>
+ #include <sys/systm.h>
+ 
+@@ -65,3 +66,82 @@ hakios_platform_init(void)
+ 	printf("hakios-kernel: %d drivers built in (%s): %s\n", HAKIOS_DRIVERS_COUNT, HAKIOS_DRIVERS_CONFIG, hakios_drivers_string);
+ }
+ STARTUP(EARLY_BOOT, STARTUP_RANK_LAST, hakios_platform_init);
++
++/*
++ * kern.hakios.pmsg (boot-arg pmsg=1 only; root, write only): what is written here is appended to pstore's pmsg zone
++ * (ramoops_mem@fd3ff000 of the Pixel 9 Pro's device tree: console 2 MiB, then pmsg 2 MiB at 0xfd5ff000), in Linux's
++ * struct persistent_ram_buffer {sig "DBGC", start, size, data}, so that Android, started by the watcher's reset, shows it
++ * as /sys/fs/pstore/pmsg-ramoops-0: a way off the phone for files made here (the Metal shader cache) that writes nothing
++ * to its storage. An empty write empties the zone. The zone is outside the memory XNU is given.
++ */
++extern vm_offset_t ml_io_map_wcomb(vm_offset_t phys_addr, vm_size_t size);
++
++#define PMSG_PHYS       0xfd5ff000ULL
++#define PMSG_SIZE       0x200000u
++#define PMSG_SIG        0x43474244u
++
++static LCK_MTX_DECLARE(pmsg_lock, &hakios_platform_lock_group);
++static volatile uint32_t *pmsg_zone;
++
++static int
++pmsg_sysctl SYSCTL_HANDLER_ARGS
++{
++#pragma unused(oidp, arg1, arg2)
++	uint32_t enabled = 0, used;
++	uint8_t chunk[1024];
++	size_t left;
++	int error = 0;
++
++	if (!PE_parse_boot_argn("pmsg", &enabled, sizeof(enabled)) || !enabled) {
++		return ENOTSUP;
++	}
++	if (req->newptr == USER_ADDR_NULL) {
++		used = pmsg_zone != NULL ? pmsg_zone[2] : 0;
++		return SYSCTL_OUT(req, &used, sizeof(used));
++	}
++	if (pmsg_zone == NULL) {
++		return ENXIO;
++	}
++	lck_mtx_lock(&pmsg_lock);
++	used = pmsg_zone[2];
++	left = req->newlen;
++	if (left == 0) {
++		used = 0;
++	} else if (used + left > PMSG_SIZE - 12) {
++		error = ENOSPC;
++	}
++	while (error == 0 && left > 0) {
++		size_t n = left < sizeof(chunk) ? left : sizeof(chunk);
++
++		error = SYSCTL_IN(req, chunk, n);
++		for (size_t i = 0; error == 0 && i < n; i++) {
++			((volatile uint8_t *)(pmsg_zone + 3))[used + i] = chunk[i];
++		}
++		used += (uint32_t)n;
++		left -= n;
++	}
++	__builtin_arm_dsb(0xf);
++	pmsg_zone[1] = pmsg_zone[2] = used;     /* start = size: the zone read from its beginning */
++	__builtin_arm_dsb(0xf);
++	lck_mtx_unlock(&pmsg_lock);
++	return error;
++}
++/*
++ * The zone mapped at boot (with pmsg=1), not at the first write: 2 MiB of kernel addresses found then failed once
++ * late in a run (kmem_alloc of 0x204000, a panic in cache_export).
++ */
++static void
++pmsg_init(void)
++{
++	uint32_t enabled = 0;
++
++	if (PE_parse_boot_argn("pmsg", &enabled, sizeof(enabled)) && enabled) {
++		pmsg_zone = (volatile uint32_t *)ml_io_map_wcomb(PMSG_PHYS, PMSG_SIZE);
++		pmsg_zone[0] = PMSG_SIG;
++		pmsg_zone[1] = pmsg_zone[2] = 0;
++	}
++}
++STARTUP(EARLY_BOOT, STARTUP_RANK_LAST, pmsg_init);
++
++SYSCTL_PROC(_kern_hakios, OID_AUTO, pmsg, CTLTYPE_OPAQUE | CTLFLAG_RW | CTLFLAG_LOCKED, NULL, 0, pmsg_sysctl, "",
++    "append to pstore's pmsg zone (boot-arg pmsg=1)");
 diff --git a/drivers/gpu/hakios.adreno.c b/drivers/gpu/hakios.adreno.c
-index 3f1f97a..8ea6273 100644
+index 3f1f97a..700adc3 100644
 --- a/drivers/gpu/hakios.adreno.c
 +++ b/drivers/gpu/hakios.adreno.c
 @@ -100,6 +100,7 @@
@@ -127,12 +222,11 @@ index 3f1f97a..8ea6273 100644
  	for (int i = 0; i < 20000; i++) {
  		room = (rd(gpu.base + CP_RB_RPTR) + RING_WORDS - ring_at - 1) % RING_WORDS;
  		if (room >= wanted) {
-@@ -3505,10 +3557,18 @@ hakios_gpu_submit(const uint64_t *addresses, const uint32_t *words, uint32_t cou
+@@ -3505,10 +3557,17 @@ hakios_gpu_submit(const uint64_t *addresses, const uint32_t *words, uint32_t cou
  	return gpu_fence;
  }
  
 +static void mali_report(const char *why);
-+static vm_offset_t mali_shared;         /* the firmware's interface pages (the loader's handoff) */
 +
  /* A submission does not come back: what the 3D core and its SMMU context say. */
  void
@@ -146,7 +240,7 @@ index 3f1f97a..8ea6273 100644
  	uint32_t context = smmu_context(&core_space);
  
  	printf("adreno: gpu: %s: submission %u is the last, the core has done %u; ring: read up to %u, written up to %u; status "
-@@ -3753,6 +3813,728 @@ start_by_itself(void)
+@@ -3753,6 +3812,928 @@ start_by_itself(void)
   * as long as the steps and the watch after them last, nothing else writes to the log, so that
   * its end -- all that the loader's notes keep -- is about what is being done here.
   */
@@ -184,11 +278,39 @@ index 3f1f97a..8ea6273 100644
 +
 +static vm_offset_t mali_regs, mali_bell0;
 +static volatile uint32_t *mali_glb_in, *mali_glb_out, *mali_csg_in, *mali_csg_out;
++/* Byte offsets and event masks from the CS and CSG interfaces in Linux Panthor's panthor_fw.h. */
++#define MALI_CS_HEAP_START      0x20
++#define MALI_CS_HEAP_END        0x28
++#define MALI_CS_FAULT_STATUS    0x80
++#define MALI_CS_FATAL_STATUS    0x84
++#define MALI_CS_FAULT_INFO      0x88
++#define MALI_CS_FATAL_INFO      0x90
++#define MALI_CS_HEAP_VT_START   0xc0
++#define MALI_CS_HEAP_VT_END     0xc4
++#define MALI_CS_HEAP_FRAG_END   0xcc
++#define MALI_CS_HEAP_ADDRESS    0xd0
++#define MALI_CS_TILER_OOM       (1u << 26)
++#define MALI_CS_FATAL           (1u << 30)
++#define MALI_CS_FAULT           (1u << 31)
++#define MALI_CSG_SYNC_UPDATE    (1u << 28)
++#define MALI_CSG_IDLE           (1u << 29)
++#define MALI_CSG_PROGRESS       (1u << 31)
 +#define MALI_STREAMS            3
++#define MALI_MAX_HEAPS          16
++#define MALI_MAX_CHUNKS         64
++
++static struct mali_heap {
++	uint64_t context;
++	uint64_t newest;                        /* the chunk a new one's header points at (Panthor puts new ones first) */
++	uint32_t chunk_size, chunks;
++} mali_heaps[MALI_MAX_HEAPS];
++static unsigned mali_heap_count;
++static uint64_t mali_oom, mali_oom_failed, mali_faults, mali_fatals, mali_sync_updates, mali_idles, mali_progress;
 +static struct mali_stream {
 +	vm_offset_t bell;
 +	volatile uint64_t *ring, *q_in, *q_out;
-+	volatile uint32_t *fence_word;
++	volatile uint32_t *fence_word, *cs_in, *cs_out;
++	bool dead, fault_told;
 +	uint64_t ring_size, insert;
 +	uint32_t last;                          /* the last fence given to this stream */
 +	/* (diagnostic) the last 64 fences given and when, the fence last seen done, and how long they took: submission to
@@ -353,6 +475,7 @@ index 3f1f97a..8ea6273 100644
 + * slot 5 for all, as before).
 + */
 +static uint32_t mali_cached = 3;
++static uint32_t mali_sh = 3;                    /* boot-arg mali_sh: the shareability of the cached mappings */
 +
 +static bool
 +mali_map_cached(uint64_t address, uint64_t phys, bool read_only, uint32_t which)
@@ -360,7 +483,96 @@ index 3f1f97a..8ea6273 100644
 +	if (!(mali_cached & which)) {
 +		return mali_map(address, phys, read_only);
 +	}
-+	return mali_space_map(address, phys, 3 | (1u << 10) | (read_only ? 3u << 6 : 1u << 6) | (0u << 2));
++	/* (SH = inner shareable, bits 9:8, as Linux's io-pgtable gives Panthor's cached mappings: with SH 0 the shader
++	 * cores' own caches were not kept coherent with each other -- stray triangles while swiping, darwin-ws38) */
++	return mali_space_map(address, phys, 3 | (1u << 10) | (read_only ? 3u << 6 : 1u << 6) | (mali_sh << 8) | (0u << 2));
++}
++
++static uint64_t mali_heap_grow(uint64_t context, uint32_t vt_start, uint32_t vt_end, uint32_t frag_end);
++
++static void
++mali_csf_events(void)
++{
++	uint32_t irq_req = mali_csg_out[3], irq_ack = mali_csg_in[3];
++	uint32_t req = mali_csg_in[0], ack = mali_csg_out[0];
++	uint32_t events = (req ^ ack) & (MALI_CSG_SYNC_UPDATE | MALI_CSG_IDLE | MALI_CSG_PROGRESS);
++	uint32_t bells = 0;
++
++	/* Match the CS IRQ request before reading the stream event bits so firmware can signal another IRQ
++	 * while the host handles this one. The output ACK pages belong to firmware. For firmware-originated
++	 * events the host copies the changed bits from ACK into its REQ, keeping the host request bits intact.
++	 */
++	if (irq_req != irq_ack) {
++		mali_csg_in[3] = irq_req;
++		__builtin_arm_dsb(0xf);
++	}
++	if (events != 0) {
++		mali_csg_in[0] = req ^ events;
++		mali_sync_updates += (events & MALI_CSG_SYNC_UPDATE) != 0;
++		mali_idles += (events & MALI_CSG_IDLE) != 0;
++		if ((events & MALI_CSG_PROGRESS) && mali_progress++ == 0) {
++			printf("mali: group 0 progress timeout\n");
++		}
++	}
++	for (unsigned st = 0; st < MALI_STREAMS; st++) {
++		struct mali_stream *q = &mali_stream[st];
++		volatile uint32_t *in = q->cs_in, *out = q->cs_out;
++		uint32_t cs_req, cs_events;
++
++		if (in == NULL) {
++			continue;
++		}
++		cs_req = in[0];
++		cs_events = (cs_req ^ out[0]) & (MALI_CS_TILER_OOM | MALI_CS_FAULT | MALI_CS_FATAL);
++		if (cs_events == 0) {
++			continue;
++		}
++		if (cs_events & MALI_CS_FAULT) {
++			mali_faults++;
++			if (!q->fault_told) {
++				printf("mali: stream %u CS fault %#x info %#llx\n", st, out[MALI_CS_FAULT_STATUS / 4],
++				    (unsigned long long)*(volatile uint64_t *)(out + MALI_CS_FAULT_INFO / 4));
++				q->fault_told = true;
++			}
++		}
++		if (cs_events & MALI_CS_FATAL) {
++			mali_fatals++;
++			if (!q->dead) {
++				printf("mali: stream %u CS fatal %#x info %#llx\n", st, out[MALI_CS_FATAL_STATUS / 4],
++				    (unsigned long long)*(volatile uint64_t *)(out + MALI_CS_FATAL_INFO / 4));
++				q->dead = true;
++			}
++		}
++		if (cs_events & MALI_CS_TILER_OOM) {
++			uint64_t context = *(volatile uint64_t *)(out + MALI_CS_HEAP_ADDRESS / 4);
++			uint32_t vt_start = out[MALI_CS_HEAP_VT_START / 4], vt_end = out[MALI_CS_HEAP_VT_END / 4];
++			uint32_t frag_end = out[MALI_CS_HEAP_FRAG_END / 4];
++			uint64_t chunk = q->dead ? 0 : mali_heap_grow(context, vt_start, vt_end, frag_end);
++
++			mali_oom++;
++			if (chunk == 0 && mali_oom_failed++ == 0) {
++				printf("mali: stream %u could not grow heap %#llx (vt start %u, vt end %u, frag end %u)\n",
++				    st, (unsigned long long)context, vt_start, vt_end, frag_end);
++			}
++			/* Panthor supplies the same encoded pointer twice. Firmware links the new chunk to the live
++			 * heap, or tries to reclaim memory if both values are zero.
++			 */
++			*(volatile uint64_t *)(in + MALI_CS_HEAP_START / 4) = chunk;
++			*(volatile uint64_t *)(in + MALI_CS_HEAP_END / 4) = chunk;
++			__builtin_arm_dsb(0xf);
++		}
++		in[0] = cs_req ^ cs_events;
++		bells |= 1u << st;
++	}
++	if (bells != 0) {
++		/* Panthor's CSG doorbell request selects the streams. The global request selects group 0. */
++		mali_csg_in[2] = (mali_csg_in[2] & ~bells) | ((mali_csg_out[2] ^ bells) & bells);
++	}
++	if (bells != 0 || events != 0 || irq_req != irq_ack) {
++		mali_glb_in[2] = (mali_glb_in[2] & ~1u) | ((mali_glb_out[2] ^ 1u) & 1u);
++		__builtin_arm_dsb(0xf);
++		*(volatile uint32_t *)mali_bell0 = 1;
++	}
 +}
 +
 +static uint32_t
@@ -370,9 +582,14 @@ index 3f1f97a..8ea6273 100644
 +	uint32_t n = 3 * count + 20, i;
 +	uint64_t deadline;
 +
++	mali_csf_events();
++	if (q->dead) {
++		return 0;
++	}
 +	clock_interval_to_deadline(1, NSEC_PER_SEC, &deadline);
 +	while (q->insert + n * 8 + 64 - q->q_out[0] > q->ring_size) {
-+		if (mach_absolute_time() > deadline) {
++		mali_csf_events();
++		if (q->dead || mach_absolute_time() > deadline) {
 +			return 0;
 +		}
 +		delay(100);
@@ -430,13 +647,13 @@ index 3f1f97a..8ea6273 100644
 +static bool
 +mali_done(uint32_t fence)
 +{
-+	/* the firmware's job interrupts, cleared, and group 0's requests acknowledged (as the loader's gpu_service) */
++	/* Clear the firmware job IRQs before servicing the shared interface. */
 +	uint32_t raw = mali_rd(0x1000);
 +
 +	if (raw) {
 +		mali_wr(0x1004, raw);
 +	}
-+	mali_csg_in[3] = mali_csg_out[3];
++	mali_csf_events();
 +	for (unsigned st = 0; st < MALI_STREAMS; st++) {
 +		struct mali_stream *q = &mali_stream[st];
 +		uint32_t now_done = q->ring != NULL ? *q->fence_word : 0;
@@ -459,7 +676,7 @@ index 3f1f97a..8ea6273 100644
 +			q->seen = now_done;
 +		}
 +		/* (diagnostic) the first few submissions not done 6 ms after they were given: the streams' state then */
-+		if (q->ring != NULL && q->last != q->seen && mali_stalls_told < 4) {
++		if (q->ring != NULL && !q->dead && q->last != q->seen && mali_stalls_told < 4) {
 +			uint32_t next = q->seen + 1;
 +			uint64_t ns;
 +
@@ -477,9 +694,11 @@ index 3f1f97a..8ea6273 100644
 +		}
 +	}
 +	for (unsigned st = 0; st < MALI_STREAMS; st++) {
-+		uint32_t need = (int32_t)(mali_stream[st].last - fence) < 0 ? mali_stream[st].last : fence;
++		struct mali_stream *q = &mali_stream[st];
++		uint32_t need = (int32_t)(q->last - fence) < 0 ? q->last : fence;
 +
-+		if (mali_stream[st].ring != NULL && need != 0 && (int32_t)(*mali_stream[st].fence_word - need) < 0) {
++		/* The boolean wait treats fences on a dead stream as retired. The fatal log records the error. */
++		if (q->ring != NULL && !q->dead && need != 0 && (int32_t)(*q->fence_word - need) < 0) {
 +			return false;
 +		}
 +	}
@@ -491,6 +710,9 @@ index 3f1f97a..8ea6273 100644
 +void
 +hakios_mali_latency(void)
 +{
++	printf("mali: CSF events: OOM %llu (no chunk %llu), fault %llu, fatal %llu, sync update %llu, idle %llu, "
++	    "progress timeout %llu\n", mali_oom, mali_oom_failed, mali_faults, mali_fatals, mali_sync_updates,
++	    mali_idles, mali_progress);
 +	for (unsigned st = 0; st < MALI_STREAMS; st++) {
 +		uint32_t *t = mali_stream[st].took;
 +
@@ -527,12 +749,9 @@ index 3f1f97a..8ea6273 100644
 +		}
 +		printf("mali:   stream %u: fence word %u of %u; ring inserted to %llu, the GPU extracted to %llu\n", st,
 +		    *q->fence_word, q->last, q->insert, q->q_out[0]);
-+		if (mali_shared != 0) {
++		if (q->cs_in != NULL) {
 +			/* the stream's output page (CS_STATUS_*, kbase's names): where it is and what it waits for */
-+			volatile uint32_t *ctl = (volatile uint32_t *)(mali_shared + 0x1040 + st * *(volatile uint32_t *)(mali_shared + 0x1018));
-+			volatile uint32_t *out = (volatile uint32_t *)(mali_shared + (ctl[2] - 0x04000000));
-+
-+			volatile uint32_t *in = (volatile uint32_t *)(mali_shared + (ctl[1] - 0x04000000));
++			volatile uint32_t *in = q->cs_in, *out = q->cs_out;
 +
 +			printf("mali:     CS_REQ %#x CS_ACK %#x (differ %#x); CSG_REQ %#x ACK %#x, CSG_IRQ_REQ %#x ACK %#x\n", in[0], out[0],
 +			    in[0] ^ out[0], mali_csg_in[0], mali_csg_out[0], mali_csg_out[3], mali_csg_in[3]);
@@ -544,56 +763,125 @@ index 3f1f97a..8ea6273 100644
 +	}
 +}
 +
++static void
++mali_heap_unmap(uint64_t va, uint32_t size)
++{
++	for (uint64_t off = 0; off < size; off += 4096) {
++		mali_space_map(va + off, 0, 0);
++	}
++}
++
++/* Map zeroed backing for a heap context or chunk. If mapping runs out of tables, remove any leaf
++ * entries installed for this allocation before releasing the physical pages.
++ */
++static uint64_t
++mali_heap_backing(uint32_t size, vm_offset_t *kva)
++{
++	uint64_t va = mali_address(size), off;
++	vm_offset_t mem = 0;
++
++	if (va == 0 || kmem_alloc(kernel_map, &mem, size, KMA_KOBJECT | KMA_ZERO,
++	    VM_KERN_MEMORY_IOKIT) != KERN_SUCCESS) {
++		return 0;
++	}
++	for (off = 0; off < size; off += 4096) {
++		if (!mali_map_cached(va + off, kvtophys(mem + off), false, 2)) {
++			mali_heap_unmap(va, (uint32_t)off);
++			mali_as1_flush();
++			kmem_free(kernel_map, mem, size);
++			return 0;
++		}
++	}
++	*kva = mem;
++	return va;
++}
++
++static uint64_t
++mali_heap_grow(uint64_t context, uint32_t vt_start, uint32_t vt_end, uint32_t frag_end)
++{
++	/* Panthor requires an unfinished tiler job and a consistent fragment count. The shim does not
++	 * carry target_in_flight, so the chunk limit is the only growth threshold after that check.
++	 */
++	if (frag_end > vt_end || vt_end >= vt_start) {
++		return 0;
++	}
++	for (unsigned i = 0; i < mali_heap_count; i++) {
++		struct mali_heap *heap = &mali_heaps[i];
++		vm_offset_t chunk;
++		uint64_t va;
++
++		if (heap->context != context) {
++			continue;
++		}
++		if (heap->chunks >= MALI_MAX_CHUNKS) {
++			break;
++		}
++		va = mali_heap_backing(heap->chunk_size, &chunk);
++		if (va == 0) {
++			break;
++		}
++		/* (panthor_alloc_heap_chunk: a new chunk's header points at the one made before it) */
++		*(volatile uint64_t *)chunk = heap->newest | (heap->chunk_size >> 12);
++		hakios_gpu_to_memory((void *)chunk, 64);
++		mali_as1_flush();
++		heap->chunks++;
++		heap->newest = va;
++		return va | (heap->chunk_size >> 12);
++	}
++	return 0;
++}
++
 +/*
 + * A tiler heap, as Panthor's TILER_HEAP_CREATE gives PanVK one (docs/panvk-uapi.md), in kbase's format (the
 + * loader's step 11 drew a triangle with it): `count` chunks of `chunk_size` bytes of wired kernel memory, each
 + * mapped at consecutive AS1 addresses, each starting with a 64-byte header whose first u64 points at the next
 + * ((address & ~0xfff) | size >> 12; 0 for the last), and a 32-byte heap context pointing at the first. Returns
 + * the context's GPU address (for HEAP_SET) and the first chunk's (for the Tiler Heap descriptor); 0: no memory.
-+ * Chunks are never added on out-of-memory events yet: enough are given at the start.
++ * The heap stays registered for firmware OOM requests for the life of AS1.
 + */
 +static uint64_t
 +mali_tiler_heap_create(uint32_t chunk_size, uint32_t count, uint64_t *first_chunk)
 +{
-+	vm_offset_t ctx_page = 0;
-+	uint64_t ctx_va, chunk_va = 0, prev_hdr_kva = 0, first = 0;
++	vm_offset_t ctx_page, chunk_pages[MALI_MAX_CHUNKS];
++	uint64_t ctx_va, chunk_va[MALI_MAX_CHUNKS];
++	uint32_t c;
 +
-+	if (chunk_size < 0x10000 || (chunk_size & 0xfff) || count == 0 ||
-+	    kmem_alloc(kernel_map, &ctx_page, PAGE_SIZE, KMA_KOBJECT | KMA_ZERO, VM_KERN_MEMORY_IOKIT) != KERN_SUCCESS) {
++	if (chunk_size < 0x10000 || (chunk_size & 0xfff) || (chunk_size >> 12) > 0xfff ||
++	    count == 0 || count > MALI_MAX_CHUNKS || mali_heap_count >= MALI_MAX_HEAPS) {
 +		return 0;
 +	}
-+	ctx_va = mali_address(PAGE_SIZE);
-+	for (uint64_t off = 0; off < PAGE_SIZE; off += 4096) {
-+		mali_map_cached(ctx_va + off, kvtophys(ctx_page + off), false, 2);
++	ctx_va = mali_heap_backing(PAGE_SIZE, &ctx_page);
++	if (ctx_va == 0) {
++		return 0;
 +	}
-+	for (uint32_t c = 0; c < count; c++) {
-+		vm_offset_t chunk = 0;
-+		uint64_t va = mali_address(chunk_size);
-+
-+		if (va == 0 || kmem_alloc(kernel_map, &chunk, chunk_size, KMA_KOBJECT | KMA_ZERO,
-+		    VM_KERN_MEMORY_IOKIT) != KERN_SUCCESS) {
-+			return 0;
++	for (c = 0; c < count; c++) {
++		chunk_va[c] = mali_heap_backing(chunk_size, &chunk_pages[c]);
++		if (chunk_va[c] == 0) {
++			goto fail;
 +		}
-+		for (uint64_t off = 0; off < chunk_size; off += 4096) {
-+			if (!mali_map_cached(va + off, kvtophys(chunk + off), false, 2)) {
-+				return 0;
-+			}
-+		}
-+		if (prev_hdr_kva) {
-+			*(volatile uint64_t *)prev_hdr_kva = va | (chunk_size >> 12);
-+			hakios_gpu_to_memory((void *)prev_hdr_kva, 64);
-+		} else {
-+			first = va;
-+		}
-+		prev_hdr_kva = chunk;
-+		chunk_va = va;
 +	}
-+	(void)chunk_va;
-+	*(volatile uint64_t *)ctx_page = first | (chunk_size >> 12);
++	for (c = 0; c < count; c++) {
++		*(volatile uint64_t *)chunk_pages[c] = c + 1 < count ? chunk_va[c + 1] | (chunk_size >> 12) : 0;
++		hakios_gpu_to_memory((void *)chunk_pages[c], 64);
++	}
++	*(volatile uint64_t *)ctx_page = chunk_va[0] | (chunk_size >> 12);
 +	hakios_gpu_to_memory((void *)ctx_page, 64);
 +	mali_as1_flush();
-+	*first_chunk = first;
++	mali_heaps[mali_heap_count++] = (struct mali_heap){ ctx_va, chunk_va[0], chunk_size, count };
++	*first_chunk = chunk_va[0];
 +	return ctx_va;
++
++fail:
++	mali_heap_unmap(ctx_va, PAGE_SIZE);
++	for (uint32_t i = 0; i < c; i++) {
++		mali_heap_unmap(chunk_va[i], chunk_size);
++	}
++	mali_as1_flush();
++	for (uint32_t i = 0; i < c; i++) {
++		kmem_free(kernel_map, chunk_pages[i], chunk_size);
++	}
++	kmem_free(kernel_map, ctx_page, PAGE_SIZE);
++	return 0;
 +}
 +
 +/* The API, used the way HakiosGPU's client uses it: a command buffer in a kernel page, mapped, submitted, waited for. */
@@ -852,13 +1140,18 @@ index 3f1f97a..8ea6273 100644
 +		q->insert = hs[3];
 +		q->fence_word = (volatile uint32_t *)(target + 0xc00 + 4 * st);
 +		*q->fence_word = 0;
++		/* The loader's CS control blocks give the firmware VAs of each stream's input and output pages. */
++		volatile uint32_t *ctl = (volatile uint32_t *)(shared + 0x1040 + st *
++		    *(volatile uint32_t *)(shared + 0x1018));
++
++		q->cs_in = (volatile uint32_t *)(shared + (ctl[1] - 0x04000000));
++		q->cs_out = (volatile uint32_t *)(shared + (ctl[2] - 0x04000000));
 +	}
 +	mali_as1_root = h[5];
 +	mali_pool_next = h[6];
 +	mali_pool_end = h[7];
 +	mali_pool_base = h[6] & ~0x1ffffffull;          /* the loader's pool: 32 MiB at a 32 MiB boundary */
 +	mali_glb_in = (volatile uint32_t *)(shared + (*(volatile uint32_t *)(shared + 8) - 0x04000000));
-+	mali_shared = shared;
 +	mali_glb_out = (volatile uint32_t *)(shared + (*(volatile uint32_t *)(shared + 0xc) - 0x04000000));
 +	mali_csg_in = (volatile uint32_t *)(shared + (*(volatile uint32_t *)(shared + 0x1004) - 0x04000000));
 +	mali_csg_out = (volatile uint32_t *)(shared + (*(volatile uint32_t *)(shared + 0x1008) - 0x04000000));
@@ -867,6 +1160,7 @@ index 3f1f97a..8ea6273 100644
 +	    *(volatile uint32_t *)shared, mali_stream[0].insert, mali_stream[0].q_out[0], mali_stream[1].ring_size,
 +	    mali_stream[2].ring_size, mali_as1_root, (mali_pool_end - mali_pool_next) / 1024);
 +	PE_parse_boot_argn("mali_cached", &mali_cached, sizeof(mali_cached));
++	PE_parse_boot_argn("mali_sh", &mali_sh, sizeof(mali_sh));
 +	mali_kept = true;
 +	mali_self_test();
 +	HakiosGPUStart();
@@ -875,7 +1169,7 @@ index 3f1f97a..8ea6273 100644
  void
  hakios_adreno_init(void)
  {
-@@ -3765,6 +4547,11 @@ hakios_adreno_init(void)
+@@ -3765,6 +4746,11 @@ hakios_adreno_init(void)
  	uint32_t only = 0, done = 0, failed = 0, keep = 0;
  	bool by_itself = false;
  
@@ -888,7 +1182,7 @@ index 3f1f97a..8ea6273 100644
  		display_probe();
  	}
 diff --git a/drivers/gpu/hakios.gpu.cpp b/drivers/gpu/hakios.gpu.cpp
-index 633b419..b6aa633 100644
+index 633b419..a3f082b 100644
 --- a/drivers/gpu/hakios.gpu.cpp
 +++ b/drivers/gpu/hakios.gpu.cpp
 @@ -56,6 +56,13 @@ void hakios_gpu_mapped(void);
@@ -948,15 +1242,17 @@ index 633b419..b6aa633 100644
  };
  
  struct msm_timespec {
-@@ -182,6 +225,7 @@ struct hakios_show {
+@@ -182,6 +225,9 @@ struct hakios_show {
  static IOLock * gGPULock;                       /* around everything that is the GPU's (hakios_gpu_...) */
  static bool gGPUReported;
  static bool gGPUCached;                         /* boot-arg gpu_cached=1 */
++static bool gMaliAfter;                         /* boot-arg mali_after=1: and again after a Mali fence is waited for */
++static bool gMaliNoSeed;                        /* boot-arg mali_noseed=1: no IOSurface passed over for an unchanged seed */
 +static uint32_t gMaliCachedShared;              /* boot-arg mali_shared_cached: 1 IOSurfaces, 2 client pages cached by the Mali too */
  
  /* What the last seconds' submissions were and cost here, for the log. */
  static struct {
-@@ -189,6 +233,7 @@ static struct {
+@@ -189,6 +235,7 @@ static struct {
  	uint64_t flushed;                       /* bytes sent out of the cache */
  	uint32_t submissions, commands, buffers, surfaces, waits, over;
  	uint32_t made, given_again;             /* buffers of their own made for programs, and of those kept ones given again */
@@ -964,7 +1260,7 @@ index 633b419..b6aa633 100644
  	uint64_t making;                        /* ... and the time it took to make the others */
  } gGPUStat;
  
-@@ -256,6 +301,24 @@ slowWait(const char * kind, uint64_t began)
+@@ -256,6 +303,24 @@ slowWait(const char * kind, uint64_t began)
  	}
  }
  
@@ -989,7 +1285,7 @@ index 633b419..b6aa633 100644
  /* How long from now a time of msm's is, in milliseconds; 0: now or past. */
  static uint64_t
  millisecondsUntil(const struct msm_timespec * when)
-@@ -263,7 +326,7 @@ millisecondsUntil(const struct msm_timespec * when)
+@@ -263,7 +328,7 @@ millisecondsUntil(const struct msm_timespec * when)
  	uint64_t now;
  	int64_t left, end;
  
@@ -998,7 +1294,7 @@ index 633b419..b6aa633 100644
  	/* the seconds are the caller's: a number too big to be nanoseconds is a time far ahead (or far behind), not a wrapped one */
  	if (__builtin_mul_overflow(when->seconds, (int64_t) NSEC_PER_SEC, &end) || __builtin_add_overflow(end, when->nanoseconds, &end)) {
  		return when->seconds > 0 && when->nanoseconds >= 0 ? GPU_PATIENCE_MS : 0;
-@@ -292,7 +355,7 @@ waitOver(const struct msm_timespec * when, uint32_t fence)
+@@ -292,7 +357,7 @@ waitOver(const struct msm_timespec * when, uint32_t fence)
  	gGPUStat.over++;
  	if (told < 4) {
  		told++;
@@ -1007,27 +1303,40 @@ index 633b419..b6aa633 100644
  		IOLog("HakiosGPU: a wait for submission %u, which is not done, until %lld.%09lld s, asked for at %llu.%09llu s: "
  		    "over before it began\n", fence, when->seconds, when->nanoseconds, now / NSEC_PER_SEC, now % NSEC_PER_SEC);
  	}
-@@ -330,6 +393,9 @@ HakiosGPUStart(void)
+@@ -330,6 +395,13 @@ HakiosGPUStart(void)
  	uint32_t cached = 0;
  
  	gGPUCached = PE_parse_boot_argn("gpu_cached", &cached, sizeof(cached)) && cached != 0;
 +	cached = 0;
 +	PE_parse_boot_argn("mali_shared_cached", &cached, sizeof(cached));
 +	gMaliCachedShared = cached;
++	cached = 0;
++	gMaliAfter = PE_parse_boot_argn("mali_after", &cached, sizeof(cached)) && cached != 0;
++	cached = 0;
++	gMaliNoSeed = PE_parse_boot_argn("mali_noseed", &cached, sizeof(cached)) && cached != 0;
  	gGPULock = IOLockAlloc();
  	gpu = OSTypeAlloc(HakiosGPU);
  	if (gpu == NULL || provider == NULL || !gpu->init() || !gpu->attach(provider)) {
-@@ -433,6 +499,9 @@ class HakiosGPUUserClient : public IOUserClient
+@@ -418,6 +490,8 @@ class HakiosGPUUserClient : public IOUserClient
+ 	uint32_t                fNextQueue;
+ 	uint32_t                fNextBuffer;            /* where the search for a free handle starts: one given back is not the next given */
+ 	uint32_t                fBufferCount;
++	bool                    fMaliUsed;      /* this client has given the Mali work (kMaliSubmit) */
++	uint32_t                fMaliAfter;     /* mali_after=1: the last fence its caches were made fresh after */
+ 	uint64_t                fBufferBytes;
+ 	uint32_t                fSubmits;
+ 	uint32_t                fStrangers;             /* requests that named a buffer the client does not have */
+@@ -433,6 +507,9 @@ class HakiosGPUUserClient : public IOUserClient
  	void dropKept(struct gpu_kept * k);
  	void reap(void);
  	IOReturn gemNew(struct msm_gem_new * request);
 +	IOReturn maliBind(const struct mali_bind * request);
-+	void maliCaches(void);
++	void maliCaches(bool all);
 +	void maliStat(void);
  	IOReturn surfaceBuffer(struct hakios_surface * request);
  	IOReturn userBuffer(struct hakios_user_memory * request);
  	IOReturn gemInfo(struct msm_gem_info * request);
-@@ -944,6 +1013,119 @@ HakiosGPUUserClient::userBuffer(struct hakios_user_memory * request)
+@@ -944,6 +1021,119 @@ HakiosGPUUserClient::userBuffer(struct hakios_user_memory * request)
  	return kIOReturnSuccess;
  }
  
@@ -1038,7 +1347,7 @@ index 633b419..b6aa633 100644
 + * not written since is passed over). The Mali's submissions name no buffers, so every such buffer of the client is.
 + */
 +void
-+HakiosGPUUserClient::maliCaches(void)
++HakiosGPUUserClient::maliCaches(bool all)
 +{
 +	uint64_t began = mach_absolute_time(), again;
 +
@@ -1052,7 +1361,7 @@ index 633b419..b6aa633 100644
 +		if (b->surface != NULL) {
 +			uint32_t seed = b->surface->shared()->seed;
 +
-+			if (seed == b->seed && !b->seen && began - b->pushed < again) {
++			if (!all && !gMaliNoSeed && seed == b->seed && !b->seen && began - b->pushed < again) {
 +				continue;
 +			}
 +			b->seed = seed;
@@ -1147,7 +1456,7 @@ index 633b419..b6aa633 100644
  IOReturn
  HakiosGPUUserClient::gemInfo(struct msm_gem_info * request)
  {
-@@ -1216,6 +1398,11 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
+@@ -1216,6 +1406,11 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
  		struct hakios_surface surface;
  		struct hakios_user_memory user;
  		struct hakios_show show;
@@ -1159,7 +1468,19 @@ index 633b419..b6aa633 100644
  	} r;
  	size_t size = args->structureInputSize;
  	struct gpu_buffer * b;
-@@ -1298,6 +1485,7 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
+@@ -1276,6 +1471,11 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
+ 			if (patience == 0) {
+ 				waitOver(&r.waitFence.timeout, r.waitFence.fence);
+ 			}
++		} else if (gMaliAfter && fMaliUsed && (int32_t)(r.waitFence.fence - fMaliAfter) > 0) {
++			/* (boot-arg mali_after=1) what the GPU wrote, not what the processor's caches kept from before: once a
++			 * fence, for the first wait that finds it done */
++			fMaliAfter = r.waitFence.fence;
++			maliCaches(true);
+ 		}
+ 		IOLockUnlock(gGPULock);
+ 		slowWait("fence", waitBegan);
+@@ -1298,6 +1498,7 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
  			ret = kIOReturnBadArgument;
  		} else {
  			freeBuffer(b);
@@ -1167,7 +1488,7 @@ index 633b419..b6aa633 100644
  			reap();
  		}
  		IOLockUnlock(gGPULock);
-@@ -1311,6 +1499,31 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
+@@ -1311,6 +1512,32 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
  	case kHakiosShow:
  		ret = show(&r.show);
  		break;
@@ -1176,7 +1497,8 @@ index 633b419..b6aa633 100644
 +		break;
 +	case kMaliSubmit:
 +		IOLockLock(gGPULock);
-+		maliCaches();
++		maliCaches(false);
++		fMaliUsed = true;
 +		r.maliSubmit.fence = hakios_mali_submit(r.maliSubmit.queue, r.maliSubmit.address, r.maliSubmit.size);
 +		maliStat();
 +		IOLockUnlock(gGPULock);
@@ -3811,6 +4133,15 @@ index 0000000..bb153ac
 +install_name_tool -id /redwood/lib/libvulkan_panfrost.dylib out/libvulkan_panfrost.dylib
 +echo "mk-panvk.sh: PanVK (Mesa $COMMIT): $B/out/libvulkan_panfrost.dylib ($(stat -f %z out/libvulkan_panfrost.dylib) bytes);" \
 +	"libdrm's functions left undefined: $(nm -u out/libvulkan_panfrost.dylib | grep -c '^_drm')"
+diff --git a/userland/rc.jobs.m2vcache b/userland/rc.jobs.m2vcache
+new file mode 100644
+index 0000000..f24f84c
+--- /dev/null
++++ b/userland/rc.jobs.m2vcache
+@@ -0,0 +1,3 @@
++# the window server on Metal over PanVK, m2v_test beside it, and its shader cache sent off the phone at 220 s
++/redwood/bin/m2v_test
++/redwood/bin/cache_export 220
 diff --git a/userland/rc.jobs.malitest b/userland/rc.jobs.malitest
 new file mode 100644
 index 0000000..dcf51ef
@@ -3830,10 +4161,18 @@ index 0000000..607d0b8
 +# Commands run by the launchd job com.hakios.demo: PanVK, compute and a triangle (src/vk_tri.c), with mali=1
 +/redwood/bin/vk_tri
 diff --git a/userland/src/HakiosMetalCA.m b/userland/src/HakiosMetalCA.m
-index c6a7ff1..79b89ae 100644
+index c6a7ff1..d860173 100644
 --- a/userland/src/HakiosMetalCA.m
 +++ b/userland/src/HakiosMetalCA.m
-@@ -104,6 +104,8 @@
+@@ -89,6 +89,7 @@
+ #include <sys/sysctl.h>
+ #include <sys/stat.h>
+ #include <fcntl.h>
++#include <dirent.h>
+ #import <Metal/Metal.h>
+ #import <objc/message.h>
+ #import <objc/runtime.h>
+@@ -104,6 +105,8 @@
  #include <stdlib.h>
  #include <string.h>
  #include <unistd.h>
@@ -3842,7 +4181,7 @@ index c6a7ff1..79b89ae 100644
  
  #include "hakios-metal/hakios_metal.h"
  
-@@ -153,6 +155,37 @@ hm_print(const char *fmt, ...)
+@@ -153,6 +156,37 @@ hm_print(const char *fmt, ...)
  	}
  }
  
@@ -3880,7 +4219,66 @@ index c6a7ff1..79b89ae 100644
  /* a sentence that is true every time and says nothing new after the first */
  #define HM_ONCE(...)							\
  	do {								\
-@@ -2097,6 +2130,7 @@ extern id native_bridge_metal_open(const char *loader, const char *cache, uint64
+@@ -2092,11 +2126,66 @@ ca_prof_start(void)
+ 	});
+ }
+ 
++/* Every file under FROM copied to the same place under TO where TO has none: directories 0700, files 0600, this
++ * process's (the cache's owner). Said once in the log with how many. */
++static unsigned
++hm_seed_cache_dir(const char *from, const char *to)
++{
++	DIR *d = opendir(from);
++	struct dirent *e;
++	unsigned n = 0;
++
++	if (d == NULL) {
++		return 0;
++	}
++	mkdir(to, 0700);
++	while ((e = readdir(d)) != NULL) {
++		char src[1024], dst[1024];
++
++		if (e->d_name[0] == '.') {
++			continue;
++		}
++		snprintf(src, sizeof(src), "%s/%s", from, e->d_name);
++		snprintf(dst, sizeof(dst), "%s/%s", to, e->d_name);
++		if (e->d_type == DT_DIR) {
++			n += hm_seed_cache_dir(src, dst);
++		} else if (e->d_type == DT_REG && access(dst, F_OK) != 0) {
++			int in = open(src, O_RDONLY), out = open(dst, O_WRONLY | O_CREAT | O_EXCL, 0600);
++			char buf[65536];
++			ssize_t r;
++
++			while (in >= 0 && out >= 0 && (r = read(in, buf, sizeof(buf))) > 0) {
++				if (write(out, buf, (size_t)r) != r) {
++					break;
++				}
++			}
++			if (in >= 0) close(in);
++			if (out >= 0) {
++				close(out);
++				n++;
++			}
++		}
++	}
++	closedir(d);
++	return n;
++}
++
++static void
++hm_seed_cache(const char *from, const char *to)
++{
++	unsigned n = hm_seed_cache_dir(from, to);
++
++	if (n != 0) {
++		hm_print("the shader cache: %u files from %s\n", n, from);
++	}
++}
++
+ /* UniXNU's Metal on Vulkan (NativeBridgeMetalFrontend.h), there when the bundle is linked with it (M2V=1) */
+ extern id native_bridge_metal_open(const char *loader, const char *cache, uint64_t registryID,
  				   void (*missing)(const char *, const char *)) __attribute__((weak_import));
  extern uint64_t native_bridge_metal_first_problem(char *out, size_t size) __attribute__((weak_import));
  extern size_t native_bridge_metal_status(char *out, size_t size) __attribute__((weak_import));
@@ -3888,7 +4286,7 @@ index c6a7ff1..79b89ae 100644
  extern size_t native_bridge_metal_formats(char *out, size_t size) __attribute__((weak_import));
  extern const void *(*native_bridge_metal_variant_hook)(const char *, const char *, const char *, int, size_t *) __attribute__((weak_import));
  static const void *hm_m2v_variant(const char *name, const char *label, const char *pipeline, int vertex, size_t *length);
-@@ -2140,6 +2174,13 @@ hm_boot_arg_set(const char *what)
+@@ -2140,6 +2229,13 @@ hm_boot_arg_set(const char *what)
  	/* (hakios) metal_m2v=1: the device is UniXNU's Metal on Vulkan instead (AdrenoMetal's frontend over metal2vulkan
  	 * over Turnip, tools/mk-m2v.sh; linked in by userland/build.sh M2V=1): its own objects, from the device down */
  	if (native_bridge_metal_open != NULL && hm_boot_arg_set("metal_m2v=1")) {
@@ -3902,11 +4300,15 @@ index c6a7ff1..79b89ae 100644
  		/* boot-arg tu_debug=FLAGS[,FLAGS]: Turnip's TU_DEBUG in the window server (sysmem, gmem, forcebin, ...) */
  		{
  			char args[1024] = "", value[64] = "";
-@@ -2199,10 +2240,19 @@ hm_boot_arg_set(const char *what)
+@@ -2199,10 +2295,23 @@ hm_boot_arg_set(const char *what)
  			native_bridge_metal_variant_hook = hm_m2v_variant;
  		}
  		mkdir("/private/var/db/m2v", 0700);
 -		id device = native_bridge_metal_open("/redwood/lib/libvulkan_freedreno.dylib",
++		/* the shader cache a run before made, brought on the RAM disk (userland/src/cache_export.c and caiman's
++		 * tools/m2v_cache.py: the cache directory is in RAM, its 71 pipelines took 91 s at every boot) */
++		hm_seed_cache("/redwood/share/m2v-cache",
++		    access("/private/var/db/m2v", W_OK) == 0 ? "/private/var/db/m2v" : "/private/var/tmp/m2v");
 +		/* the Vulkan driver: Turnip, or on the Pixel 9 Pro's Mali PanVK (its G715 is v11, which Mesa leaves out unasked) */
 +		const char *vulkan = access("/redwood/lib/libvulkan_freedreno.dylib", R_OK) == 0 ?
 +		    "/redwood/lib/libvulkan_freedreno.dylib" : "/redwood/lib/libvulkan_panfrost.dylib";
@@ -3924,7 +4326,7 @@ index c6a7ff1..79b89ae 100644
  				 object_getClassName(device));
  			/* QuartzCore's pipeline library opened as for hakios-metal's device (this class's method, onto the
  			 * metal2vulkan device's class: it calls _MTLDevice's own, both devices' base): its pipelines then
-@@ -2222,6 +2272,121 @@ hm_boot_arg_set(const char *what)
+@@ -2222,6 +2331,121 @@ hm_boot_arg_set(const char *what)
  				}
  				class_replaceMethod(nb, @selector(targetDeviceInfo),
  				    imp_implementationWithBlock(^const struct MTLTargetDeviceArch *(id me) { (void)me; return &target; }), "^v16@0:8");
@@ -4046,7 +4448,7 @@ index c6a7ff1..79b89ae 100644
  			}
  			/* what it did, every 5 s: commits, passes, draws, refusals; the textures and the surfaces imported */
  			dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
-@@ -2231,6 +2396,22 @@ hm_boot_arg_set(const char *what)
+@@ -2231,6 +2455,22 @@ hm_boot_arg_set(const char *what)
  					native_bridge_metal_status(status, sizeof(status));
  					native_bridge_metal_formats(formats, sizeof(formats));
  					hm_print("metal2vulkan: %s | %s\n", status, formats);
@@ -4069,6 +4471,158 @@ index c6a7ff1..79b89ae 100644
  					if (hm_m2v_last_stderr[0] != 0) {
  						hm_print("metal2vulkan: last stderr: %s", hm_m2v_last_stderr);
  					}
+diff --git a/userland/src/cache_export.c b/userland/src/cache_export.c
+new file mode 100644
+index 0000000..c072a8b
+--- /dev/null
++++ b/userland/src/cache_export.c
+@@ -0,0 +1,146 @@
++/*
++ * The Metal shader cache off the phone, with nothing written to its storage: the window server's cache directory
++ * (metal2vulkan's, /private/var/db/m2v or /private/var/tmp/m2v) is kept in RAM and made again at every boot (71 pipelines, 91 s). This waits
++ * until the system has been up `seconds` (argument 1, 200 by default: the home screen drawn and swiped), then packs
++ * the cache's files that the RAM disk did not bring (/redwood/share/m2v-cache, which HakiosMetalCA.m copies in at
++ * start), each zlib-compressed, into pstore's pmsg zone through the kernel's kern.hakios.pmsg (boot-arg pmsg=1),
++ * as many as fit in its 2 MiB. Android shows the zone as /sys/fs/pstore/pmsg-ramoops-0 after the watcher's reset;
++ * caiman's tools/m2v_cache.py unpacks it into the RAM disk's tree for the next run, which then packs what is left.
++ *
++ * The pack: "HKC1", then for each file: u16 path length, u32 size, u32 packed size (0: stored as is), the path
++ * relative to the cache directory, the bytes. Run by rc.jobs.
++ */
++#include <compression.h>
++#include <dirent.h>
++#include <errno.h>
++#include <stdint.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <sys/stat.h>
++#include <sys/sysctl.h>
++#include <sys/time.h>
++#include <unistd.h>
++
++#define ZONE            (0x200000 - 12)
++#define CACHE           "/private/var/db/m2v"
++#define BAKED           "/redwood/share/m2v-cache"
++
++static uint8_t pack[ZONE];
++static size_t used;
++static unsigned packed, skipped, baked;
++
++static void
++put(const void *p, size_t n)
++{
++	memcpy(pack + used, p, n);
++	used += n;
++}
++
++static void
++add(const char *root, const char *rel)
++{
++	char path[1024], old[1024];
++	struct stat st, bst;
++	FILE *f;
++	uint8_t *raw, *z;
++	size_t zn;
++	uint16_t pl = (uint16_t)strlen(rel);
++	uint32_t size, zsize;
++
++	snprintf(path, sizeof(path), "%s/%s", root, rel);
++	snprintf(old, sizeof(old), "%s/%s", BAKED, rel);
++	if (stat(path, &st) != 0 || st.st_size <= 0 || st.st_size > 64 << 20) {
++		return;
++	}
++	if (stat(old, &bst) == 0 && bst.st_size == st.st_size) {
++		baked++;
++		return;
++	}
++	raw = malloc((size_t)st.st_size);
++	z = malloc((size_t)st.st_size + 1024);
++	f = fopen(path, "rb");
++	if (raw == NULL || z == NULL || f == NULL || fread(raw, 1, (size_t)st.st_size, f) != (size_t)st.st_size) {
++		if (f != NULL) fclose(f);
++		free(raw);
++		free(z);
++		return;
++	}
++	fclose(f);
++	size = (uint32_t)st.st_size;
++	zn = compression_encode_buffer(z, (size_t)st.st_size + 1024, raw, size, NULL, COMPRESSION_ZLIB);
++	zsize = zn > 0 && zn < size ? (uint32_t)zn : 0;
++	if (used + 10 + pl + (zsize ? zsize : size) > ZONE) {
++		skipped++;
++	} else {
++		put(&pl, 2);
++		put(&size, 4);
++		put(&zsize, 4);
++		put(rel, pl);
++		put(zsize ? z : raw, zsize ? zsize : size);
++		packed++;
++	}
++	free(raw);
++	free(z);
++}
++
++static void
++walk(const char *root, const char *rel)
++{
++	char dir[1024];
++	DIR *d;
++	struct dirent *e;
++
++	snprintf(dir, sizeof(dir), "%s%s%s", root, *rel ? "/" : "", rel);
++	if ((d = opendir(dir)) == NULL) {
++		return;
++	}
++	while ((e = readdir(d)) != NULL) {
++		char sub[1024];
++
++		if (e->d_name[0] == '.') {
++			continue;
++		}
++		snprintf(sub, sizeof(sub), "%s%s%s", rel, *rel ? "/" : "", e->d_name);
++		if (e->d_type == DT_DIR) {
++			walk(root, sub);
++		} else if (e->d_type == DT_REG) {
++			add(root, sub);
++		}
++	}
++	closedir(d);
++}
++
++int
++main(int argc, char **argv)
++{
++	int seconds = argc > 1 ? atoi(argv[1]) : 200;
++	const char *root = argc > 2 ? argv[2] : CACHE;
++	struct timeval boot;
++	size_t size = sizeof(boot);
++
++	if (sysctlbyname("kern.boottime", &boot, &size, NULL, 0) == 0) {
++		for (;;) {
++			struct timeval now;
++
++			gettimeofday(&now, NULL);
++			if (now.tv_sec - boot.tv_sec >= seconds) {
++				break;
++			}
++			sleep(5);
++		}
++	}
++	put("HKC1", 4);
++	walk(root, "");
++	if (argc <= 2 && packed + skipped + baked == 0) {
++		root = "/private/var/tmp/m2v";  /* (the window server's when it may not write /private/var/db) */
++		walk(root, "");
++	}
++	if (sysctlbyname("kern.hakios.pmsg", NULL, NULL, pack, used) != 0) {
++		printf("cache_export: kern.hakios.pmsg: %s (boot-arg pmsg=1?)\n", strerror(errno));
++		return 1;
++	}
++	printf("cache_export: %u files of %s packed into pmsg (%zu bytes), %u left for the next run, %u the RAM disk "
++	    "already had\n", packed, root, used, skipped, baked);
++	return 0;
++}
 diff --git a/userland/src/m2v_test.m b/userland/src/m2v_test.m
 index beaec62..56dc669 100644
 --- a/userland/src/m2v_test.m

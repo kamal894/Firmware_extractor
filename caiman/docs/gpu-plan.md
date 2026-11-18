@@ -411,6 +411,36 @@ cache maintenance at ownership hand-offs (map/unmap, KCPU import), not per submi
 ownership of shared ranges across clients and hand them over with the right maintenance. Until then IOSurfaces
 and client pages stay non-cacheable for the GPU.
 
+### The stray triangles found (runs darwin-ws32..41)
+
+Loader `PROBE_SHOTS=N` (probe/watcher.c): a picture of the panel every second from XNU's N-th, 50 of them, into
+pstore's pmsg zone, which the snapshots' rewrites of the console zone leave alone; tools/shots.py makes PNGs and a
+contact sheet. The end-of-run picture had hidden what the user saw on the phone: while swiping, stray triangles
+and black boxes even with IOSurfaces and client pages uncached (ws38: about 8 pictures in 50).
+
+| run | settings | pictures with damage | frames a second |
+|---|---|---|---|
+| darwin-ws38 | PanVK memory cached, PTE SH 0 | ~8 of 50 | 35-41 |
+| darwin-ws39 | `mali_cached=0` (all non-cacheable) | 0 | - |
+| darwin-ws40 | cached, **PTE SH = inner shareable** | 0 of 50 | 34-38 |
+| darwin-ws41 | as ws40 + `mali_shared_cached=3` | 0 of 50 | 37-43; m2v_test: 16 stale pixels read back |
+
+The cause: the cached mappings' PTEs had SH 0 (non-shareable); Linux's io-pgtable gives Panthor's cached
+mappings inner shareable, without which the shader cores' own caches are not kept coherent with each other. Now
+SH 3 (boot-arg `mali_sh`). Shared memory stays non-cacheable for the GPU by default: cached, the processor
+can read stale lines of what the GPU wrote (nothing invalidates its caches after a fence; `mali_after=1` does, at
+~21 frames a second, too slow).
+
+Also in these runs:
+
+- the shader cache brought on the RAM disk: kernel `kern.hakios.pmsg` (boot-arg pmsg=1, hakios.platform.c;
+  the zone mapped at boot, a late 2 MiB mapping once panicked), userland/src/cache_export.c (rc.jobs.m2vcache),
+  tools/m2v_cache.py on the Mac; three boots brought all 302 files (11 MB) into share/m2v-cache, which
+  HakiosMetalCA.m copies into the cache directory at start. Pipeline creation 91 s -> 0.5 s; launchd to
+  SpringBoard 96 s -> 10.5 s;
+- Codex's CSF event servicing (tiler OOM with heap growth, CS fault/fatal, CSG sync/idle/progress acks), with
+  new chunks linked to the previous newest as Panthor does: in ws37 no OOM, fault or timeout, only idle events.
+
 Codex's review of the CSF back end (to do): service CS/CSG events (tiler OOM bit 26, faults), grow the tiler
 heap on OOM, skip the per-submission L2 flush with Panthor's LATEST_FLUSH id, a poller or interrupts for
 completion, the GLB power-off timer.

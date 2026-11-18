@@ -227,6 +227,52 @@ static void snapshot(u32 base, u32 seconds, int last)
 	log_flush();
 }
 
+#ifdef PROBE_SHOTS
+/*
+ * PROBE_SHOTS=N: from XNU's N-th second, a picture of the panel every second, 50 of them, into pstore's pmsg zone
+ * (after the console zone; Android shows it as /sys/fs/pstore/pmsg-ramoops-0), which a snapshot's rewrite of the
+ * console does not touch: what the screen does while it moves (the kernel's touch_demo swipes), not only at the end.
+ * Each: "SHOT", the second (u32), then 128 x 286 bytes of RGB 3-3-2. tools/shots.py makes PNGs of them. (Not with
+ * XNU's own pmsg writes, boot-arg pmsg=1.)
+ */
+#define SHOT_W		128
+#define SHOT_H		286
+#define SHOT_COUNT	50
+
+static void shot(u32 second)
+{
+	static u32 taken;
+	volatile u32 *hdr = (volatile u32 *)(uptr)(PLAT_RAMOOPS_BASE + PLAT_RAMOOPS_CONSOLE);
+	volatile u8 *data = (volatile u8 *)(hdr + 3);
+	u32 at = taken * (8 + SHOT_W * SHOT_H), x, y;
+
+	if (!g.fb_addr || g.fb_bpp != 4 || !g.fb_width || !g.fb_height || taken >= SHOT_COUNT ||
+	    12 + at + 8 + SHOT_W * SHOT_H > PLAT_RAMOOPS_PMSG)
+		return;
+	if (taken == 0) {
+		hdr[0] = 0x43474244u;		/* "DBGC" */
+		hdr[1] = hdr[2] = 0;
+	}
+	data[at] = 'S', data[at + 1] = 'H', data[at + 2] = 'O', data[at + 3] = 'T';
+	*(volatile u32 *)(data + at + 4) = second;
+	for (y = 0; y < SHOT_H; y++) {
+		u32 sy = y * g.fb_height / SHOT_H;
+
+		/* (this core's cached copy of the row from a picture before, out first: the panel's memory, not it) */
+		civac((const volatile void *)(uptr)(g.fb_addr + (u64)sy * g.fb_stride), g.fb_width * 4ULL);
+		for (x = 0; x < SHOT_W; x++) {
+			u32 px = *(volatile u32 *)(uptr)(g.fb_addr + (u64)sy * g.fb_stride + (x * g.fb_width / SHOT_W) * 4ULL);
+			u32 b = px & 0xff, gr = (px >> 8) & 0xff, r = (px >> 16) & 0xff;
+
+			data[at + 8 + y * SHOT_W + x] = (u8)((r & 0xe0) | ((gr >> 3) & 0x1c) | (b >> 6));
+		}
+	}
+	taken++;
+	hdr[1] = hdr[2] = taken * (8 + SHOT_W * SHOT_H);
+	civac(hdr, 12 + hdr[2]);
+}
+#endif
+
 /* The loader's core, right before it jumps: the watcher's clock starts now. */
 void watcher_go(void)
 {
@@ -270,6 +316,10 @@ void watcher_main(void)
 
 		if (!(s % 2))
 			snapshot(base, s, 0);
+#ifdef PROBE_SHOTS
+		if (s >= PROBE_SHOTS)
+			shot(s);
+#endif
 		for (q = 0; q < 4; q++) {
 			wdt_kick();
 			delay_us(250000);
