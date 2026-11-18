@@ -1,0 +1,11 @@
+m2v_test: Vulkan driver /redwood/lib/libvulkan_panfrost.dylib
+m2v_test: device "Mali-G715 MC7" (class NativeBridgeMetalDevice) in 259.6 ms
+m2v_test: blit fill: 1048576 of 1048576 words right in 138.67 ms (status 4)
+m2v_test: clear of 1080x2400: 0 of 2592000 pixels orange in 2.48 ms (first pixelm2v_test: clear of 1080x2400: 0 of 2592000 pixels orange in 2.48 ms (first pixel 0x1bec4) -- WRONG
+m2v_test: 100 full-screen clears, each committed and waited for: 1.362 ms on avem2v_test: 100 full-screen clears, each committed and waited for: 1.362 ms on average, 1.157 at best
+m2v_test: IOSurface written by the CPU, copied by the GPU: 0 of 65536 pixels grem2v_test: IOSurface written by the CPU, copied by the GPU: 0 of 65536 pixels green -- WRONG
+m2v_test: own pages (no-copy buffer REFUSED, texture REFUSED) copied by the GPU:m2v_test: own pages (no-copy buffer REFUSED, texture REFUSED) copied by the GPU: 0 of 65536 pixels r 0 of 65536 pixels red -- WRONG
+m2v_test: IOSurface cleared by the GPU, read by the CPU: 0 of 65536 pixels blue m2v_test: IOSurface cleared by the GPU, read by the CPU: 0 of 65536 pixels blue (first 0xff00ff00) -(first 0xff00ff00) -- WRONG
+m2v_test: status c103/1 d102 p0 x8 R101 D0 F101 M2531 C0 B1 native-metal: commanm2v_test: status c103/1 d102 p0 x8 R101 D0 F101 M2531 C0 B1 native-metal: command buffer refused: red buffer refused: renderCommandEncoder: render encoder: Nil(Nil { call: "render_command_encoder", prnderCommandEncoder: render encoder: Nil(Nil { call: "render_command_encoder", problem: RenderPass(Nooblem: RenderPass(NoTargets) }) | native-metal: no-copy buffer refused: no-copy buffer: Unsupported(Targets) }) | native-metal: no-copy buffer refused: no-copy buffer: Unsupported(Unsupported { featurUnsupported { feature: HostMemory, needs: AnyOf([[Extension(ExtExternalMemoryHost)]]), location: None: HostMemory, needs: AnyOf([[Extension(ExtExternalMemoryHost)]]), location: None, symbol: None })
+m2v_test: first problem: native-metal: command buffer refused: renderCommandEncom2v_test: first problem: native-metal: command buffer refused: renderCommandEncoder: render encoder:der: render encoder: Nil(Nil { call: "render_command_encoder", problem: RenderPass(NoTargets) })
+m2v_test: FAIL

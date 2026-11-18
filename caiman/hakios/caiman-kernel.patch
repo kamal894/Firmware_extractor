@@ -2380,10 +2380,10 @@ index 0000000..d2a4da7
 +#endif
 diff --git a/tools/mesa/panvk-darwin.patch b/tools/mesa/panvk-darwin.patch
 new file mode 100644
-index 0000000..e949a3d
+index 0000000..d581221
 --- /dev/null
 +++ b/tools/mesa/panvk-darwin.patch
-@@ -0,0 +1,401 @@
+@@ -0,0 +1,420 @@
 +diff --git a/src/panfrost/lib/kmod/meson.build b/src/panfrost/lib/kmod/meson.build
 +index 20ee6db..b8d4060 100644
 +--- a/src/panfrost/lib/kmod/meson.build
@@ -2483,7 +2483,7 @@ index 0000000..e949a3d
 +   gnu_symbol_visibility : 'hidden',
 +   install : true,
 +diff --git a/src/panfrost/vulkan/panvk_instance.c b/src/panfrost/vulkan/panvk_instance.c
-+index b519885..fe20a14 100644
++index b519885..e8280bf 100644
 +--- a/src/panfrost/vulkan/panvk_instance.c
 ++++ b/src/panfrost/vulkan/panvk_instance.c
 +@@ -11,6 +11,34 @@
@@ -2566,6 +2566,25 @@ index 0000000..e949a3d
 + 
 +    *pInstance = panvk_instance_to_handle(instance);
 + 
++@@ -325,3 +369,18 @@ vk_icdGetInstanceProcAddr(VkInstance instance, const char *pName)
++ {
++    return panvk_GetInstanceProcAddr(instance, pName);
++ }
+++
+++#ifdef __APPLE__
+++/* HackiOS: no Vulkan loader on Darwin; the driver is the loader too, for what opens it by the loader's entry point
+++ * (metal2vulkan, through ash::Entry::load_from), as turnip-darwin.patch does for Turnip */
+++PUBLIC
+++VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL
+++vkGetInstanceProcAddr(VkInstance instance, const char *pName);
+++
+++PUBLIC
+++VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL
+++vkGetInstanceProcAddr(VkInstance instance, const char *pName)
+++{
+++   return panvk_GetInstanceProcAddr(instance, pName);
+++}
+++#endif
 +diff --git a/src/panfrost/vulkan/panvk_physical_device.c b/src/panfrost/vulkan/panvk_physical_device.c
 +index 3cba853..e80f45f 100644
 +--- a/src/panfrost/vulkan/panvk_physical_device.c
@@ -2785,6 +2804,47 @@ index 0000000..e949a3d
 +    /* VK_EXT_drm_format_modifier
 +     *
 +     * Initialized by vk_image_create/init() to DRM_FORMAT_MOD_INVALID.  It's
+diff --git a/tools/mk-m2v.sh b/tools/mk-m2v.sh
+index f3fe06c..59f829f 100755
+--- a/tools/mk-m2v.sh
++++ b/tools/mk-m2v.sh
+@@ -14,6 +14,8 @@ set -e
+ ROOT=$(cd "$(dirname "$0")/.." && pwd)
+ B=$ROOT/xnu-deps/build/m2v
+ SDK=${THEOS:-$HOME/theos}/sdks/iPhoneOS16.5.sdk
++[ -d "$SDK" ] || SDK=$ROOT/xnu-deps/theos-mac/sdks/iPhoneOS16.5.sdk     # (the Mac: xnu-deps/setup.sh's)
++export PATH=/opt/homebrew/opt/llvm@21/bin:$PATH                                # (the Mac: Homebrew's llvm@21)
+ M2V_PIN=624bab3918de5b978e1101517abca2b4fa426565            # steelbrain/metal2vulkan, branch development
+ AM_PIN=243d63cf43305a85c8119b66b49cb7df4b30b019             # UniXNU/AdrenoMetal
+ export PATH=$HOME/.cargo/bin:$PATH
+@@ -35,6 +37,9 @@ A=$B/AdrenoMetal
+ fetch https://github.com/steelbrain/metal2vulkan.git $M2V_PIN metal2vulkan $A/bridge/patches/00*.patch $ROOT/tools/m2v/metal2vulkan-hakios.patch
+ S=$B/metal2vulkan
+ 
++# (on the Mac SDKROOT is the macOS SDK: cargo's build scripts run here, and the iOS one is in CFLAGS above)
++HOST_SDKROOT=$SDK
++[ "$(uname)" = Darwin ] && HOST_SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
+ # the bridge: the runtime behind a C interface, as UniXNU's scripts/build-adreno-metal-bridge.py builds it
+ $LLVM_AS -o obj/runtime_examples.air $S/crates/metal2vulkan-validation/fixtures/public/examples/runtime_examples.ll
+ $LLVM_AS -o obj/function_constant.air $S/crates/metal2vulkan-validation/fixtures/public/kernel_function_constant_gate_fold.ll
+@@ -63,7 +68,7 @@ lto = "fat"
+ codegen-units = 1
+ EOF
+ CC_aarch64_apple_ios=clang CFLAGS_aarch64_apple_ios="-target arm64-apple-ios16.0 -isysroot $SDK" \
+-AR_aarch64_apple_ios=$(command -v llvm-ar-21 || command -v llvm-ar) IPHONEOS_DEPLOYMENT_TARGET=16.0 SDKROOT=$SDK \
++AR_aarch64_apple_ios=$(command -v llvm-ar-21 || command -v llvm-ar) IPHONEOS_DEPLOYMENT_TARGET=16.0 SDKROOT=$HOST_SDKROOT \
+ NMB_RUNTIME_ID=$(echo $M2V_PIN | cut -c1-32) NMB_FIXTURE_AIR=$B/obj/runtime_examples.air \
+ NMB_FC_AIR=$B/obj/function_constant.air NMB_SCANOUT_AIR=$B/obj/scanout_convert.air \
+ 	cargo build --release --manifest-path bridge/Cargo.toml --target aarch64-apple-ios --target-dir target > cargo.log 2>&1 ||
+@@ -72,6 +77,6 @@ cp target/aarch64-apple-ios/release/libadreno_metal_bridge.a out/
+ 
+ # the frontend: the Metal objects
+ clang++ -target arm64-apple-ios16.0 -isysroot $SDK -O2 -std=c++17 -fobjc-arc -Wno-deprecated-declarations \
+-	-include $ROOT/tools/m2v/ios16-compat.h -I $A -I $ROOT/xnu-deps/build/mesa/mesa-25.0.7/include \
++	-include $ROOT/tools/m2v/ios16-compat.h -I $A -I ${VULKAN_INCLUDE:-$ROOT/xnu-deps/build/mesa/mesa-25.0.7/include} \
+ 	-x objective-c++ -c $A/NativeBridgeMetalFrontend.mm -o out/frontend.o
+-echo "mk-m2v.sh: $B/out: frontend.o ($(stat -c %s out/frontend.o) bytes), libadreno_metal_bridge.a ($(stat -c %s out/libadreno_metal_bridge.a) bytes)"
++echo "mk-m2v.sh: $B/out: frontend.o ($(wc -c < out/frontend.o) bytes), libadreno_metal_bridge.a ($(wc -c < out/libadreno_metal_bridge.a) bytes)"
 diff --git a/tools/mk-panvk.sh b/tools/mk-panvk.sh
 new file mode 100755
 index 0000000..bb153ac
@@ -2897,6 +2957,39 @@ index 0000000..607d0b8
 @@ -0,0 +1,2 @@
 +# Commands run by the launchd job com.hakios.demo: PanVK, compute and a triangle (src/vk_tri.c), with mali=1
 +/redwood/bin/vk_tri
+diff --git a/userland/src/m2v_test.m b/userland/src/m2v_test.m
+index beaec62..251e806 100644
+--- a/userland/src/m2v_test.m
++++ b/userland/src/m2v_test.m
+@@ -97,7 +97,13 @@ main(void)
+ 
+ 	@autoreleasepool {
+ 		double t0 = now_ms();
+-		id<MTLDevice> device = native_bridge_metal_open(TURNIP, CACHE, 0, missing);
++		/* the Vulkan driver: Turnip, or on the Pixel 9 Pro's Mali PanVK (its G715 is v11: see vk_test.c) */
++		const char *driver = access(TURNIP, R_OK) == 0 ? TURNIP : "/redwood/lib/libvulkan_panfrost.dylib";
++		setenv("PAN_I_WANT_A_BROKEN_VULKAN_DRIVER", "1", 0);
++		setenv("NMB_LOG_STDERR", "1", 0);       /* the frontend's own account of what it refuses */
++		dup2(1, 2);
++		printf("m2v_test: Vulkan driver %s\n", driver);
++		id<MTLDevice> device = native_bridge_metal_open(driver, CACHE, 0, missing);
+ 		if (device == nil) {
+ 			printf("m2v_test: no device\n");
+ 			return status(1);
+@@ -131,6 +137,13 @@ main(void)
+ 		td.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
+ 		td.storageMode = MTLStorageModeShared;
+ 		id<MTLTexture> texture = [device newTextureWithDescriptor:td];
++		if (texture == nil) {
++			char problem[512] = "";
++
++			native_bridge_metal_first_problem(problem, sizeof(problem));
++			printf("m2v_test: the %lux%lu shared render-target texture was refused (first problem so far: %s)\n",
++			    (unsigned long)width, (unsigned long)height, problem);
++		}
+ 		MTLRenderPassDescriptor *rp = [MTLRenderPassDescriptor renderPassDescriptor];
+ 		rp.colorAttachments[0].texture = texture;
+ 		rp.colorAttachments[0].loadAction = MTLLoadActionClear;
 diff --git a/userland/src/mali_test.c b/userland/src/mali_test.c
 new file mode 100644
 index 0000000..ea4d4a1
