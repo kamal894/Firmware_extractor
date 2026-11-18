@@ -213,6 +213,30 @@ MiB), then HEAP_SET with it from a command buffer on stream 0:
 mali: self test, tiler heap: context at GPU 0x100010000, first chunk 0x100020000 (5 x 2 MiB); HEAP_SET then a store: 0x4ea90001: OK
 ```
 
+## Step 13: user space drives the Mali through HakiosGPU (run darwin-mali7)
+
+Three requests in HakiosGPU for a Panthor stand-in: 0x90 query (GPU and CSF properties: 8 CSG slots, 3
+streams, 96 registers of which 4 the kernel's, 16 scoreboards), 0x91 submit one user command stream on one of
+the three streams (returns a fence for msm WAIT_FENCE), 0x92 tiler heap. Buffers, their GPU addresses and
+their mapping into the process are HakiosGPU's msm requests as they were (GEM_NEW, GEM_INFO IOVA, client
+memory), now backed by AS1. userland/src/mali_test.c (rc.jobs.malitest), an iOS program:
+
+```
+mali_test: query 0: GPU_ID 0xb8a21030, shader cores 0x1110055, tiler 0x1, L2 0x1; CSF 0x4100412; 8 CSG slots, 3 streams, ...
+mali_test: buffer 1: 0, GPU address 0x100a20000, mapped here at 0x101024000 (65536 bytes)
+mali_test: stream 0: submit and wait 0, fence 5; the word is 0x5e70000: USER SPACE DROVE THE GPU
+mali_test: stream 1: submit and wait 0, fence 6; the word is 0x5e70001: USER SPACE DROVE THE GPU
+mali_test: stream 2: submit and wait 0, fence 7; the word is 0x5e70002: USER SPACE DROVE THE GPU
+mali_test: tiler heap 0: context 0x100a30000, first chunk 0x100a40000
+```
+
+**Open: the clocks disagree.** msm WAIT_FENCE's timeout is an absolute time that the kernel reads as
+mach_continuous_time in ns (82.7 s at the test), but user space's CLOCK_MONOTONIC said 0.62 s (timebase
+15625/384 is right; libc's CLOCK_MONOTONIC is wall time minus kern.boottime, so boottime is set wrong on
+caiman, probably when the wall clock is first set). A deadline of now + 1 s is "over before it began"
+(darwin-mali6). hakios-drm, and so PanVK through the shim, computes deadlines from CLOCK_MONOTONIC: fix
+boottime (or have the kernel read the same clock) before PanVK.
+
 ## Next
 
 8. User space: a Mali back end for hakios-metal (today Adreno PM4 + ir3) emitting CSF command buffers and

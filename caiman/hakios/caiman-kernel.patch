@@ -1,5 +1,5 @@
 diff --git a/drivers/gpu/hakios.adreno.c b/drivers/gpu/hakios.adreno.c
-index 3f1f97a..65c8a8b 100644
+index 3f1f97a..a077cee 100644
 --- a/drivers/gpu/hakios.adreno.c
 +++ b/drivers/gpu/hakios.adreno.c
 @@ -100,6 +100,7 @@
@@ -127,7 +127,7 @@ index 3f1f97a..65c8a8b 100644
  	for (int i = 0; i < 20000; i++) {
  		room = (rd(gpu.base + CP_RB_RPTR) + RING_WORDS - ring_at - 1) % RING_WORDS;
  		if (room >= wanted) {
-@@ -3753,6 +3805,415 @@ start_by_itself(void)
+@@ -3753,6 +3805,463 @@ start_by_itself(void)
   * as long as the steps and the watch after them last, nothing else writes to the log, so that
   * its end -- all that the loader's notes keep -- is about what is being done here.
   */
@@ -488,6 +488,54 @@ index 3f1f97a..65c8a8b 100644
 +	    heap_ctx, heap_first, *data, *data == 0x4ea90001 ? ": OK" : "");
 +}
 +
++/* For HakiosGPU's Mali requests (hakios.gpu.cpp kMaliQuery, kMaliSubmit, kMaliTilerHeap); false / 0 without mali=1 */
++bool hakios_mali_query(uint32_t *w32, uint64_t *w64);
++uint32_t hakios_mali_submit(uint32_t queue, uint64_t address, uint32_t bytes);
++uint64_t hakios_mali_tiler_heap(uint32_t chunk_size, uint32_t chunks, uint64_t *first_chunk);
++
++/* w32: GPU_ID, L2/CORE/TILER/MEM/MMU features, AS_PRESENT, CSF_ID; w64: shader, tiler, L2 present; then w32 again
++ * (after w64 in struct mali_query): CSG slots, CS slots, CS registers, scoreboards, kernel registers, timestamp Hz */
++bool
++hakios_mali_query(uint32_t *w32, uint64_t *w64)
++{
++	static const uint16_t regs[8] = { 0x0, 0x4, 0x8, 0xc, 0x10, 0x14, 0x18, 0x1c };
++	uint32_t *tail = (uint32_t *)(w64 + 3), cs_features = 0x7105f;
++
++	if (!mali_kept) {
++		return false;
++	}
++	for (int i = 0; i < 8; i++) {
++		w32[i] = mali_rd(regs[i]);
++	}
++	w64[0] = (uint64_t)mali_rd(0x104) << 32 | mali_rd(0x100);
++	w64[1] = (uint64_t)mali_rd(0x114) << 32 | mali_rd(0x110);
++	w64[2] = (uint64_t)mali_rd(0x124) << 32 | mali_rd(0x120);
++	tail[0] = 8;                                    /* CSG slots (the firmware's interface) */
++	tail[1] = MALI_STREAMS;                         /* streams of group 0 */
++	tail[2] = (cs_features & 0xff) + 1;             /* 96 registers (CS features 0x7105f, run gpu20) */
++	tail[3] = (cs_features >> 8) & 0xff;            /* 16 scoreboards */
++	tail[4] = 4;                                    /* r92-r95 are the kernel's */
++	tail[5] = 24576000;                             /* the system timestamp */
++	return true;
++}
++
++uint32_t
++hakios_mali_submit(uint32_t queue, uint64_t address, uint32_t bytes)
++{
++	uint32_t words = bytes / 4;
++
++	if (!mali_kept || queue >= MALI_STREAMS || mali_stream[queue].ring == NULL || (address & 63) || (bytes & 7)) {
++		return 0;
++	}
++	return mali_submit_on(queue, &address, &words, 1);
++}
++
++uint64_t
++hakios_mali_tiler_heap(uint32_t chunk_size, uint32_t chunks, uint64_t *first_chunk)
++{
++	return mali_kept ? mali_tiler_heap_create(chunk_size, chunks, first_chunk) : 0;
++}
++
 +static void
 +mali_handoff(void)
 +{
@@ -543,7 +591,7 @@ index 3f1f97a..65c8a8b 100644
  void
  hakios_adreno_init(void)
  {
-@@ -3765,6 +4226,11 @@ hakios_adreno_init(void)
+@@ -3765,6 +4274,11 @@ hakios_adreno_init(void)
  	uint32_t only = 0, done = 0, failed = 0, keep = 0;
  	bool by_itself = false;
  
@@ -555,6 +603,85 @@ index 3f1f97a..65c8a8b 100644
  	if (PE_parse_boot_argn("display_probe", &only, sizeof(only)) && only) {
  		display_probe();
  	}
+diff --git a/drivers/gpu/hakios.gpu.cpp b/drivers/gpu/hakios.gpu.cpp
+index 633b419..41257cd 100644
+--- a/drivers/gpu/hakios.gpu.cpp
++++ b/drivers/gpu/hakios.gpu.cpp
+@@ -56,6 +56,9 @@ void hakios_gpu_mapped(void);
+ void hakios_gpu_unmap(uint64_t address, uint64_t size);
+ void hakios_gpu_to_memory(void * start, uint64_t size);
+ uint32_t hakios_gpu_submit(const uint64_t * addresses, const uint32_t * words, uint32_t count);
++bool hakios_mali_query(uint32_t * words32, uint64_t * words64);
++uint32_t hakios_mali_submit(uint32_t queue, uint64_t address, uint32_t bytes);
++uint64_t hakios_mali_tiler_heap(uint32_t chunk_size, uint32_t chunks, uint64_t * first_chunk);
+ extern uint32_t gpu_log;
+ bool hakios_gpu_done(uint32_t fence);
+ uint32_t hakios_gpu_last(void);
+@@ -86,6 +89,32 @@ enum {
+ 	kHakiosUserMemory      = 0x7d,         /* ours: pages of the caller's own as a buffer (Linux's userptr) */
+ 	kHakiosSurface         = 0x7e,         /* ours: an IOSurface's memory as a buffer */
+ 	kHakiosShow            = 0x7f,         /* ours: pixels of the caller's onto the panel, to see a test's result */
++	/*
++	 * The Mali (mali=1), for a Panthor stand-in in user space (PanVK's kmod, docs/panvk-uapi.md in the caiman repo):
++	 * the GPU's and the command stream interface's properties, a submission of one user command stream on one of
++	 * group 0's three streams, and a tiler heap. Buffers, their addresses and waiting are the requests above.
++	 */
++	kMaliQuery             = 0x90,
++	kMaliSubmit            = 0x91,
++	kMaliTilerHeap         = 0x92,
++};
++
++struct mali_query {
++	uint32_t gpu_id, l2_features, core_features, tiler_features, mem_features, mmu_features, as_present, csf_id;
++	uint64_t shader_present, tiler_present, l2_present;
++	uint32_t csg_slots, cs_slots, cs_regs, scoreboards, unpreserved_regs, timestamp_hz;
++};
++struct mali_submit {
++	uint32_t queue;                         /* 0 vertex-tiler, 1 fragment, 2 compute (PanVK's order) */
++	uint32_t size;                          /* bytes, a multiple of 8 */
++	uint64_t address;                       /* GPU address, 64-byte aligned */
++	uint32_t fence;                         /* out: wait for it with the fence request */
++	uint32_t pad;
++};
++struct mali_tiler_heap {
++	uint32_t chunk_size, chunks;
++	uint64_t context;                       /* out: for HEAP_SET */
++	uint64_t first_chunk;                   /* out: for the Tiler Heap descriptor */
+ };
+ 
+ struct msm_timespec {
+@@ -1216,6 +1245,9 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
+ 		struct hakios_surface surface;
+ 		struct hakios_user_memory user;
+ 		struct hakios_show show;
++		struct mali_query maliQuery;
++		struct mali_submit maliSubmit;
++		struct mali_tiler_heap maliHeap;
+ 	} r;
+ 	size_t size = args->structureInputSize;
+ 	struct gpu_buffer * b;
+@@ -1311,6 +1343,21 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
+ 	case kHakiosShow:
+ 		ret = show(&r.show);
+ 		break;
++	case kMaliQuery:
++		ret = hakios_mali_query(&r.maliQuery.gpu_id, &r.maliQuery.shader_present) ? kIOReturnSuccess : kIOReturnUnsupported;
++		break;
++	case kMaliSubmit:
++		IOLockLock(gGPULock);
++		r.maliSubmit.fence = hakios_mali_submit(r.maliSubmit.queue, r.maliSubmit.address, r.maliSubmit.size);
++		IOLockUnlock(gGPULock);
++		ret = r.maliSubmit.fence ? kIOReturnSuccess : kIOReturnBadArgument;
++		break;
++	case kMaliTilerHeap:
++		IOLockLock(gGPULock);
++		r.maliHeap.context = hakios_mali_tiler_heap(r.maliHeap.chunk_size, r.maliHeap.chunks, &r.maliHeap.first_chunk);
++		IOLockUnlock(gGPULock);
++		ret = r.maliHeap.context ? kIOReturnSuccess : kIOReturnNoMemory;
++		break;
+ 	default:
+ 		IOLog("HakiosGPU: request %#x (%zu bytes) is not known here\n", selector, size);
+ 		ret = kIOReturnUnsupported;
 diff --git a/drivers/input/hakios.buttons.c b/drivers/input/hakios.buttons.c
 index 27203ee..51e621a 100644
 --- a/drivers/input/hakios.buttons.c
@@ -1115,6 +1242,164 @@ index 8d69400..f6ebbf9 100644
  	for (unsigned b = 0; b < 2; b++) {
  		tm_va[b] = ml_io_map(tm_pa[b], TM_SIZE);
  		if (tm_va[b] == 0) {
+diff --git a/userland/rc.jobs.malitest b/userland/rc.jobs.malitest
+new file mode 100644
+index 0000000..dcf51ef
+--- /dev/null
++++ b/userland/rc.jobs.malitest
+@@ -0,0 +1,4 @@
++# Commands run by the launchd job com.hakios.demo (see com.hakios.demo.plist).
++# The Pixel 9 Pro's Mali from user space through HakiosGPU (src/mali_test.c), with the kernel's mali=1:
++#   EXTRA=obj/mali_test RC_JOBS=rc.jobs.malitest userland/build.sh
++/redwood/bin/mali_test
+diff --git a/userland/src/mali_test.c b/userland/src/mali_test.c
+new file mode 100644
+index 0000000..f801d3b
+--- /dev/null
++++ b/userland/src/mali_test.c
+@@ -0,0 +1,142 @@
++/*
++ * The Pixel 9 Pro's Mali from user space, through HakiosGPU (drivers/gpu/hakios.gpu.cpp) with boot-arg mali=1:
++ * what a Panthor stand-in for PanVK will do (caiman repo docs/panvk-uapi.md), in the smallest steps. The GPU's
++ * properties (request 0x90); a buffer (msm GEM_NEW 0x42), its GPU address (GEM_INFO 0x43, IOVA) and a mapping of
++ * it here (the client memory of the buffer's handle); a command stream written into it that stores a word, run
++ * on each of group 0's three streams (0x91) and waited for (msm WAIT_FENCE 0x47); a tiler heap as PanVK asks for
++ * one (0x92). Prints one line per step. Run by rc.jobs.malitest.
++ */
++#include <mach/mach.h>
++#include <mach/mach_time.h>
++#include <stdint.h>
++#include <stdio.h>
++#include <string.h>
++#include <time.h>
++
++/* IOKit, declared here: the iPhoneOS SDK ships the framework without its headers */
++typedef mach_port_t io_object_t;
++typedef io_object_t io_service_t;
++typedef io_object_t io_connect_t;
++extern const mach_port_t kIOMainPortDefault;
++extern void *IOServiceMatching(const char *name);
++extern io_service_t IOServiceGetMatchingService(mach_port_t main, void *matching);
++extern kern_return_t IOServiceOpen(io_service_t service, task_port_t task, uint32_t type, io_connect_t *connect);
++extern kern_return_t IOConnectCallStructMethod(mach_port_t connection, uint32_t selector, const void *in, size_t in_size,
++    void *out, size_t *out_size);
++extern kern_return_t IOConnectMapMemory64(io_connect_t connect, uint32_t type, task_port_t task, mach_vm_address_t *address,
++    mach_vm_size_t *size, uint32_t options);
++
++struct mali_query {
++	uint32_t gpu_id, l2_features, core_features, tiler_features, mem_features, mmu_features, as_present, csf_id;
++	uint64_t shader_present, tiler_present, l2_present;
++	uint32_t csg_slots, cs_slots, cs_regs, scoreboards, unpreserved_regs, timestamp_hz;
++};
++struct mali_submit {
++	uint32_t queue, size;
++	uint64_t address;
++	uint32_t fence, pad;
++};
++struct mali_tiler_heap {
++	uint32_t chunk_size, chunks;
++	uint64_t context, first_chunk;
++};
++struct msm_gem_new {
++	uint64_t size;
++	uint32_t flags, handle;
++};
++struct msm_gem_info {
++	uint32_t handle, info;
++	uint64_t value;
++	uint32_t len, pad;
++};
++struct msm_wait_fence {
++	uint32_t fence, flags;
++	int64_t seconds, nanoseconds;
++	uint32_t queueid;
++};
++
++static io_connect_t gpu;
++
++static kern_return_t
++call(uint32_t selector, void *r, size_t size)
++{
++	size_t out = size;
++
++	return IOConnectCallStructMethod(gpu, selector, r, size, r, &out);
++}
++
++int
++main(void)
++{
++	io_service_t service = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("HakiosGPU"));
++	struct mali_query q = { 0 };
++	struct msm_gem_new bo = { .size = 0x10000, .flags = 0x00020000 /* MSM_BO_WC */ };
++	struct msm_gem_info info = { 0 };
++	mach_vm_address_t cpu = 0;
++	mach_vm_size_t mapped = 0;
++	kern_return_t kr;
++
++	if (service == 0 || IOServiceOpen(service, mach_task_self(), 0, &gpu) != KERN_SUCCESS) {
++		printf("mali_test: no HakiosGPU service (boot-arg mali=1?)\n");
++		return 1;
++	}
++	kr = call(0x90, &q, sizeof(q));
++	printf("mali_test: query %#x: GPU_ID %#x, shader cores %#llx, tiler %#llx, L2 %#llx; CSF %#x; %u CSG slots, %u streams, "
++	    "%u registers (%u the kernel's), %u scoreboards, timestamp %u Hz\n", kr, q.gpu_id, q.shader_present, q.tiler_present,
++	    q.l2_present, q.csf_id, q.csg_slots, q.cs_slots, q.cs_regs, q.unpreserved_regs, q.scoreboards, q.timestamp_hz);
++
++	kr = call(0x42, &bo, sizeof(bo));
++	info.handle = bo.handle;
++	info.info = 1;                                  /* MSM_INFO_GET_IOVA */
++	if (kr == KERN_SUCCESS) {
++		kr = call(0x43, &info, sizeof(info));
++	}
++	if (kr == KERN_SUCCESS) {
++		kr = IOConnectMapMemory64(gpu, bo.handle, mach_task_self(), &cpu, &mapped, 1 /* kIOMapAnywhere */);
++	}
++	printf("mali_test: buffer %u: %#x, GPU address %#llx, mapped here at %#llx (%llu bytes)\n", bo.handle, kr, info.value,
++	    (unsigned long long)cpu, (unsigned long long)mapped);
++	if (kr != KERN_SUCCESS) {
++		return 1;
++	}
++
++	for (uint32_t st = 0; st < 3; st++) {
++		volatile uint64_t *cs = (volatile uint64_t *)(uintptr_t)cpu;
++		volatile uint32_t *word = (volatile uint32_t *)(uintptr_t)(cpu + 0x800);
++		struct mali_submit s = { .queue = st, .size = 5 * 8, .address = info.value };
++		struct msm_wait_fence w = { 0 };
++
++		*word = 0;
++		cs[0] = (0x01ULL << 56) | (0ULL << 48) | (info.value + 0x800);         /* MOVE48 r0:r1 = the word */
++		cs[1] = (0x02ULL << 56) | (2ULL << 48) | (0x05e70000 + st);            /* MOVE32 r2 */
++		cs[2] = (0x1cULL << 56) | (1ULL << 32);                                 /* SB_SEL_OTHER 0 */
++		cs[3] = (0x15ULL << 56) | (2ULL << 48) | (0ULL << 40) | (1ULL << 16);   /* STORE_MULTIPLE r2 -> [r0] */
++		cs[4] = (0x03ULL << 56) | (1ULL << 16);                                 /* WAIT slot 0 */
++		__asm__ volatile("dsb sy" ::: "memory");
++		kr = call(0x91, &s, sizeof(s));
++		struct timespec now;
++
++		clock_gettime(CLOCK_MONOTONIC, &now);   /* the request's timeout is a time of this clock, not a length */
++		w.fence = s.fence;
++		w.seconds = INT64_MAX / 4;              /* far ahead: the kernel's patience (the clocks disagree, see below) */
++		if (st == 0) {
++			mach_timebase_info_data_t tb;
++
++			mach_timebase_info(&tb);
++			printf("mali_test: clocks: CLOCK_MONOTONIC %ld.%09ld s, mach_continuous_time %llu, mach_absolute_time %llu, "
++			    "timebase %u/%u\n", (long)now.tv_sec, now.tv_nsec, mach_continuous_time(), mach_absolute_time(),
++			    tb.numer, tb.denom);
++		}
++		if (kr == KERN_SUCCESS) {
++			kr = call(0x47, &w, sizeof(w));
++		}
++		printf("mali_test: stream %u: submit and wait %#x, fence %u; the word is %#x%s\n", st, kr, s.fence, *word,
++		    *word == 0x05e70000 + st ? ": USER SPACE DROVE THE GPU" : "");
++	}
++
++	struct mali_tiler_heap h = { .chunk_size = 2 * 1024 * 1024, .chunks = 5 };
++
++	kr = call(0x92, &h, sizeof(h));
++	printf("mali_test: tiler heap %#x: context %#llx, first chunk %#llx\n", kr, h.context, h.first_chunk);
++	return 0;
++}
 diff --git a/xnu-deps/setup.sh b/xnu-deps/setup.sh
 index c390093..de72f4d 100755
 --- a/xnu-deps/setup.sh
