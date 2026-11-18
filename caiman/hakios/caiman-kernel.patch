@@ -1,5 +1,5 @@
 diff --git a/drivers/gpu/hakios.adreno.c b/drivers/gpu/hakios.adreno.c
-index 3f1f97a..2cf163e 100644
+index 3f1f97a..ef4f0b2 100644
 --- a/drivers/gpu/hakios.adreno.c
 +++ b/drivers/gpu/hakios.adreno.c
 @@ -100,6 +100,7 @@
@@ -127,7 +127,7 @@ index 3f1f97a..2cf163e 100644
  	for (int i = 0; i < 20000; i++) {
  		room = (rd(gpu.base + CP_RB_RPTR) + RING_WORDS - ring_at - 1) % RING_WORDS;
  		if (room >= wanted) {
-@@ -3753,6 +3805,508 @@ start_by_itself(void)
+@@ -3753,6 +3805,521 @@ start_by_itself(void)
   * as long as the steps and the watch after them last, nothing else writes to the log, so that
   * its end -- all that the loader's notes keep -- is about what is being done here.
   */
@@ -556,6 +556,19 @@ index 3f1f97a..2cf163e 100644
 + */
 +bool hakios_mali_bind_page(uint64_t va, uint64_t phys, bool read_only);
 +void hakios_mali_bound(void);
++bool hakios_mali_register(uint32_t offset, uint32_t *value);
++
++/* A GPU_CONTROL identification register for user space (Panthor's GPU_INFO): the read-only ones only, 0x000-0x12c
++ * (IDs, features, thread and texture properties, the timestamp, the present masks) and COHERENCY_FEATURES 0x300 */
++bool
++hakios_mali_register(uint32_t offset, uint32_t *value)
++{
++	if (!mali_kept || (offset & 3) || (offset >= 0x130 && offset != 0x300) || (offset >= 0x30 && offset < 0x60)) {
++		return false;
++	}
++	*value = mali_rd(offset);
++	return true;
++}
 +
 +bool
 +hakios_mali_bind_page(uint64_t va, uint64_t phys, bool read_only)
@@ -636,7 +649,7 @@ index 3f1f97a..2cf163e 100644
  void
  hakios_adreno_init(void)
  {
-@@ -3765,6 +4319,11 @@ hakios_adreno_init(void)
+@@ -3765,6 +4332,11 @@ hakios_adreno_init(void)
  	uint32_t only = 0, done = 0, failed = 0, keep = 0;
  	bool by_itself = false;
  
@@ -649,10 +662,10 @@ index 3f1f97a..2cf163e 100644
  		display_probe();
  	}
 diff --git a/drivers/gpu/hakios.gpu.cpp b/drivers/gpu/hakios.gpu.cpp
-index 633b419..b064996 100644
+index 633b419..4b40486 100644
 --- a/drivers/gpu/hakios.gpu.cpp
 +++ b/drivers/gpu/hakios.gpu.cpp
-@@ -56,6 +56,11 @@ void hakios_gpu_mapped(void);
+@@ -56,6 +56,12 @@ void hakios_gpu_mapped(void);
  void hakios_gpu_unmap(uint64_t address, uint64_t size);
  void hakios_gpu_to_memory(void * start, uint64_t size);
  uint32_t hakios_gpu_submit(const uint64_t * addresses, const uint32_t * words, uint32_t count);
@@ -661,10 +674,11 @@ index 633b419..b064996 100644
 +uint64_t hakios_mali_tiler_heap(uint32_t chunk_size, uint32_t chunks, uint64_t * first_chunk);
 +bool hakios_mali_bind_page(uint64_t va, uint64_t phys, bool read_only);
 +void hakios_mali_bound(void);
++bool hakios_mali_register(uint32_t offset, uint32_t * value);
  extern uint32_t gpu_log;
  bool hakios_gpu_done(uint32_t fence);
  uint32_t hakios_gpu_last(void);
-@@ -86,6 +91,38 @@ enum {
+@@ -86,6 +92,42 @@ enum {
  	kHakiosUserMemory      = 0x7d,         /* ours: pages of the caller's own as a buffer (Linux's userptr) */
  	kHakiosSurface         = 0x7e,         /* ours: an IOSurface's memory as a buffer */
  	kHakiosShow            = 0x7f,         /* ours: pixels of the caller's onto the panel, to see a test's result */
@@ -677,6 +691,7 @@ index 633b419..b064996 100644
 +	kMaliSubmit            = 0x91,
 +	kMaliTilerHeap         = 0x92,
 +	kMaliBind              = 0x93,         /* Panthor's VM_BIND: a buffer's pages at user addresses, or none there */
++	kMaliRegister          = 0x94,         /* an identification register of the GPU's (Panthor's GPU_INFO) */
 +};
 +
 +struct mali_query {
@@ -696,6 +711,9 @@ index 633b419..b064996 100644
 +	uint32_t flags;                         /* 1: read only */
 +	uint64_t va, offset, size;              /* page-aligned; offset into the buffer */
 +};
++struct mali_register {
++	uint32_t offset, value;
++};
 +struct mali_tiler_heap {
 +	uint32_t chunk_size, chunks;
 +	uint64_t context;                       /* out: for HEAP_SET */
@@ -703,7 +721,7 @@ index 633b419..b064996 100644
  };
  
  struct msm_timespec {
-@@ -256,6 +293,24 @@ slowWait(const char * kind, uint64_t began)
+@@ -256,6 +298,24 @@ slowWait(const char * kind, uint64_t began)
  	}
  }
  
@@ -728,7 +746,7 @@ index 633b419..b064996 100644
  /* How long from now a time of msm's is, in milliseconds; 0: now or past. */
  static uint64_t
  millisecondsUntil(const struct msm_timespec * when)
-@@ -263,7 +318,7 @@ millisecondsUntil(const struct msm_timespec * when)
+@@ -263,7 +323,7 @@ millisecondsUntil(const struct msm_timespec * when)
  	uint64_t now;
  	int64_t left, end;
  
@@ -737,7 +755,7 @@ index 633b419..b064996 100644
  	/* the seconds are the caller's: a number too big to be nanoseconds is a time far ahead (or far behind), not a wrapped one */
  	if (__builtin_mul_overflow(when->seconds, (int64_t) NSEC_PER_SEC, &end) || __builtin_add_overflow(end, when->nanoseconds, &end)) {
  		return when->seconds > 0 && when->nanoseconds >= 0 ? GPU_PATIENCE_MS : 0;
-@@ -292,7 +347,7 @@ waitOver(const struct msm_timespec * when, uint32_t fence)
+@@ -292,7 +352,7 @@ waitOver(const struct msm_timespec * when, uint32_t fence)
  	gGPUStat.over++;
  	if (told < 4) {
  		told++;
@@ -746,7 +764,7 @@ index 633b419..b064996 100644
  		IOLog("HakiosGPU: a wait for submission %u, which is not done, until %lld.%09lld s, asked for at %llu.%09llu s: "
  		    "over before it began\n", fence, when->seconds, when->nanoseconds, now / NSEC_PER_SEC, now % NSEC_PER_SEC);
  	}
-@@ -433,6 +488,7 @@ class HakiosGPUUserClient : public IOUserClient
+@@ -433,6 +493,7 @@ class HakiosGPUUserClient : public IOUserClient
  	void dropKept(struct gpu_kept * k);
  	void reap(void);
  	IOReturn gemNew(struct msm_gem_new * request);
@@ -754,7 +772,7 @@ index 633b419..b064996 100644
  	IOReturn surfaceBuffer(struct hakios_surface * request);
  	IOReturn userBuffer(struct hakios_user_memory * request);
  	IOReturn gemInfo(struct msm_gem_info * request);
-@@ -944,6 +1000,41 @@ HakiosGPUUserClient::userBuffer(struct hakios_user_memory * request)
+@@ -944,6 +1005,41 @@ HakiosGPUUserClient::userBuffer(struct hakios_user_memory * request)
  	return kIOReturnSuccess;
  }
  
@@ -796,7 +814,7 @@ index 633b419..b064996 100644
  IOReturn
  HakiosGPUUserClient::gemInfo(struct msm_gem_info * request)
  {
-@@ -1216,6 +1307,10 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
+@@ -1216,6 +1312,11 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
  		struct hakios_surface surface;
  		struct hakios_user_memory user;
  		struct hakios_show show;
@@ -804,10 +822,11 @@ index 633b419..b064996 100644
 +		struct mali_submit maliSubmit;
 +		struct mali_tiler_heap maliHeap;
 +		struct mali_bind maliBind;
++		struct mali_register maliRegister;
  	} r;
  	size_t size = args->structureInputSize;
  	struct gpu_buffer * b;
-@@ -1311,6 +1406,26 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
+@@ -1311,6 +1412,29 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
  	case kHakiosShow:
  		ret = show(&r.show);
  		break;
@@ -824,6 +843,9 @@ index 633b419..b064996 100644
 +		IOLockLock(gGPULock);
 +		ret = maliBind(&r.maliBind);
 +		IOLockUnlock(gGPULock);
++		break;
++	case kMaliRegister:
++		ret = hakios_mali_register(r.maliRegister.offset, &r.maliRegister.value) ? kIOReturnSuccess : kIOReturnBadArgument;
 +		break;
 +	case kMaliTilerHeap:
 +		IOLockLock(gGPULock);
@@ -1394,12 +1416,939 @@ index 8d69400..f6ebbf9 100644
  	for (unsigned b = 0; b < 2; b++) {
  		tm_va[b] = ml_io_map(tm_pa[b], TM_SIZE);
  		if (tm_va[b] == 0) {
+diff --git a/tools/mesa/hakios-panthor/hakios.panthor.c b/tools/mesa/hakios-panthor/hakios.panthor.c
+new file mode 100644
+index 0000000..7b29643
+--- /dev/null
++++ b/tools/mesa/hakios-panthor/hakios.panthor.c
+@@ -0,0 +1,881 @@
++/*
++ * The libdrm of xf86drm.h for PanVK: Linux's Panthor requests to the kernel's HakiosGPU on the Mali (boot-arg mali=1),
++ * the counterpart of hakios-drm (Adreno, msm). What the kernel has (caiman repo docs/gpu-plan.md, steps 10-14):
++ *
++ *   msm GEM_NEW 0x42, GEM_INFO 0x43, WAIT_FENCE 0x47, GEM_CLOSE 0x09   buffers, their memory, waiting
++ *   0x90 query      the GPU's and the command stream interface's properties
++ *   0x91 submit     one user command stream on one of group 0's three streams; a fence back
++ *   0x92 heap       a tiler heap (context and first chunk)
++ *   0x93 bind       a buffer's pages at a user address (the lower half of the GPU's space), or none there
++ *   0x94 register   an identification register of the GPU's
++ *
++ * Panthor's model maps onto it this way. One VM: the kernel's one user address space (id 1). Groups: every group is
++ * group 0, the kernel's; its three queues are the three streams (PanVK's order: vertex-tiler, fragment, compute). A
++ * submission's waits are waited for here, before it goes to the kernel; its signals get its fence (hakios-drm's
++ * syncobjs). VM binds are done at once, ASYNC or not, their syncs as a submission's. The device is told to be
++ * Panthor 1.2: no MMU_INFO query (4 KiB pages, which is what the kernel maps), no WB mmap (buffers are
++ * write-combined, the GPU not coherent), timestamps and group priorities.
++ */
++#include <errno.h>
++#include <mach/mach_time.h>
++#include <pthread.h>
++#include <stdbool.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <sys/mman.h>
++#include <sys/time.h>
++#include <time.h>
++#include <unistd.h>
++
++#include <IOKit/IOKitLib.h>
++
++#include "xf86drm.h"
++#include "drm-uapi/panthor_drm.h"
++
++#define HAKIOS_GPU_SERVICE      "HakiosGPU"
++#define REQ_GEM_CLOSE           0x09
++#define REQ_GEM_NEW             0x42
++#define REQ_WAIT_FENCE          0x47
++#define REQ_MALI_QUERY          0x90
++#define REQ_MALI_SUBMIT         0x91
++#define REQ_MALI_HEAP           0x92
++#define REQ_MALI_BIND           0x93
++#define REQ_MALI_REGISTER       0x94
++#define MSM_BO_WC               0x00020000
++
++/* the kernel's structures (hakios.gpu.cpp) */
++struct k_gem_new { uint64_t size; uint32_t flags, handle; };
++struct k_gem_close { uint32_t handle, pad; };
++struct k_wait_fence { uint32_t fence, flags; int64_t seconds, nanoseconds; uint32_t queueid; };
++struct k_query {
++	uint32_t gpu_id, l2_features, core_features, tiler_features, mem_features, mmu_features, as_present, csf_id;
++	uint64_t shader_present, tiler_present, l2_present;
++	uint32_t csg_slots, cs_slots, cs_regs, scoreboards, unpreserved_regs, timestamp_hz;
++};
++struct k_submit { uint32_t queue, size; uint64_t address; uint32_t fence, pad; };
++struct k_heap { uint32_t chunk_size, chunks; uint64_t context, first_chunk; };
++struct k_bind { uint32_t handle, flags; uint64_t va, offset, size; };
++struct k_register { uint32_t offset, value; };
++
++static io_connect_t connection;
++static int connection_fd = -1;
++static pthread_mutex_t open_lock = PTHREAD_MUTEX_INITIALIZER;
++
++static bool
++connect_once(void)
++{
++	io_service_t service;
++	bool ok;
++
++	pthread_mutex_lock(&open_lock);
++	if (connection != 0) {
++		pthread_mutex_unlock(&open_lock);
++		return true;
++	}
++	service = IOServiceGetMatchingService(0, IOServiceMatching(HAKIOS_GPU_SERVICE));
++	ok = service != 0 && IOServiceOpen(service, mach_task_self(), 0, &connection) == 0;
++	if (service != 0) {
++		IOObjectRelease(service);
++	}
++	pthread_mutex_unlock(&open_lock);
++	return ok;
++}
++
++static int
++call(unsigned number, void *data, size_t size)
++{
++	size_t returned = size;
++	kern_return_t result;
++
++	if (!connect_once()) {
++		return ENODEV;
++	}
++	result = IOConnectCallStructMethod(connection, number, data, size, data, &returned);
++	switch (result) {
++	case 0:
++		return 0;
++	case kIOReturnNoMemory:
++		return ENOMEM;
++	case kIOReturnBadArgument:
++		return EINVAL;
++	case kIOReturnTimeout:
++		return ETIMEDOUT;
++	case kIOReturnBusy:
++		return EBUSY;
++	case kIOReturnNotFound:
++		return ENOENT;
++	case kIOReturnUnsupported:
++		return ENOSYS;
++	default:
++		return EIO;
++	}
++}
++
++static int
++fail(int error)
++{
++	errno = error;
++	return -1;
++}
++
++static void
++say_once(const char *what)
++{
++	static char said[16][48];
++	static unsigned count;
++
++	for (unsigned i = 0; i < count; i++) {
++		if (strcmp(said[i], what) == 0) {
++			return;
++		}
++	}
++	if (count < 16) {
++		strlcpy(said[count++], what, sizeof(said[0]));
++	}
++	fprintf(stderr, "hakios-panthor: %s: not here\n", what);
++}
++
++int
++drmOpenWithType(const char *name, const char *busid, int type)
++{
++	(void)busid;
++	(void)type;
++	if (strcmp(name, "panthor") != 0 || !connect_once()) {
++		return -1;
++	}
++	if (connection_fd < 0) {
++		connection_fd = open(HAKIOS_PANTHOR_NODE, O_RDWR);
++	}
++	return dup(connection_fd);
++}
++
++drmVersionPtr
++drmGetVersion(int fd)
++{
++	drmVersionPtr version;
++
++	(void)fd;
++	if (!connect_once() || (version = calloc(1, sizeof(*version))) == NULL) {
++		return NULL;
++	}
++	version->version_major = 1;
++	version->version_minor = 2;
++	version->name = strdup("panthor");
++	version->name_len = 7;
++	version->date = strdup("");
++	version->desc = strdup("Mali on Darwin");
++	version->desc_len = (int)strlen(version->desc);
++	return version;
++}
++
++void
++drmFreeVersion(drmVersionPtr version)
++{
++	if (version != NULL) {
++		free(version->name);
++		free(version->date);
++		free(version->desc);
++		free(version);
++	}
++}
++
++int
++drmGetCap(int fd, uint64_t capability, uint64_t *value)
++{
++	(void)fd;
++	(void)capability;
++	*value = 0;
++	return 0;
++}
++
++int
++drmCloseBufferHandle(int fd, uint32_t handle)
++{
++	struct k_gem_close c = { handle, 0 };
++	int error = call(REQ_GEM_CLOSE, &c, sizeof(c));
++
++	(void)fd;
++	return error ? fail(error) : 0;
++}
++
++void *
++hakios_panthor_mmap(void *address, size_t size, int prot, int flags, int fd, off_t offset)
++{
++	mach_vm_address_t at = (mach_vm_address_t)(uintptr_t)address;
++	mach_vm_size_t mapped = 0;
++	uint32_t options = kIOMapAnywhere;
++
++	(void)fd;
++	(void)prot;
++	if ((uint64_t)offset == DRM_PANTHOR_USER_FLUSH_ID_MMIO_OFFSET) {
++		return mmap(address, size, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE | (flags & MAP_FIXED), -1, 0);
++	}
++	if (address != NULL) {
++		if (flags & MAP_FIXED) {
++			munmap(address, size);          /* (MAP_FIXED replaces what is there) */
++		}
++		options = 0;
++	}
++	if (!connect_once() ||
++	    IOConnectMapMemory64(connection, (uint32_t)((uint64_t)offset >> 32), mach_task_self(), &at, &mapped, options) != 0) {
++		errno = ENOMEM;
++		return MAP_FAILED;
++	}
++	return (void *)(uintptr_t)at;
++}
++
++/* ---- syncobjs: hakios-drm's, over this kernel's fences -------------------------------------------------------------- */
++
++#define SYNCOBJS        4096
++#define PENDING         16
++
++struct syncobj {
++	bool used;
++	uint64_t reached;
++	unsigned pending;
++	struct { uint64_t point; uint32_t fence; } on_the_way[PENDING];
++};
++static struct syncobj syncobjs[SYNCOBJS];
++static pthread_mutex_t syncobj_lock = PTHREAD_MUTEX_INITIALIZER;
++static pthread_cond_t syncobj_submitted = PTHREAD_COND_INITIALIZER;
++static uint32_t last_fence;
++
++static struct syncobj *
++syncobj_of(uint32_t handle)
++{
++	return handle != 0 && handle < SYNCOBJS && syncobjs[handle].used ? &syncobjs[handle] : NULL;
++}
++
++static int64_t
++now_ns(void)
++{
++	struct timespec t;
++
++	clock_gettime(CLOCK_MONOTONIC, &t);
++	return (int64_t)t.tv_sec * 1000000000 + t.tv_nsec;
++}
++
++/* whether the kernel is done with FENCE: waited for until DEADLINE (absolute CLOCK_MONOTONIC ns; 0: not at all) */
++static bool
++fence_done(uint32_t fence, int64_t deadline)
++{
++	struct k_wait_fence wait = { .fence = fence };
++
++	if (fence == 0) {
++		return true;
++	}
++	wait.seconds = deadline / 1000000000;
++	wait.nanoseconds = deadline % 1000000000;
++	return call(REQ_WAIT_FENCE, &wait, sizeof(wait)) == 0;
++}
++
++static void
++syncobj_poll(struct syncobj *s)
++{
++	unsigned kept = 0;
++
++	for (unsigned i = 0; i < s->pending; i++) {
++		if (fence_done(s->on_the_way[i].fence, 0)) {
++			if (s->on_the_way[i].point > s->reached) s->reached = s->on_the_way[i].point;
++		} else {
++			s->on_the_way[kept++] = s->on_the_way[i];
++		}
++	}
++	s->pending = kept;
++}
++
++static void
++syncobj_add(struct syncobj *s, uint64_t point, uint32_t fence)
++{
++	if (fence == 0 || fence_done(fence, 0)) {
++		if (point > s->reached) s->reached = point;
++		return;
++	}
++	if (s->pending == PENDING) {
++		syncobj_poll(s);
++	}
++	if (s->pending == PENDING) {
++		fence_done(s->on_the_way[0].fence, now_ns() + 10000000000LL);
++		if (s->on_the_way[0].point > s->reached) s->reached = s->on_the_way[0].point;
++		memmove(&s->on_the_way[0], &s->on_the_way[1], (PENDING - 1) * sizeof(s->on_the_way[0]));
++		s->pending--;
++	}
++	s->on_the_way[s->pending].point = point;
++	s->on_the_way[s->pending].fence = fence;
++	s->pending++;
++}
++
++int
++drmSyncobjCreate(int fd, uint32_t flags, uint32_t *handle)
++{
++	(void)fd;
++	pthread_mutex_lock(&syncobj_lock);
++	for (uint32_t h = 1; h < SYNCOBJS; h++) {
++		if (!syncobjs[h].used) {
++			memset(&syncobjs[h], 0, sizeof(syncobjs[h]));
++			syncobjs[h].used = true;
++			syncobjs[h].reached = (flags & DRM_SYNCOBJ_CREATE_SIGNALED) ? 1 : 0;
++			*handle = h;
++			pthread_mutex_unlock(&syncobj_lock);
++			return 0;
++		}
++	}
++	pthread_mutex_unlock(&syncobj_lock);
++	return fail(ENOMEM);
++}
++
++int
++drmSyncobjDestroy(int fd, uint32_t handle)
++{
++	struct syncobj *s;
++
++	(void)fd;
++	pthread_mutex_lock(&syncobj_lock);
++	s = syncobj_of(handle);
++	if (s != NULL) s->used = false;
++	pthread_mutex_unlock(&syncobj_lock);
++	return s != NULL ? 0 : fail(EINVAL);
++}
++
++int
++drmSyncobjReset(int fd, const uint32_t *handles, uint32_t count)
++{
++	(void)fd;
++	pthread_mutex_lock(&syncobj_lock);
++	for (uint32_t i = 0; i < count; i++) {
++		struct syncobj *s = syncobj_of(handles[i]);
++		if (s != NULL) s->reached = 0, s->pending = 0;
++	}
++	pthread_mutex_unlock(&syncobj_lock);
++	return 0;
++}
++
++int
++drmSyncobjTimelineSignal(int fd, const uint32_t *handles, uint64_t *points, uint32_t count)
++{
++	(void)fd;
++	pthread_mutex_lock(&syncobj_lock);
++	for (uint32_t i = 0; i < count; i++) {
++		struct syncobj *s = syncobj_of(handles[i]);
++		uint64_t point = points != NULL && points[i] != 0 ? points[i] : 1;
++		if (s != NULL && point > s->reached) s->reached = point;
++	}
++	pthread_cond_broadcast(&syncobj_submitted);
++	pthread_mutex_unlock(&syncobj_lock);
++	return 0;
++}
++
++int
++drmSyncobjSignal(int fd, const uint32_t *handles, uint32_t count)
++{
++	return drmSyncobjTimelineSignal(fd, handles, NULL, count);
++}
++
++int
++drmSyncobjQuery2(int fd, uint32_t *handles, uint64_t *points, uint32_t count, uint32_t flags)
++{
++	(void)fd;
++	(void)flags;
++	pthread_mutex_lock(&syncobj_lock);
++	for (uint32_t i = 0; i < count; i++) {
++		struct syncobj *s = syncobj_of(handles[i]);
++		if (s != NULL) syncobj_poll(s);
++		points[i] = s != NULL ? s->reached : 0;
++	}
++	pthread_mutex_unlock(&syncobj_lock);
++	return 0;
++}
++
++int
++drmSyncobjQuery(int fd, uint32_t *handles, uint64_t *points, uint32_t count)
++{
++	return drmSyncobjQuery2(fd, handles, points, count, 0);
++}
++
++/* As hakios-drm's: each point (0 or NULL: 1, a binary one's), all or the first, until DEADLINE (CLOCK_MONOTONIC ns). */
++int
++drmSyncobjTimelineWait(int fd, uint32_t *handles, uint64_t *points, unsigned count, int64_t deadline, unsigned flags,
++    uint32_t *first)
++{
++	const bool all = (flags & DRM_SYNCOBJ_WAIT_FLAGS_WAIT_ALL) != 0;
++
++	(void)fd;
++	pthread_mutex_lock(&syncobj_lock);
++	for (;;) {
++		unsigned reached = 0, unknown = 0;
++		uint32_t wait_fence = 0;
++		bool have_fence = false;
++
++		for (unsigned i = 0; i < count; i++) {
++			struct syncobj *s = syncobj_of(handles[i]);
++			uint64_t point = points != NULL && points[i] != 0 ? points[i] : 1;
++			bool on_the_way = false;
++
++			if (s == NULL) {
++				pthread_mutex_unlock(&syncobj_lock);
++				return fail(EINVAL);
++			}
++			syncobj_poll(s);
++			for (unsigned k = 0; k < s->pending; k++) {
++				if (s->on_the_way[k].point >= point) {
++					on_the_way = true;
++					if (!have_fence || (int32_t)(s->on_the_way[k].fence - wait_fence) < 0) wait_fence = s->on_the_way[k].fence;
++					have_fence = true;
++					break;
++				}
++			}
++			if (s->reached >= point || (on_the_way && (flags & DRM_SYNCOBJ_WAIT_FLAGS_WAIT_AVAILABLE))) {
++				reached++;
++				if (!all) {
++					if (first != NULL) *first = i;
++					pthread_mutex_unlock(&syncobj_lock);
++					return 0;
++				}
++			} else if (!on_the_way) {
++				unknown++;
++			}
++		}
++		if (reached == count) {
++			if (first != NULL) *first = 0;
++			pthread_mutex_unlock(&syncobj_lock);
++			return 0;
++		}
++		if (unknown != 0 && !(flags & DRM_SYNCOBJ_WAIT_FLAGS_WAIT_FOR_SUBMIT)) {
++			pthread_mutex_unlock(&syncobj_lock);
++			return fail(EINVAL);
++		}
++		if (now_ns() >= deadline) {
++			break;
++		}
++		if (have_fence && unknown == 0) {
++			pthread_mutex_unlock(&syncobj_lock);
++			fence_done(wait_fence, deadline);
++			pthread_mutex_lock(&syncobj_lock);
++		} else {
++			struct timeval tv;
++			struct timespec until;
++			int64_t step = deadline - now_ns() < 1000000 ? deadline - now_ns() : 1000000, real;
++
++			gettimeofday(&tv, NULL);
++			real = (int64_t)tv.tv_sec * 1000000000 + (int64_t)tv.tv_usec * 1000 + (step > 0 ? step : 0);
++			until.tv_sec = real / 1000000000;
++			until.tv_nsec = real % 1000000000;
++			pthread_cond_timedwait(&syncobj_submitted, &syncobj_lock, &until);
++		}
++	}
++	pthread_mutex_unlock(&syncobj_lock);
++	return fail(ETIME);
++}
++
++int
++drmSyncobjWait(int fd, uint32_t *handles, unsigned count, int64_t deadline, unsigned flags, uint32_t *first)
++{
++	return drmSyncobjTimelineWait(fd, handles, NULL, count, deadline, flags, first);
++}
++
++int
++drmSyncobjTransfer(int fd, uint32_t dst, uint64_t dst_point, uint32_t src, uint64_t src_point, uint32_t flags)
++{
++	struct syncobj *d, *s;
++	uint64_t want = src_point != 0 ? src_point : 1, to = dst_point != 0 ? dst_point : 1;
++
++	(void)fd;
++	(void)flags;
++	pthread_mutex_lock(&syncobj_lock);
++	d = syncobj_of(dst);
++	s = syncobj_of(src);
++	if (d == NULL || s == NULL) {
++		pthread_mutex_unlock(&syncobj_lock);
++		return fail(EINVAL);
++	}
++	syncobj_poll(s);
++	if (dst_point == 0) d->reached = 0, d->pending = 0;
++	if (s->reached >= want) {
++		if (to > d->reached) d->reached = to;
++	} else {
++		for (unsigned k = 0; k < s->pending; k++) {
++			if (s->on_the_way[k].point >= want) {
++				syncobj_add(d, to, s->on_the_way[k].fence);
++				break;
++			}
++		}
++	}
++	pthread_cond_broadcast(&syncobj_submitted);
++	pthread_mutex_unlock(&syncobj_lock);
++	return 0;
++}
++
++/* Buffers and fences as file descriptors, for other programs and drivers: none of that here (yet). */
++#define NONE(name, ...) int name(__VA_ARGS__) { say_once(#name); return fail(ENOSYS); }
++NONE(drmPrimeHandleToFD, __attribute__((unused)) int fd, __attribute__((unused)) uint32_t handle,
++    __attribute__((unused)) uint32_t flags, __attribute__((unused)) int *prime_fd)
++NONE(drmPrimeFDToHandle, __attribute__((unused)) int fd, __attribute__((unused)) int prime_fd,
++    __attribute__((unused)) uint32_t *handle)
++NONE(drmSyncobjFDToHandle, __attribute__((unused)) int fd, __attribute__((unused)) int obj_fd,
++    __attribute__((unused)) uint32_t *handle)
++NONE(drmSyncobjHandleToFD, __attribute__((unused)) int fd, __attribute__((unused)) uint32_t handle,
++    __attribute__((unused)) int *obj_fd)
++NONE(drmSyncobjImportSyncFile, __attribute__((unused)) int fd, __attribute__((unused)) uint32_t handle,
++    __attribute__((unused)) int sync_file_fd)
++NONE(drmSyncobjExportSyncFile, __attribute__((unused)) int fd, __attribute__((unused)) uint32_t handle,
++    __attribute__((unused)) int *sync_file_fd)
++
++int drmGetNodeTypeFromFd(int fd) { (void)fd; return DRM_NODE_RENDER; }
++/* Linux's list of DRM devices, which the Vulkan runtime walks for PanVK: the one Mali, its render node a descriptor that
++ * means nothing (HAKIOS_PANTHOR_NODE), when the kernel has the GPU's service */
++static char *panthor_nodes[DRM_NODE_MAX] = { [DRM_NODE_RENDER] = HAKIOS_PANTHOR_NODE };
++static drmDevice panthor_device = { .nodes = panthor_nodes, .available_nodes = 1 << DRM_NODE_RENDER, .bustype = DRM_BUS_PLATFORM };
++
++int
++drmGetDevices2(uint32_t flags, drmDevicePtr devices[], int max_devices)
++{
++	(void)flags;
++	if (!connect_once()) {
++		return 0;
++	}
++	if (devices != NULL && max_devices > 0) {
++		devices[0] = &panthor_device;
++	}
++	return 1;
++}
++
++void drmFreeDevices(drmDevicePtr devices[], int count) { (void)devices; (void)count; }
++int drmGetDevice2(int fd, uint32_t flags, drmDevicePtr *device) { (void)fd; (void)flags; *device = NULL; return -ENODEV; }
++void drmFreeDevice(drmDevicePtr *device) { (void)device; }
++
++/* ---- Panthor's requests ---------------------------------------------------------------------------------------------- */
++
++static uint32_t
++reg(uint32_t offset)
++{
++	struct k_register r = { offset, 0 };
++
++	return call(REQ_MALI_REGISTER, &r, sizeof(r)) == 0 ? r.value : 0;
++}
++
++static int
++dev_query(struct drm_panthor_dev_query *q)
++{
++	union {
++		struct drm_panthor_gpu_info gpu;
++		struct drm_panthor_csif_info csif;
++		struct drm_panthor_timestamp_info ts;
++		struct drm_panthor_group_priorities_info prio;
++		struct drm_panthor_mmu_info mmu;
++	} out;
++	struct k_query k = { 0 };
++	uint32_t size;
++	int error;
++
++	memset(&out, 0, sizeof(out));
++	switch (q->type) {
++	case DRM_PANTHOR_DEV_QUERY_GPU_INFO:
++		size = sizeof(out.gpu);
++		break;
++	case DRM_PANTHOR_DEV_QUERY_CSIF_INFO:
++		size = sizeof(out.csif);
++		break;
++	case DRM_PANTHOR_DEV_QUERY_TIMESTAMP_INFO:
++		size = sizeof(out.ts);
++		break;
++	case DRM_PANTHOR_DEV_QUERY_GROUP_PRIORITIES_INFO:
++		size = sizeof(out.prio);
++		break;
++	case DRM_PANTHOR_DEV_QUERY_MMU_INFO:
++		size = sizeof(out.mmu);
++		break;
++	default:
++		return EINVAL;
++	}
++	if (q->pointer == 0) {
++		q->size = size;
++		return 0;
++	}
++	if ((error = call(REQ_MALI_QUERY, &k, sizeof(k))) != 0) {
++		return error;
++	}
++	switch (q->type) {
++	case DRM_PANTHOR_DEV_QUERY_GPU_INFO:
++		out.gpu.gpu_id = k.gpu_id;
++		out.gpu.gpu_rev = 0;                    /* (GPU_REVID, 0x280, is not among the kernel's registers) */
++		out.gpu.csf_id = k.csf_id;
++		out.gpu.l2_features = k.l2_features;
++		out.gpu.tiler_features = k.tiler_features;
++		out.gpu.mem_features = k.mem_features;
++		out.gpu.mmu_features = k.mmu_features;
++		out.gpu.thread_features = reg(0xac);
++		out.gpu.max_threads = reg(0xa0);
++		out.gpu.thread_max_workgroup_size = reg(0xa4);
++		out.gpu.thread_max_barrier_size = reg(0xa8);
++		out.gpu.coherency_features = reg(0x300);
++		for (int i = 0; i < 4; i++) out.gpu.texture_features[i] = reg(0xb0 + 4 * i);
++		out.gpu.as_present = k.as_present;
++		out.gpu.selected_coherency = DRM_PANTHOR_GPU_COHERENCY_NONE;
++		out.gpu.shader_present = k.shader_present;
++		out.gpu.l2_present = k.l2_present;
++		out.gpu.tiler_present = k.tiler_present;
++		out.gpu.core_features = k.core_features;
++		out.gpu.gpu_features = (uint64_t)reg(0x64) << 32 | reg(0x60);
++		break;
++	case DRM_PANTHOR_DEV_QUERY_CSIF_INFO:
++		out.csif.csg_slot_count = k.csg_slots;
++		out.csif.cs_slot_count = k.cs_slots;
++		out.csif.cs_reg_count = k.cs_regs;
++		out.csif.scoreboard_slot_count = k.scoreboards;
++		out.csif.unpreserved_cs_reg_count = k.unpreserved_regs;
++		break;
++	case DRM_PANTHOR_DEV_QUERY_TIMESTAMP_INFO: {
++		struct timespec t;
++		uint32_t hi, lo;
++
++		do {                                    /* the GPU's timestamp: the system counter, no offset */
++			hi = reg(0x9c);
++			lo = reg(0x98);
++		} while (reg(0x9c) != hi);
++		clock_gettime(CLOCK_MONOTONIC, &t);
++		out.ts.timestamp_frequency = k.timestamp_hz;
++		out.ts.current_timestamp = (uint64_t)hi << 32 | lo;
++		out.ts.timestamp_offset = 0;
++		out.ts.flags = DRM_PANTHOR_TIMESTAMP_GPU | DRM_PANTHOR_TIMESTAMP_CPU_MONOTONIC | DRM_PANTHOR_TIMESTAMP_GPU_OFFSET |
++		    DRM_PANTHOR_TIMESTAMP_FREQ;
++		out.ts.cpu_timestamp_sec = (uint64_t)t.tv_sec;
++		out.ts.cpu_timestamp_nsec = (uint64_t)t.tv_nsec;
++		break;
++	}
++	case DRM_PANTHOR_DEV_QUERY_GROUP_PRIORITIES_INFO:
++		out.prio.allowed_mask = (1u << PANTHOR_GROUP_PRIORITY_LOW) | (1u << PANTHOR_GROUP_PRIORITY_MEDIUM);
++		break;
++	case DRM_PANTHOR_DEV_QUERY_MMU_INFO:
++		out.mmu.page_size_bitmap = 1u << 12;
++		break;
++	}
++	memcpy((void *)(uintptr_t)q->pointer, &out, q->size < size ? q->size : size);
++	return 0;
++}
++
++/* a submission's (or a bind's) sync operations: the waits now, the signals given FENCE */
++static int
++syncs_wait(const struct drm_panthor_obj_array *syncs)
++{
++	for (uint32_t i = 0; i < syncs->count; i++) {
++		const struct drm_panthor_sync_op *op = (const void *)(uintptr_t)(syncs->array + (uint64_t)i * syncs->stride);
++		uint32_t h = op->handle;
++		uint64_t p = (op->flags & DRM_PANTHOR_SYNC_OP_HANDLE_TYPE_MASK) == DRM_PANTHOR_SYNC_OP_HANDLE_TYPE_TIMELINE_SYNCOBJ ?
++		    op->timeline_value : 0;
++
++		if (!(op->flags & DRM_PANTHOR_SYNC_OP_SIGNAL) &&
++		    drmSyncobjTimelineWait(0, &h, &p, 1, now_ns() + 10000000000LL,
++		    DRM_SYNCOBJ_WAIT_FLAGS_WAIT_ALL | DRM_SYNCOBJ_WAIT_FLAGS_WAIT_FOR_SUBMIT, NULL) != 0) {
++			return errno ? errno : ETIME;
++		}
++	}
++	return 0;
++}
++
++static void
++syncs_signal(const struct drm_panthor_obj_array *syncs, uint32_t fence)
++{
++	pthread_mutex_lock(&syncobj_lock);
++	for (uint32_t i = 0; i < syncs->count; i++) {
++		const struct drm_panthor_sync_op *op = (const void *)(uintptr_t)(syncs->array + (uint64_t)i * syncs->stride);
++		bool timeline = (op->flags & DRM_PANTHOR_SYNC_OP_HANDLE_TYPE_MASK) == DRM_PANTHOR_SYNC_OP_HANDLE_TYPE_TIMELINE_SYNCOBJ;
++		struct syncobj *s = syncobj_of(op->handle);
++
++		if (!(op->flags & DRM_PANTHOR_SYNC_OP_SIGNAL) || s == NULL) {
++			continue;
++		}
++		if (!timeline) {
++			s->reached = 0, s->pending = 0;         /* a binary one: what it holds now is this */
++		}
++		syncobj_add(s, timeline ? op->timeline_value : 1, fence);
++	}
++	pthread_cond_broadcast(&syncobj_submitted);
++	pthread_mutex_unlock(&syncobj_lock);
++}
++
++static int
++vm_bind(struct drm_panthor_vm_bind *b)
++{
++	for (uint32_t i = 0; i < b->ops.count; i++) {
++		struct drm_panthor_vm_bind_op *op = (void *)(uintptr_t)(b->ops.array + (uint64_t)i * b->ops.stride);
++		uint32_t type = op->flags & DRM_PANTHOR_VM_BIND_OP_TYPE_MASK;
++		int error = syncs_wait(&op->syncs);
++
++		if (error != 0) {
++			b->ops.count = i;
++			return error;
++		}
++		if (type == DRM_PANTHOR_VM_BIND_OP_TYPE_MAP || type == DRM_PANTHOR_VM_BIND_OP_TYPE_UNMAP) {
++			struct k_bind k = {
++				.handle = type == DRM_PANTHOR_VM_BIND_OP_TYPE_MAP ? op->bo_handle : 0,
++				.flags = (op->flags & DRM_PANTHOR_VM_BIND_OP_MAP_READONLY) ? 1 : 0,
++				.va = op->va, .offset = op->bo_offset, .size = op->size,
++			};
++
++			if (op->flags & DRM_PANTHOR_VM_BIND_OP_MAP_SPARSE) {
++				say_once("sparse binding");
++				error = ENOSYS;
++			} else {
++				error = call(REQ_MALI_BIND, &k, sizeof(k));
++			}
++			if (error != 0) {
++				b->ops.count = i;
++				return error;
++			}
++		}
++		syncs_signal(&op->syncs, 0);            /* done now */
++	}
++	return 0;
++}
++
++static int
++group_submit(struct drm_panthor_group_submit *g)
++{
++	for (uint32_t i = 0; i < g->queue_submits.count; i++) {
++		struct drm_panthor_queue_submit *q = (void *)(uintptr_t)(g->queue_submits.array + (uint64_t)i * g->queue_submits.stride);
++		uint32_t fence;
++		int error = syncs_wait(&q->syncs);
++
++		if (error != 0) {
++			return error;
++		}
++		if (q->stream_size == 0) {
++			/* only syncs: done when everything submitted before it is (the kernel's done() is over all streams) */
++			fence = __atomic_load_n(&last_fence, __ATOMIC_ACQUIRE);
++		} else {
++			struct k_submit k = { .queue = q->queue_index, .size = q->stream_size, .address = q->stream_addr };
++
++			if ((error = call(REQ_MALI_SUBMIT, &k, sizeof(k))) != 0) {
++				return error;
++			}
++			fence = k.fence;
++			__atomic_store_n(&last_fence, fence, __ATOMIC_RELEASE);
++		}
++		syncs_signal(&q->syncs, fence);
++	}
++	return 0;
++}
++
++static uint32_t next_group = 1, next_heap = 1;
++static uint32_t bo_flags[8192 + 1];
++
++static int
++panthor(unsigned id, void *arg)
++{
++	switch (id) {
++	case DRM_PANTHOR_DEV_QUERY:
++		return dev_query(arg);
++	case DRM_PANTHOR_VM_CREATE: {
++		struct drm_panthor_vm_create *v = arg;
++
++		v->id = 1;                              /* the one user address space: the kernel's */
++		return 0;
++	}
++	case DRM_PANTHOR_VM_DESTROY:
++		return 0;
++	case DRM_PANTHOR_VM_BIND:
++		return vm_bind(arg);
++	case DRM_PANTHOR_VM_GET_STATE:
++		((struct drm_panthor_vm_get_state *)arg)->state = DRM_PANTHOR_VM_STATE_USABLE;
++		return 0;
++	case DRM_PANTHOR_BO_CREATE: {
++		struct drm_panthor_bo_create *c = arg;
++		struct k_gem_new k = { .size = c->size, .flags = MSM_BO_WC };
++		int error = call(REQ_GEM_NEW, &k, sizeof(k));
++
++		if (error == 0) {
++			c->handle = k.handle;
++			if (k.handle <= 8192) bo_flags[k.handle] = c->flags;
++		}
++		return error;
++	}
++	case DRM_PANTHOR_BO_MMAP_OFFSET: {
++		struct drm_panthor_bo_mmap_offset *m = arg;
++
++		m->offset = (uint64_t)m->handle << 32;  /* (hakios_panthor_mmap's) */
++		return 0;
++	}
++	case DRM_PANTHOR_GROUP_CREATE: {
++		struct drm_panthor_group_create *c = arg;
++
++		if (c->queues.count > 3) {
++			say_once("a group of more than 3 queues");
++			return EINVAL;
++		}
++		c->group_handle = __atomic_fetch_add(&next_group, 1, __ATOMIC_RELAXED);
++		return 0;
++	}
++	case DRM_PANTHOR_GROUP_DESTROY:
++		return 0;
++	case DRM_PANTHOR_GROUP_SUBMIT:
++		return group_submit(arg);
++	case DRM_PANTHOR_GROUP_GET_STATE: {
++		struct drm_panthor_group_get_state *s = arg;
++
++		s->state = 0;
++		s->fatal_queues = 0;
++		return 0;
++	}
++	case DRM_PANTHOR_TILER_HEAP_CREATE: {
++		struct drm_panthor_tiler_heap_create *c = arg;
++		struct k_heap k = { .chunk_size = c->chunk_size, .chunks = c->initial_chunk_count };
++		int error = call(REQ_MALI_HEAP, &k, sizeof(k));
++
++		if (error == 0) {
++			c->handle = __atomic_fetch_add(&next_heap, 1, __ATOMIC_RELAXED);
++			c->tiler_heap_ctx_gpu_va = k.context;
++			c->first_heap_chunk_gpu_va = k.first_chunk;
++		}
++		return error;
++	}
++	case DRM_PANTHOR_TILER_HEAP_DESTROY:            /* (its memory is the kernel's until the next boot) */
++	case DRM_PANTHOR_BO_SET_LABEL:
++	case DRM_PANTHOR_SET_USER_MMIO_OFFSET:
++	case DRM_PANTHOR_BO_SYNC:                       /* (write-combined: nothing of the processor's to push out) */
++		return 0;
++	case DRM_PANTHOR_BO_QUERY_INFO: {
++		struct drm_panthor_bo_query_info *q = arg;
++
++		q->extra_flags = 0;
++		q->create_flags = q->handle <= 8192 ? bo_flags[q->handle] : 0;
++		return 0;
++	}
++	default:
++		say_once("a Panthor request");
++		return ENOSYS;
++	}
++}
++
++int
++drmIoctl(int fd, unsigned long request, void *arg)
++{
++	unsigned nr = (unsigned)(request & 0xff);
++	int error;
++
++	(void)fd;
++	if (nr == REQ_GEM_CLOSE) {
++		struct drm_gem_close *c = arg;
++		return drmCloseBufferHandle(fd, c->handle);
++	}
++	if (nr < DRM_COMMAND_BASE || nr > DRM_COMMAND_BASE + DRM_PANTHOR_BO_QUERY_INFO) {
++		say_once("a DRM request");
++		return fail(ENOSYS);
++	}
++	error = panthor(nr - DRM_COMMAND_BASE, arg);
++	return error ? fail(error) : 0;
++}
++
++int
++drmCommandWrite(int fd, unsigned long index, const void *data, unsigned long size)
++{
++	(void)size;
++	return drmIoctl(fd, DRM_COMMAND_BASE + index, (void *)(uintptr_t)data) ? -errno : 0;
++}
++
++int
++drmCommandWriteRead(int fd, unsigned long index, void *data, unsigned long size)
++{
++	(void)size;
++	return drmIoctl(fd, DRM_COMMAND_BASE + index, data) ? -errno : 0;
++}
+diff --git a/tools/mesa/hakios-panthor/xf86drm.h b/tools/mesa/hakios-panthor/xf86drm.h
+new file mode 100644
+index 0000000..d2a4da7
+--- /dev/null
++++ b/tools/mesa/hakios-panthor/xf86drm.h
+@@ -0,0 +1,34 @@
++/*
++ * What Mesa's PanVK (and the Panthor kmod under it) takes from libdrm's xf86drm.h, for a system without Linux's DRM:
++ * hakios-drm's declarations (../hakios-drm/xf86drm.h; the syncobjs are the same, kept in the process over the kernel's
++ * fences) and what Panthor needs besides. The functions are in hakios.panthor.c, which carries Panthor's requests to
++ * the kernel's HakiosGPU (mali=1; drivers/gpu/hakios.gpu.cpp, requests 0x90-0x94) as calls of its user client.
++ * tools/mk-panvk.sh builds PanVK against this directory and links the library in.
++ */
++#ifndef HAKIOS_PANTHOR_XF86DRM_H
++#define HAKIOS_PANTHOR_XF86DRM_H
++
++#include "../hakios-drm/xf86drm.h"
++
++#ifdef __cplusplus
++extern "C" {
++#endif
++
++int drmCloseBufferHandle(int fd, uint32_t handle);
++
++/*
++ * Not libdrm's: mmap() on the device, which Darwin cannot give for a descriptor that means nothing (/dev/null, as in
++ * hakios-drm). An offset from BO_MMAP_OFFSET is a buffer's (its memory, mapped through the user client); Panthor's
++ * LATEST_FLUSH_ID page is a page of zeros (the kernel flushes before every submission anyway). panthor_kmod.c is
++ * patched to call this where it calls os_mmap() on the device (tools/mesa/panvk-darwin.patch).
++ */
++void *hakios_panthor_mmap(void *address, size_t size, int prot, int flags, int fd, off_t offset);
++
++/* Not libdrm's: the one device's render node, for PanVK's enumeration on Darwin (panvk_instance.c, patched) */
++#define HAKIOS_PANTHOR_NODE     "/dev/null"
++
++#ifdef __cplusplus
++}
++#endif
++
++#endif
 diff --git a/tools/mesa/panvk-darwin.patch b/tools/mesa/panvk-darwin.patch
 new file mode 100644
-index 0000000..21fa792
+index 0000000..a9f66b9
 --- /dev/null
 +++ b/tools/mesa/panvk-darwin.patch
-@@ -0,0 +1,142 @@
+@@ -0,0 +1,187 @@
 +diff --git a/src/panfrost/lib/kmod/meson.build b/src/panfrost/lib/kmod/meson.build
 +index 20ee6db..b8d4060 100644
 +--- a/src/panfrost/lib/kmod/meson.build
@@ -1450,6 +2399,37 @@ index 0000000..21fa792
 +    {
 +       "panthor",
 +       &panthor_kmod_ops,
++diff --git a/src/panfrost/lib/kmod/panthor_kmod.c b/src/panfrost/lib/kmod/panthor_kmod.c
++index 4011b55..5190024 100644
++--- a/src/panfrost/lib/kmod/panthor_kmod.c
+++++ b/src/panfrost/lib/kmod/panthor_kmod.c
++@@ -307,8 +307,14 @@ panthor_kmod_dev_create(int fd, uint32_t flags,
++       }
++    }
++ 
+++#ifdef __APPLE__
+++   /* (HackiOS: no mmap() on the device; hakios-panthor maps) */
+++   panthor_dev->flush_id = hakios_panthor_mmap(0, getpagesize(), PROT_READ, MAP_SHARED, fd,
+++                                               DRM_PANTHOR_USER_FLUSH_ID_MMIO_OFFSET);
+++#else
++    panthor_dev->flush_id = os_mmap(0, getpagesize(), PROT_READ, MAP_SHARED, fd,
++                                    DRM_PANTHOR_USER_FLUSH_ID_MMIO_OFFSET);
+++#endif
++    if (panthor_dev->flush_id == MAP_FAILED) {
++       mesa_loge("failed to mmap the LATEST_FLUSH_ID register (err=%d)", errno);
++       goto err_free_dev;
++@@ -659,7 +665,11 @@ panthor_kmod_bo_mmap(struct pan_kmod_bo *bo, int prot, int flags,
++    if (mmap_offset < 0)
++       return MAP_FAILED;
++ 
+++#ifdef __APPLE__
+++   return hakios_panthor_mmap(host_addr, bo->size, prot, flags, bo->dev->fd, mmap_offset);
+++#else
++    return os_mmap(host_addr, bo->size, prot, flags, bo->dev->fd, mmap_offset);
+++#endif
++ }
++ 
++ static bool
 +diff --git a/src/panfrost/vulkan/meson.build b/src/panfrost/vulkan/meson.build
 +index 588ba0e..0fd95c8 100644
 +--- a/src/panfrost/vulkan/meson.build
@@ -1483,6 +2463,20 @@ index 0000000..21fa792
 ++#endif
 + 
 + #include "git_sha1.h"
++ 
++diff --git a/src/util/libdrm.h b/src/util/libdrm.h
++index 8876ebe..acb442f 100644
++--- a/src/util/libdrm.h
+++++ b/src/util/libdrm.h
++@@ -30,7 +30,8 @@
++ #ifndef LIBDRM_H
++ #define LIBDRM_H
++ 
++-#ifdef HAVE_LIBDRM
+++#if defined(HAVE_LIBDRM) || (defined(__APPLE__) && __has_include(<xf86drm.h>))
+++/* (Darwin: the stand-in for libdrm, tools/mesa/hakios-panthor, where a target has it on its include path) */
++ #include <xf86drm.h>
++ #else
 + 
 +diff --git a/src/vulkan/runtime/meson.build b/src/vulkan/runtime/meson.build
 +index 506b6cb..ee4770b 100644
@@ -1544,10 +2538,10 @@ index 0000000..21fa792
 +     * Initialized by vk_image_create/init() to DRM_FORMAT_MOD_INVALID.  It's
 diff --git a/tools/mk-panvk.sh b/tools/mk-panvk.sh
 new file mode 100755
-index 0000000..240d4ba
+index 0000000..bb153ac
 --- /dev/null
 +++ b/tools/mk-panvk.sh
-@@ -0,0 +1,85 @@
+@@ -0,0 +1,88 @@
 +#!/bin/bash
 +# Build PanVK, Mesa's Vulkan driver for the Mali (CSF: v10 and up; the Pixel 9 Pro's G715 is v11), for the Darwin
 +# userland: the Mali's counterpart of tools/mk-turnip.sh, for metal2vulkan on the Pixel (caiman repo
@@ -1588,11 +2582,7 @@ index 0000000..240d4ba
 +
 +# libdrm's headers for the native build (see above)
 +cat > hoststub/xf86drm.h <<H
-+#include "$ROOT/tools/mesa/hakios-drm/xf86drm.h"
-+#ifndef HOSTSTUB_DRM_EXTRA
-+#define HOSTSTUB_DRM_EXTRA
-+int drmCloseBufferHandle(int fd, uint32_t handle);
-+#endif
++#include "$ROOT/tools/mesa/hakios-panthor/xf86drm.h"
 +H
 +
 +OFF="-Dplatforms= -Dgallium-drivers= -Dvulkan-drivers=panfrost -Dpanfrost-rust=false -Dopengl=false -Dgles1=disabled
@@ -1625,14 +2615,21 @@ index 0000000..240d4ba
 +[properties]
 +needs_exe_wrapper = true
 +INI
++# hakios-panthor, the libdrm PanVK is built against and linked with
++SHIM=$ROOT/tools/mesa/hakios-panthor
++xnu-clang -arch arm64 -isysroot "$SDK" -O2 -Wall -I"$B/mesa/include" -c -o hakios.panthor.o "$SHIM/hakios.panthor.c"
++llvm-ar rcs libhakios_panthor.a hakios.panthor.o
 +[ -f ios/build.ninja ] || meson setup ios mesa --cross-file cross.ini --wrap-mode=nofallback --prefix=/redwood \
 +	--libdir=lib --buildtype=release -Db_ndebug=true $OFF -Dmesa-clc=system -Dprecomp-compiler=system -Dllvm=disabled \
-+	-Dshader-cache=disabled -Dglvnd=disabled -Dtools= -Dc_args="-I$B/hoststub" -Dcpp_args="-I$B/hoststub" > ios-setup.log
++	-Dshader-cache=disabled -Dglvnd=disabled -Dtools= -Dc_args="-I$SHIM" -Dcpp_args="-I$SHIM" \
++	-Dc_link_args="$B/libhakios_panthor.a -framework IOKit" -Dcpp_link_args="$B/libhakios_panthor.a -framework IOKit" \
++	> ios-setup.log
++touch mesa/src/panfrost/vulkan/panvk_instance.c       # (relinks with a new libhakios_panthor.a)
 +ninja -C ios src/panfrost/vulkan/libvulkan_panfrost.dylib > ios-ninja.log
 +cp ios/src/panfrost/vulkan/libvulkan_panfrost.dylib out/
 +install_name_tool -id /redwood/lib/libvulkan_panfrost.dylib out/libvulkan_panfrost.dylib
 +echo "mk-panvk.sh: PanVK (Mesa $COMMIT): $B/out/libvulkan_panfrost.dylib ($(stat -f %z out/libvulkan_panfrost.dylib) bytes);" \
-+	"libdrm's functions it wants from hakios-panthor: $(nm -u out/libvulkan_panfrost.dylib | grep -c '^_drm')"
++	"libdrm's functions left undefined: $(nm -u out/libvulkan_panfrost.dylib | grep -c '^_drm')"
 diff --git a/userland/rc.jobs.malitest b/userland/rc.jobs.malitest
 new file mode 100644
 index 0000000..dcf51ef
@@ -1825,6 +2822,27 @@ index 0000000..ea4d4a1
 +	printf("mali_test: tiler heap %#x: context %#llx, first chunk %#llx\n", kr, h.context, h.first_chunk);
 +	return 0;
 +}
+diff --git a/userland/src/vk_test.c b/userland/src/vk_test.c
+index 622ca30..1f4882e 100644
+--- a/userland/src/vk_test.c
++++ b/userland/src/vk_test.c
+@@ -84,10 +84,14 @@ main(void)
+ 	setvbuf(stdout, NULL, _IONBF, 0);
+ 	dup2(1, 2);                     /* Mesa's own messages (stderr) beside ours */
+ 	setenv("TU_DEBUG", "startup", 0);
+-	void *driver = dlopen(DRIVER, RTLD_NOW | RTLD_LOCAL);
++	setenv("PANVK_DEBUG", "startup", 0);
++	/* the driver: Turnip by default, another by its path (PanVK on the Pixel: /redwood/lib/libvulkan_panfrost.dylib) */
++	const char *path = getenv("VK_TEST_DRIVER") != NULL ? getenv("VK_TEST_DRIVER") :
++	    access(DRIVER, R_OK) == 0 ? DRIVER : "/redwood/lib/libvulkan_panfrost.dylib";
++	void *driver = dlopen(path, RTLD_NOW | RTLD_LOCAL);
+ 
+ 	if (driver == NULL) {
+-		printf("vk_test: %s does not load: %s\n", DRIVER, dlerror());
++		printf("vk_test: %s does not load: %s\n", path, dlerror());
+ 		return 1;
+ 	}
+ 	gipa = (PFN_vkGetInstanceProcAddr)dlsym(driver, "vk_icdGetInstanceProcAddr");
 diff --git a/xnu-deps/setup.sh b/xnu-deps/setup.sh
 index c390093..de72f4d 100755
 --- a/xnu-deps/setup.sh
