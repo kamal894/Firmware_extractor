@@ -1,0 +1,19 @@
+m2v_test: Vulkan driver /redwood/lib/libvulkan_panfrost.dylib
+m2v_test: native-metal: no device answer: the device has no answer for maxVertexm2v_test: native-metal: no device answer: the device has no answer for maxVertexAmplificationCount
+m2v_test: native-metal: no device answer: the device has no answer for maxComputm2v_test: native-metal: no device answer: the device has no answer for maxComputeThreadgroupMemory
+m2v_test: native-metal: no device answer: the device has no answer for isLargeMRm2v_test: native-metal: no device answer: the device has no answer for isLargeMRTSupported
+m2v_test: native-metal: no device answer: the device has no answer for supportsCm2v_test: native-metal: no device answer: the device has no answer for supportsComputeCompressedTextomputeCompressedTextureWrite
+m2v_test: native-metal: no device answer: the device has no answer for supportsCm2v_test: native-metal: no device answer: the device has no answer for supportsConditionalLoadStore
+m2v_test: device "Mali-G715 MC7" (class NativeBridgeMetalDevice) in 1663.5 ms
+m2v_test: blit fill: 1048576 of 1048576 words right in 235.65 ms (status 4)
+m2v_test: texture 0x101e0ea00 (class NBTexture), as the pass's colour attachmentm2v_test: texture 0x101e0ea00 (class NBTexture), as the pass's colour attachment 0: 0x101e0ea00
+m2v_test: clear of 1080x2400: 2592000 of 2592000 pixels orange in 3.09 ms (firstm2v_test: clear of 1080x2400: 2592000 of 2592000 pixels orange in 3.09 ms (first pixel 0xffff8000)
+m2v_test: 100 full-screen clears, each committed and waited for: 1.016 ms on avem2v_test: 100 full-screen clears, each committed and waited for: 1.016 ms on average, 0.908 at best
+m2v_test:   status 4, first pixel 0xff00ff00, last 0xff00ff00
+m2v_test: IOSurface written by the CPU, copied by the GPU: 65536 of 65536 pixelsm2v_test: IOSurface written by the CPU, copied by the GPU: 65536 of 65536 pixels green
+m2v_test:   status 4, first pixel 0xffff0000, last 0xffff0000
+m2v_test: own pages (no-copy buffer made, texture made) copied by the GPU: 65536m2v_test: own pages (no-copy buffer made, texture made) copied by the GPU: 65536 of 65536 pixels red of 65536 pixels red
+m2v_test: IOSurface cleared by the GPU, read by the CPU: 65536 of 65536 pixels bm2v_test: IOSurface cleared by the GPU, read by the CPU: 65536 of 65536 pixels blue (first 0xff0000flue (first 0xff0000ff)
+m2v_test: status c105/0 d105 p0 x5 R102 D0 F101 M2531 C0 B3 native-metal: no devm2v_test: status c105/0 d105 p0 x5 R102 D0 F101 M2531 C0 B3 native-metal: no device answer: the deviice answer: the device has no answer for supportsConditionalLoadStore | native-metal: no device answce has no answer for supportsConditionalLoadStore | native-metal: no device answer: the device has ner: the device has no answer for supportsComputeCompressedTextureWrite
+m2v_test: first problem: 
+m2v_test: PASS

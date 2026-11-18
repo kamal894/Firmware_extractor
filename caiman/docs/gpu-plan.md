@@ -301,6 +301,32 @@ vk_tri: triangle: 18432 red, 47104 green, 0 other of 65536 pixels (28% red; 28% 
 Nothing new was needed in the kernel or hakios-panthor: the vertex/tiler, fragment and compute streams, the
 tiler heap and the binds all work as PanVK uses them.
 
+## Step 17: Metal on the Mali (metal2vulkan over PanVK): m2v_test PASS (run darwin-m2v9)
+
+tools/mk-m2v.sh builds UniXNU's AdrenoMetal frontend and steelbrain's metal2vulkan on the Mac (rustup target
+aarch64-apple-ios, Homebrew llvm@21, SDKROOT the macOS SDK for cargo's build scripts); m2v_test opens it over
+PanVK (/redwood/lib/libvulkan_panfrost.dylib):
+
+```
+m2v_test: device "Mali-G715 MC7" (class NativeBridgeMetalDevice)
+m2v_test: blit fill: 1048576 of 1048576 words right
+m2v_test: clear of 1080x2400: 2592000 of 2592000 pixels orange in 3.09 ms
+m2v_test: 100 full-screen clears, each committed and waited for: 1.016 ms on average, 0.908 at best
+m2v_test: IOSurface written by the CPU, copied by the GPU: 65536 of 65536 pixels green
+m2v_test: own pages (no-copy buffer made, texture made) copied by the GPU: 65536 of 65536 pixels red
+m2v_test: IOSurface cleared by the GPU, read by the CPU: 65536 of 65536 pixels blue
+m2v_test: PASS
+```
+
+What it took: PanVK exports vkGetInstanceProcAddr on Darwin (ash::Entry::load_from); VK_EXT_external_memory_host
+in PanVK (a host pointer becomes a hakios-panthor descriptor imported as a dma-buf; HOST_ALLOCATION importable;
+16 KiB alignment), the IOSurface table (hakios_drm_host_surface, called by the frontend) and kernel requests
+0x7e/0x7d behind drmPrimeFDToHandle, the kernel's bind taking surface and client buffers; IOKit mappings made
+unique (kIOMapUnique); host image copy off on Darwin (metal2vulkan's host reads of Shared textures faulted in
+pan_access_tiled_image: to be found; copies through a submission work); the processor's caches cleaned and
+invalidated over imported ranges before each submission and after each wait (the Mali does not snoop: 32 to 646
+pixels were stale); the kernel's hang report for the Mali instead of the Adreno's registers (it panicked).
+
 ## Next
 
 8. User space: a Mali back end for hakios-metal (today Adreno PM4 + ir3) emitting CSF command buffers and

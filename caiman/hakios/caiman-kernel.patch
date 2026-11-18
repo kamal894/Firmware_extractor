@@ -1456,10 +1456,10 @@ index 8d69400..f6ebbf9 100644
  		if (tm_va[b] == 0) {
 diff --git a/tools/mesa/hakios-panthor/hakios.panthor.c b/tools/mesa/hakios-panthor/hakios.panthor.c
 new file mode 100644
-index 0000000..d391c50
+index 0000000..fff36e4
 --- /dev/null
 +++ b/tools/mesa/hakios-panthor/hakios.panthor.c
-@@ -0,0 +1,1041 @@
+@@ -0,0 +1,1109 @@
 +/*
 + * The libdrm of xf86drm.h for PanVK: Linux's Panthor requests to the kernel's HakiosGPU on the Mali (boot-arg mali=1),
 + * the counterpart of hakios-drm (Adreno, msm). What the kernel has (caiman repo docs/gpu-plan.md, steps 10-14):
@@ -1519,6 +1519,8 @@ index 0000000..d391c50
 +struct k_heap { uint32_t chunk_size, chunks; uint64_t context, first_chunk; };
 +struct k_bind { uint32_t handle, flags; uint64_t va, offset, size; };
 +struct k_register { uint32_t offset, value; };
++
++static void host_range_drop(uint32_t handle);
 +
 +static io_connect_t connection;
 +static int connection_fd = -1;
@@ -1680,7 +1682,10 @@ index 0000000..d391c50
 +drmCloseBufferHandle(int fd, uint32_t handle)
 +{
 +	struct k_gem_close c = { handle, 0 };
-+	int error = call(REQ_GEM_CLOSE, &c, sizeof(c));
++	int error;
++
++	host_range_drop(handle);
++	error = call(REQ_GEM_CLOSE, &c, sizeof(c));
 +
 +	(void)fd;
 +	return error ? fail(error) : 0;
@@ -1715,6 +1720,60 @@ index 0000000..d391c50
 +		return MAP_FAILED;
 +	}
 +	return (void *)(uintptr_t)at;
++}
++
++/* ---- the processor's caches over memory imported at an address --------------------------------------------------------
++ * An IOSurface's pages and a program's own are ordinary cached memory, and the Mali does not look into the processor's
++ * caches: lines the processor wrote stay in them where the GPU reads, and lines it read before stay stale after the GPU
++ * wrote (m2v_test: 32 to 646 pixels of 65536 wrong). So every such range is cleaned and invalidated to the point of
++ * coherency before each submission, and again once a wait has seen the GPU done.
++ */
++#define HOST_RANGES     512
++
++static struct { uintptr_t address; uint64_t size; uint32_t handle; } host_ranges[HOST_RANGES];
++static pthread_mutex_t ranges_lock = PTHREAD_MUTEX_INITIALIZER;
++
++static void
++host_range_add(uintptr_t address, uint64_t size, uint32_t handle)
++{
++	pthread_mutex_lock(&ranges_lock);
++	for (unsigned i = 0; i < HOST_RANGES; i++) {
++		if (host_ranges[i].address == 0) {
++			host_ranges[i].address = address;
++			host_ranges[i].size = size;
++			host_ranges[i].handle = handle;
++			break;
++		}
++	}
++	pthread_mutex_unlock(&ranges_lock);
++}
++
++static void
++host_range_drop(uint32_t handle)
++{
++	pthread_mutex_lock(&ranges_lock);
++	for (unsigned i = 0; i < HOST_RANGES; i++) {
++		if (host_ranges[i].address != 0 && host_ranges[i].handle == handle) {
++			host_ranges[i].address = 0;
++		}
++	}
++	pthread_mutex_unlock(&ranges_lock);
++}
++
++static void
++host_ranges_to_memory(void)
++{
++	pthread_mutex_lock(&ranges_lock);
++	for (unsigned i = 0; i < HOST_RANGES; i++) {
++		if (host_ranges[i].address == 0) {
++			continue;
++		}
++		for (uintptr_t p = host_ranges[i].address & ~(uintptr_t)63; p < host_ranges[i].address + host_ranges[i].size; p += 64) {
++			__asm__ volatile("dc civac, %0" : : "r"(p) : "memory");
++		}
++	}
++	__asm__ volatile("dsb sy" ::: "memory");
++	pthread_mutex_unlock(&ranges_lock);
 +}
 +
 +/* ---- syncobjs: hakios-drm's, over this kernel's fences -------------------------------------------------------------- */
@@ -1759,7 +1818,11 @@ index 0000000..d391c50
 +	}
 +	wait.seconds = deadline / 1000000000;
 +	wait.nanoseconds = deadline % 1000000000;
-+	return call(REQ_WAIT_FENCE, &wait, sizeof(wait)) == 0;
++	if (call(REQ_WAIT_FENCE, &wait, sizeof(wait)) != 0) {
++		return false;
++	}
++	host_ranges_to_memory();                /* (what the GPU wrote, not what the caches kept) */
++	return true;
 +}
 +
 +static void
@@ -2117,6 +2180,9 @@ index 0000000..d391c50
 +		*handle = request.handle;
 +	}
 +	trace(surface ? "IOSurface as a buffer" : "own pages as a buffer", 59, error);
++	if (error == 0) {
++		host_range_add(address, size, *handle);
++	}
 +	return error ? fail(error) : 0;
 +}
 +
@@ -2366,6 +2432,8 @@ index 0000000..d391c50
 +			fence = __atomic_load_n(&last_fence, __ATOMIC_ACQUIRE);
 +		} else {
 +			struct k_submit k = { .queue = q->queue_index, .size = q->stream_size, .address = q->stream_addr };
++
++			host_ranges_to_memory();        /* (what the processor wrote, for the GPU to read) */
 +
 +			if ((error = call(REQ_MALI_SUBMIT, &k, sizeof(k))) != 0) {
 +				return error;
