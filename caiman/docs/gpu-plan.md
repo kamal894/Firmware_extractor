@@ -202,6 +202,17 @@ next ((address & ~0xfff) | size >> 12), a 32-byte heap context pointing at the f
 48) with the context before the draw, as PanVK does at queue start; the Tiler Heap descriptor names the first
 chunk. The triangle comes out the same (1152 red, 2944 green), no faults: the firmware takes the format.
 
+## Step 12: tiler heaps from the kernel (run darwin-mali4)
+
+`mali_tiler_heap_create(chunk_size, count, &first)` in the kernel (what Panthor's TILER_HEAP_CREATE does for
+PanVK): wired kernel chunks mapped at consecutive AS1 addresses, linked through their headers, and a heap
+context; returns the context's and the first chunk's GPU addresses. Self test with PanVK's own request (5 x 2
+MiB), then HEAP_SET with it from a command buffer on stream 0:
+
+```
+mali: self test, tiler heap: context at GPU 0x100010000, first chunk 0x100020000 (5 x 2 MiB); HEAP_SET then a store: 0x4ea90001: OK
+```
+
 ## Next
 
 8. User space: a Mali back end for hakios-metal (today Adreno PM4 + ir3) emitting CSF command buffers and

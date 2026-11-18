@@ -1,0 +1,5 @@
+mali: GPU_ID 0xb8a21030, MCU_STATUS 1; firmware interface 0x2080000; stream 0 insert 576, extract 576; streams 1, 2 rings 65536, 65536 bytes; AS1 tables at 0xf0130000, 30260 KiB of DRAM for more
+mali: self test, stream 0: a command buffer in kernel memory (phys 0x8fc540000) at GPU address 0x100000000, fence 1 done; it wrote 0xc0ffee10: OK
+mali: self test, stream 1: a command buffer in kernel memory (phys 0x8fc540000) at GPU address 0x100000000, fence 2 done; it wrote 0xc0ffee11: OK
+mali: self test, stream 2: fence 3 done, wrote 0xc0ffee12: OK
+mali: self test, tiler heap: context at GPU 0x100010000, first chunk 0x100020000 (5 x 2 MiB); HEAP_SET then a store: 0x4ea90001: OK

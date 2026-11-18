@@ -1,5 +1,5 @@
 diff --git a/drivers/gpu/hakios.adreno.c b/drivers/gpu/hakios.adreno.c
-index 3f1f97a..8e5f8d5 100644
+index 3f1f97a..65c8a8b 100644
 --- a/drivers/gpu/hakios.adreno.c
 +++ b/drivers/gpu/hakios.adreno.c
 @@ -100,6 +100,7 @@
@@ -127,7 +127,7 @@ index 3f1f97a..8e5f8d5 100644
  	for (int i = 0; i < 20000; i++) {
  		room = (rd(gpu.base + CP_RB_RPTR) + RING_WORDS - ring_at - 1) % RING_WORDS;
  		if (room >= wanted) {
-@@ -3753,6 +3805,335 @@ start_by_itself(void)
+@@ -3753,6 +3805,415 @@ start_by_itself(void)
   * as long as the steps and the watch after them last, nothing else writes to the log, so that
   * its end -- all that the loader's notes keep -- is about what is being done here.
   */
@@ -359,12 +359,64 @@ index 3f1f97a..8e5f8d5 100644
 +	return true;
 +}
 +
++/*
++ * A tiler heap, as Panthor's TILER_HEAP_CREATE gives PanVK one (docs/panvk-uapi.md), in kbase's format (the
++ * loader's step 11 drew a triangle with it): `count` chunks of `chunk_size` bytes of wired kernel memory, each
++ * mapped at consecutive AS1 addresses, each starting with a 64-byte header whose first u64 points at the next
++ * ((address & ~0xfff) | size >> 12; 0 for the last), and a 32-byte heap context pointing at the first. Returns
++ * the context's GPU address (for HEAP_SET) and the first chunk's (for the Tiler Heap descriptor); 0: no memory.
++ * Chunks are never added on out-of-memory events yet: enough are given at the start.
++ */
++static uint64_t
++mali_tiler_heap_create(uint32_t chunk_size, uint32_t count, uint64_t *first_chunk)
++{
++	vm_offset_t ctx_page = 0;
++	uint64_t ctx_va, chunk_va = 0, prev_hdr_kva = 0, first = 0;
++
++	if (chunk_size < 0x10000 || (chunk_size & 0xfff) || count == 0 ||
++	    kmem_alloc(kernel_map, &ctx_page, PAGE_SIZE, KMA_KOBJECT | KMA_ZERO, VM_KERN_MEMORY_IOKIT) != KERN_SUCCESS) {
++		return 0;
++	}
++	ctx_va = mali_address(PAGE_SIZE);
++	for (uint64_t off = 0; off < PAGE_SIZE; off += 4096) {
++		mali_map(ctx_va + off, kvtophys(ctx_page + off), false);
++	}
++	for (uint32_t c = 0; c < count; c++) {
++		vm_offset_t chunk = 0;
++		uint64_t va = mali_address(chunk_size);
++
++		if (va == 0 || kmem_alloc(kernel_map, &chunk, chunk_size, KMA_KOBJECT | KMA_ZERO,
++		    VM_KERN_MEMORY_IOKIT) != KERN_SUCCESS) {
++			return 0;
++		}
++		for (uint64_t off = 0; off < chunk_size; off += 4096) {
++			if (!mali_map(va + off, kvtophys(chunk + off), false)) {
++				return 0;
++			}
++		}
++		if (prev_hdr_kva) {
++			*(volatile uint64_t *)prev_hdr_kva = va | (chunk_size >> 12);
++			hakios_gpu_to_memory((void *)prev_hdr_kva, 64);
++		} else {
++			first = va;
++		}
++		prev_hdr_kva = chunk;
++		chunk_va = va;
++	}
++	(void)chunk_va;
++	*(volatile uint64_t *)ctx_page = first | (chunk_size >> 12);
++	hakios_gpu_to_memory((void *)ctx_page, 64);
++	mali_as1_flush();
++	*first_chunk = first;
++	return ctx_va;
++}
++
 +/* The API, used the way HakiosGPU's client uses it: a command buffer in a kernel page, mapped, submitted, waited for. */
 +static void
 +mali_self_test(void)
 +{
 +	vm_offset_t page = 0;
-+	uint64_t phys, address, deadline;
++	uint64_t phys, address, deadline, heap_ctx, heap_first = 0;
 +	volatile uint64_t *cmd;
 +	volatile uint32_t *data;
 +	uint32_t fence, words;
@@ -402,10 +454,38 @@ index 3f1f97a..8e5f8d5 100644
 +			delay(10);
 +		}
 +		hakios_gpu_to_memory((void *)(page + 0x800), 64);
++		if (st == 2) {
++			break;
++		}
 +		printf("mali: self test, stream %u: a command buffer in kernel memory (phys %#llx) at GPU address %#llx, fence "
 +		    "%u %s; it wrote %#x%s\n", st, phys, address, fence, fence && mali_done(fence) ? "done" : "NOT done", *data,
 +		    *data == 0xc0ffee10 + st ? ": OK" : "");
 +	}
++	printf("mali: self test, stream 2: fence %u %s, wrote %#x%s\n", fence, fence && mali_done(fence) ? "done" : "NOT done",
++	    *data, *data == 0xc0ffee12 ? ": OK" : "");
++
++	/* a tiler heap as PanVK asks for one (5 chunks of 2 MiB), then HEAP_SET with it on stream 0 */
++	heap_ctx = mali_tiler_heap_create(2 * 1024 * 1024, 5, &heap_first);
++	if (heap_ctx != 0) {
++		cmd[0] = (0x01ULL << 56) | (0ULL << 48) | heap_ctx;                     /* MOVE48 r0:r1 = the context */
++		cmd[1] = (0x30ULL << 56) | (0ULL << 40);                                  /* HEAP_SET */
++		cmd[2] = (0x01ULL << 56) | (2ULL << 48) | (address + 0x800);              /* MOVE48 r2:r3 */
++		cmd[3] = (0x02ULL << 56) | (4ULL << 48) | 0x4ea90001;                     /* MOVE32 r4 */
++		cmd[4] = (0x1cULL << 56) | (1ULL << 32);
++		cmd[5] = (0x15ULL << 56) | (4ULL << 48) | (2ULL << 40) | (1ULL << 16);    /* STORE r4 -> [r2] */
++		cmd[6] = (0x03ULL << 56) | (1ULL << 16);
++		words = 7 * 2;
++		*data = 0;
++		hakios_gpu_to_memory((void *)page, PAGE_SIZE);
++		fence = mali_submit_on(0, &address, &words, 1);
++		clock_interval_to_deadline(1, NSEC_PER_SEC, &deadline);
++		while (fence && !mali_done(fence) && mach_absolute_time() < deadline) {
++			delay(10);
++		}
++		hakios_gpu_to_memory((void *)(page + 0x800), 64);
++	}
++	printf("mali: self test, tiler heap: context at GPU %#llx, first chunk %#llx (5 x 2 MiB); HEAP_SET then a store: %#x%s\n",
++	    heap_ctx, heap_first, *data, *data == 0x4ea90001 ? ": OK" : "");
 +}
 +
 +static void
@@ -463,7 +543,7 @@ index 3f1f97a..8e5f8d5 100644
  void
  hakios_adreno_init(void)
  {
-@@ -3765,6 +4146,11 @@ hakios_adreno_init(void)
+@@ -3765,6 +4226,11 @@ hakios_adreno_init(void)
  	uint32_t only = 0, done = 0, failed = 0, keep = 0;
  	bool by_itself = false;
  
