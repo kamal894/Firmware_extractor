@@ -394,6 +394,23 @@ What was found:
 - m2v_test: a GPU-cleared IOSurface read by the processor had 32 stale pixels once (darwin-ws23); nothing
   invalidates the processor's caches after the GPU is done. It passed in ws25 and ws28.
 
+The shared-memory corruption, narrowed (runs darwin-ws29..31):
+
+- `mali_shared_cached=1` (IOSurfaces cached): 38-46 frames a second, much corruption (stray icons on the App
+  Library); `=2` (client pages cached): 35-41, a label half cut;
+- the kernel self-test now checks the L2 itself (a cached word read, changed by the processor, read again by a
+  new submission; a GPU store read back after the fence): OK, so the per-submission clean and invalidate works;
+- `mali_shared_cached=3 m2v_sync=1` (the plug-in waits for every command buffer at its commit: one frame on the
+  GPU at a time): a clean screen, at 25 frames a second. So the corruption needs GPU work and processor writes
+  to the same shared memory to overlap.
+
+Codex's reading: an ownership race on shared memory. A partly written cache line that both the GPU's L2 and a
+processor own (byte-precise when the GPU does not cache it) can be written back over the other's bytes; and
+nothing invalidates the processor's caches after the GPU writes. kbase and Panthor map imports GPU-cached, with
+cache maintenance at ownership hand-offs (map/unmap, KCPU import), not per submission. The fix is to track
+ownership of shared ranges across clients and hand them over with the right maintenance. Until then IOSurfaces
+and client pages stay non-cacheable for the GPU.
+
 Codex's review of the CSF back end (to do): service CS/CSG events (tiler OOM bit 26, faults), grow the tiler
 heap on OOM, skip the per-submission L2 flush with Panthor's LATEST_FLUSH id, a poller or interrupts for
 completion, the GLB power-off timer.

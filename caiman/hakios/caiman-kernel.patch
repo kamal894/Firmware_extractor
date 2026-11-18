@@ -1,5 +1,5 @@
 diff --git a/drivers/gpu/hakios.adreno.c b/drivers/gpu/hakios.adreno.c
-index 3f1f97a..b52c2b4 100644
+index 3f1f97a..8ea6273 100644
 --- a/drivers/gpu/hakios.adreno.c
 +++ b/drivers/gpu/hakios.adreno.c
 @@ -100,6 +100,7 @@
@@ -146,7 +146,7 @@ index 3f1f97a..b52c2b4 100644
  	uint32_t context = smmu_context(&core_space);
  
  	printf("adreno: gpu: %s: submission %u is the last, the core has done %u; ring: read up to %u, written up to %u; status "
-@@ -3753,6 +3813,673 @@ start_by_itself(void)
+@@ -3753,6 +3813,728 @@ start_by_itself(void)
   * as long as the steps and the watch after them last, nothing else writes to the log, so that
   * its end -- all that the loader's notes keep -- is about what is being done here.
   */
@@ -671,6 +671,61 @@ index 3f1f97a..b52c2b4 100644
 +	}
 +	printf("mali: self test, tiler heap: context at GPU %#llx, first chunk %#llx (5 x 2 MiB); HEAP_SET then a store: %#x%s\n",
 +	    heap_ctx, heap_first, *data, *data == 0x4ea90001 ? ": OK" : "");
++
++	/*
++	 * The L2 as PanVK's memory now goes through it (mali_map_cached): a word of a cached page read by the GPU, then
++	 * changed by the processor (and cleaned to memory), then read again by a new submission, whose L2 clean and
++	 * invalidate (mali_submit_on) must make it read the new value; then a word the GPU stores into that page, read
++	 * by the processor after the fence.
++	 */
++	{
++		vm_offset_t cached = 0;
++		uint64_t cva = mali_address(PAGE_SIZE);
++		volatile uint32_t *word;
++		uint32_t got[3] = { 0 };
++
++		if (kmem_alloc(kernel_map, &cached, PAGE_SIZE, KMA_KOBJECT | KMA_ZERO, VM_KERN_MEMORY_IOKIT) != KERN_SUCCESS) {
++			return;
++		}
++		for (uint64_t off = 0; off < PAGE_SIZE; off += 4096) {
++			mali_map_cached(cva + off, kvtophys(cached + off), false, 1);
++		}
++		mali_as1_flush();
++		word = (volatile uint32_t *)cached;
++		cmd[0] = (0x01ULL << 56) | (0ULL << 48) | cva;                          /* MOVE48 r0:r1 = the cached word */
++		cmd[1] = (0x1cULL << 56) | (1ULL << 32);                                  /* SB_SEL_OTHER 0 */
++		cmd[2] = (0x14ULL << 56) | (2ULL << 48) | (0ULL << 40) | (1ULL << 16);    /* LOAD_MULTIPLE r2 <- [r0] */
++		cmd[3] = (0x03ULL << 56) | (1ULL << 16);                                  /* WAIT slot 0 */
++		cmd[4] = (0x01ULL << 56) | (4ULL << 48) | (address + 0x800);              /* MOVE48 r4:r5 = the result */
++		cmd[5] = (0x15ULL << 56) | (2ULL << 48) | (4ULL << 40) | (1ULL << 16);    /* STORE r2 -> [r4] */
++		cmd[6] = (0x02ULL << 56) | (6ULL << 48) | 0x5703e333;                     /* MOVE32 r6 */
++		cmd[7] = (0x15ULL << 56) | (6ULL << 48) | (0ULL << 40) | (1ULL << 16);    /* STORE r6 -> [r0 + 0], last */
++		cmd[8] = (0x03ULL << 56) | (1ULL << 16);                                  /* WAIT slot 0 */
++		for (int round = 0; round < 2; round++) {
++			words = (round == 0 ? 6 : 9) * 2;
++			if (round == 0) {
++				cmd[6] = (0x03ULL << 56) | (1ULL << 16);
++			} else {
++				cmd[6] = (0x02ULL << 56) | (6ULL << 48) | 0x5703e333;
++			}
++			*word = round == 0 ? 0x11110001 : 0x22220002;
++			*data = 0;
++			hakios_gpu_to_memory((void *)cached, PAGE_SIZE);
++			hakios_gpu_to_memory((void *)page, PAGE_SIZE);
++			fence = mali_submit_on(0, &address, &words, 1);
++			clock_interval_to_deadline(1, NSEC_PER_SEC, &deadline);
++			while (fence && !mali_done(fence) && mach_absolute_time() < deadline) {
++				delay(10);
++			}
++			hakios_gpu_to_memory((void *)(page + 0x800), 64);
++			hakios_gpu_to_memory((void *)cached, 64);
++			got[round] = *data;
++			got[2] = *word;
++		}
++		printf("mali: self test, L2: the GPU read %#x then %#x (want 0x11110001, 0x22220002), then stored %#x (want "
++		    "0x5703e333)%s\n", got[0], got[1], got[2], got[0] == 0x11110001 && got[1] == 0x22220002 &&
++		    got[2] == 0x5703e333 ? ": OK" : ": WRONG");
++	}
 +}
 +
 +/* For HakiosGPU's Mali requests (hakios.gpu.cpp kMaliQuery, kMaliSubmit, kMaliTilerHeap); false / 0 without mali=1 */
@@ -820,7 +875,7 @@ index 3f1f97a..b52c2b4 100644
  void
  hakios_adreno_init(void)
  {
-@@ -3765,6 +4492,11 @@ hakios_adreno_init(void)
+@@ -3765,6 +4547,11 @@ hakios_adreno_init(void)
  	uint32_t only = 0, done = 0, failed = 0, keep = 0;
  	bool by_itself = false;
  
@@ -833,7 +888,7 @@ index 3f1f97a..b52c2b4 100644
  		display_probe();
  	}
 diff --git a/drivers/gpu/hakios.gpu.cpp b/drivers/gpu/hakios.gpu.cpp
-index 633b419..d486615 100644
+index 633b419..b6aa633 100644
 --- a/drivers/gpu/hakios.gpu.cpp
 +++ b/drivers/gpu/hakios.gpu.cpp
 @@ -56,6 +56,13 @@ void hakios_gpu_mapped(void);
@@ -897,7 +952,7 @@ index 633b419..d486615 100644
  static IOLock * gGPULock;                       /* around everything that is the GPU's (hakios_gpu_...) */
  static bool gGPUReported;
  static bool gGPUCached;                         /* boot-arg gpu_cached=1 */
-+static bool gMaliCachedShared;                  /* boot-arg mali_shared_cached=1: IOSurfaces and client pages cached by the Mali too */
++static uint32_t gMaliCachedShared;              /* boot-arg mali_shared_cached: 1 IOSurfaces, 2 client pages cached by the Mali too */
  
  /* What the last seconds' submissions were and cost here, for the log. */
  static struct {
@@ -952,15 +1007,17 @@ index 633b419..d486615 100644
  		IOLog("HakiosGPU: a wait for submission %u, which is not done, until %lld.%09lld s, asked for at %llu.%09llu s: "
  		    "over before it began\n", fence, when->seconds, when->nanoseconds, now / NSEC_PER_SEC, now % NSEC_PER_SEC);
  	}
-@@ -330,6 +393,7 @@ HakiosGPUStart(void)
+@@ -330,6 +393,9 @@ HakiosGPUStart(void)
  	uint32_t cached = 0;
  
  	gGPUCached = PE_parse_boot_argn("gpu_cached", &cached, sizeof(cached)) && cached != 0;
-+	gMaliCachedShared = PE_parse_boot_argn("mali_shared_cached", &cached, sizeof(cached)) && cached != 0;
++	cached = 0;
++	PE_parse_boot_argn("mali_shared_cached", &cached, sizeof(cached));
++	gMaliCachedShared = cached;
  	gGPULock = IOLockAlloc();
  	gpu = OSTypeAlloc(HakiosGPU);
  	if (gpu == NULL || provider == NULL || !gpu->init() || !gpu->attach(provider)) {
-@@ -433,6 +497,9 @@ class HakiosGPUUserClient : public IOUserClient
+@@ -433,6 +499,9 @@ class HakiosGPUUserClient : public IOUserClient
  	void dropKept(struct gpu_kept * k);
  	void reap(void);
  	IOReturn gemNew(struct msm_gem_new * request);
@@ -970,7 +1027,7 @@ index 633b419..d486615 100644
  	IOReturn surfaceBuffer(struct hakios_surface * request);
  	IOReturn userBuffer(struct hakios_user_memory * request);
  	IOReturn gemInfo(struct msm_gem_info * request);
-@@ -944,6 +1011,119 @@ HakiosGPUUserClient::userBuffer(struct hakios_user_memory * request)
+@@ -944,6 +1013,119 @@ HakiosGPUUserClient::userBuffer(struct hakios_user_memory * request)
  	return kIOReturnSuccess;
  }
  
@@ -1081,7 +1138,7 @@ index 633b419..d486615 100644
 +		}
 +		ok = ok && hakios_mali_bind_page(request->va + at, phys,
 +		    b != NULL && ((request->flags & 1) || (b->flags & MSM_BO_GPU_READONLY)),
-+		    (request->flags & 2) != 0 || (b != NULL && (b->surface != NULL || b->client) && !(gMaliCachedShared)));
++		    (request->flags & 2) != 0 || (b != NULL && ((b->surface != NULL && !(gMaliCachedShared & 1)) || (b->client && !(gMaliCachedShared & 2)))));
 +	}
 +	hakios_mali_bound();
 +	return ok ? kIOReturnSuccess : kIOReturnBadArgument;
@@ -1090,7 +1147,7 @@ index 633b419..d486615 100644
  IOReturn
  HakiosGPUUserClient::gemInfo(struct msm_gem_info * request)
  {
-@@ -1216,6 +1396,11 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
+@@ -1216,6 +1398,11 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
  		struct hakios_surface surface;
  		struct hakios_user_memory user;
  		struct hakios_show show;
@@ -1102,7 +1159,7 @@ index 633b419..d486615 100644
  	} r;
  	size_t size = args->structureInputSize;
  	struct gpu_buffer * b;
-@@ -1298,6 +1483,7 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
+@@ -1298,6 +1485,7 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
  			ret = kIOReturnBadArgument;
  		} else {
  			freeBuffer(b);
@@ -1110,7 +1167,7 @@ index 633b419..d486615 100644
  			reap();
  		}
  		IOLockUnlock(gGPULock);
-@@ -1311,6 +1497,31 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
+@@ -1311,6 +1499,31 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
  	case kHakiosShow:
  		ret = show(&r.show);
  		break;
@@ -3773,7 +3830,7 @@ index 0000000..607d0b8
 +# Commands run by the launchd job com.hakios.demo: PanVK, compute and a triangle (src/vk_tri.c), with mali=1
 +/redwood/bin/vk_tri
 diff --git a/userland/src/HakiosMetalCA.m b/userland/src/HakiosMetalCA.m
-index c6a7ff1..52f1e9d 100644
+index c6a7ff1..79b89ae 100644
 --- a/userland/src/HakiosMetalCA.m
 +++ b/userland/src/HakiosMetalCA.m
 @@ -104,6 +104,8 @@
@@ -3867,7 +3924,7 @@ index c6a7ff1..52f1e9d 100644
  				 object_getClassName(device));
  			/* QuartzCore's pipeline library opened as for hakios-metal's device (this class's method, onto the
  			 * metal2vulkan device's class: it calls _MTLDevice's own, both devices' base): its pipelines then
-@@ -2222,6 +2272,105 @@ hm_boot_arg_set(const char *what)
+@@ -2222,6 +2272,121 @@ hm_boot_arg_set(const char *what)
  				}
  				class_replaceMethod(nb, @selector(targetDeviceInfo),
  				    imp_implementationWithBlock(^const struct MTLTargetDeviceArch *(id me) { (void)me; return &target; }), "^v16@0:8");
@@ -3970,10 +4027,26 @@ index c6a7ff1..52f1e9d 100644
 +						}
 +					}
 +				}
++			}
++			/* (diagnostic) boot-arg m2v_sync=1: each command buffer waited for at its commit, one at a time on the GPU,
++			 * so the processor never writes shared memory the GPU may still read (mali_shared_cached's corruption) */
++			if (hm_boot_arg_set("m2v_sync=1")) {
++				Class cb = NSClassFromString(@"NBCommandBuffer");
++				Method commit = cb ? class_getInstanceMethod(cb, @selector(commit)) : NULL;
++
++				if (commit != NULL) {
++					void (*original)(id, SEL) = (void (*)(id, SEL))method_getImplementation(commit);
++
++					method_setImplementation(commit, imp_implementationWithBlock(^(id me) {
++						original(me, @selector(commit));
++						[me waitUntilCompleted];
++					}));
++					hm_print("m2v_sync=1: every commit waited for\n");
++				}
  			}
  			/* what it did, every 5 s: commits, passes, draws, refusals; the textures and the surfaces imported */
  			dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
-@@ -2231,6 +2380,22 @@ hm_boot_arg_set(const char *what)
+@@ -2231,6 +2396,22 @@ hm_boot_arg_set(const char *what)
  					native_bridge_metal_status(status, sizeof(status));
  					native_bridge_metal_formats(formats, sizeof(formats));
  					hm_print("metal2vulkan: %s | %s\n", status, formats);
