@@ -469,3 +469,16 @@ completion, the GLB power-off timer.
   data-cache level before an image load instead of `dc civac` over the buffer for each request (with the D-cache
   off, the per-line maintenance was 15.5 s of the 17 s; the device itself waits 0.9 s). xnusys 1.9 GB: 32 s ->
   1.4 s (1.3 GB/s); the kernel starts 24 s after the payload instead of 56 s.
+
+### Step 19 (cont.): where a frame's time goes (2026-11-18, ws47-ws56)
+
+- metal2vulkan's telemetry: a frame's command buffer took 8-16 ms from commit to completion (never under 8), the
+  kernel ~1 blocking 15 ms fence wait a frame. Not the cause, each tried alone: the encode thread off, the shim's
+  wait-any in 2 ms slices, spinning instead of sleeping in the kernel's wait, the GPU at 890 MHz instead of 580, no
+  cache flush before a submission (`mali_flushes=1`), and the shim no longer waiting on the processor for a
+  dependency on its own stream (kept: it is right, `HAKIOS_PANTHOR_SAME_STREAM=0` turns it off).
+- The GPU's own timestamps (STORE_STATE into the fence page, `mali: stream N: on the GPU` / `given to its start`):
+  submissions start 0.5-1 ms after they are given, and a frame's work runs **8-16 ms on the GPU**, idle home
+  screen included. With surfaces GPU-cached (`mali_shared_cached=1`) the same work is **4-8 ms** and swipes go
+  37-42 fps: the GPU is slow on uncached IOSurfaces (the blur's taps from DRAM each time), not on its clock.
+- ws56 (cached, with the lock/framebuffer invalidation always on): 50/50 clean pictures, m2v_test PASS.

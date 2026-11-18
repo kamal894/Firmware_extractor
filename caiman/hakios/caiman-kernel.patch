@@ -94,7 +94,7 @@ index 85fd700..f40b5b3 100644
 +SYSCTL_PROC(_kern_hakios, OID_AUTO, pmsg, CTLTYPE_OPAQUE | CTLFLAG_RW | CTLFLAG_LOCKED, NULL, 0, pmsg_sysctl, "",
 +    "append to pstore's pmsg zone (boot-arg pmsg=1)");
 diff --git a/drivers/gpu/hakios.adreno.c b/drivers/gpu/hakios.adreno.c
-index 3f1f97a..700adc3 100644
+index 3f1f97a..56879cd 100644
 --- a/drivers/gpu/hakios.adreno.c
 +++ b/drivers/gpu/hakios.adreno.c
 @@ -100,6 +100,7 @@
@@ -240,7 +240,7 @@ index 3f1f97a..700adc3 100644
  	uint32_t context = smmu_context(&core_space);
  
  	printf("adreno: gpu: %s: submission %u is the last, the core has done %u; ring: read up to %u, written up to %u; status "
-@@ -3753,6 +3812,928 @@ start_by_itself(void)
+@@ -3753,6 +3812,970 @@ start_by_itself(void)
   * as long as the steps and the watch after them last, nothing else writes to the log, so that
   * its end -- all that the loader's notes keep -- is about what is being done here.
   */
@@ -317,7 +317,12 @@ index 3f1f97a..700adc3 100644
 +	 * the fence seen written, in milliseconds by power of two (<1, <2 ... <64, more); hakios_mali_latency() */
 +	uint32_t given[64], seen, took[8];
 +	uint64_t given_at[64];
++	/* (diagnostic) the GPU's own timestamps of each of the last 16 submissions, its start and its end (STORE_STATE into
++	 * the fence page from MALI_STAMP_VA): how long it ran (ran[]) and how long it waited before it began (queued[]) */
++	volatile uint64_t *stamps;
++	uint32_t ran[8], queued[8];
 +} mali_stream[MALI_STREAMS];
++#define MALI_STAMP_VA           0x200d00u       /* 256 bytes a stream: 16 submissions x {start, end} */
 +static uint64_t mali_pool_next, mali_pool_end, mali_va_next = MALI_VA_START;
 +static struct {
 +	uint64_t pa;
@@ -575,11 +580,17 @@ index 3f1f97a..700adc3 100644
 +	}
 +}
 +
++/*
++ * boot-arg mali_flushes=1 (a test): no flush of the GPU's caches before a submission's work, only the one after it
++ * (every submission ends with its caches cleaned and invalidated, so they hold nothing older than its own start)
++ */
++static TUNABLE(uint32_t, mali_flushes, "mali_flushes", 0);
++
 +static uint32_t
 +mali_submit_on(unsigned st, const uint64_t *addresses, const uint32_t *words, uint32_t count)
 +{
 +	struct mali_stream *q = &mali_stream[st];
-+	uint32_t n = 3 * count + 20, i;
++	uint32_t n = 3 * count + 26, i;
 +	uint64_t deadline;
 +
 +	mali_csf_events();
@@ -598,9 +609,13 @@ index 3f1f97a..700adc3 100644
 +		mali_fence = 1;
 +	}
 +#define MALI_RING(w) do { q->ring[(q->insert / 8) % (q->ring_size / 8)] = (w); q->insert += 8; } while (0)
-+	MALI_RING((0x02ULL << 56) | (95ULL << 48));                                 /* MOVE32 r95 = 0: flush always */
-+	MALI_RING((0x24ULL << 56) | (95ULL << 40) | 0x233);                         /* FLUSH_CACHE2 L2, LSC, other */
-+	MALI_RING((0x03ULL << 56) | (1ULL << 16));                                  /* WAIT slot 0 */
++	if (!(mali_flushes & 1)) {
++		MALI_RING((0x02ULL << 56) | (95ULL << 48));                         /* MOVE32 r95 = 0: flush always */
++		MALI_RING((0x24ULL << 56) | (95ULL << 40) | 0x233);                 /* FLUSH_CACHE2 L2, LSC, other */
++		MALI_RING((0x03ULL << 56) | (1ULL << 16));                          /* WAIT slot 0 */
++	}
++	MALI_RING((0x01ULL << 56) | (92ULL << 48) | (MALI_STAMP_VA + 256 * st + 16 * (mali_fence % 16)));
++	MALI_RING((0x28ULL << 56) | (92ULL << 40));                                 /* STORE_STATE timestamp -> [r92] */
 +	for (i = 0; i < count; i++) {
 +		MALI_RING((0x01ULL << 56) | (92ULL << 48) | (addresses[i] & 0xffffffffffffULL));
 +		MALI_RING((0x02ULL << 56) | (94ULL << 48) | (uint64_t)words[i] * 4);
@@ -610,6 +625,9 @@ index 3f1f97a..700adc3 100644
 +	MALI_RING((0x03ULL << 56) | (0xffffULL << 16));                             /* WAIT all */
 +	MALI_RING((0x02ULL << 56) | (95ULL << 48));                                 /* MOVE32 r95 = 0 */
 +	MALI_RING((0x24ULL << 56) | (95ULL << 40) | 0x233);                         /* FLUSH_CACHE2 L2, LSC, other */
++	MALI_RING((0x03ULL << 56) | (1ULL << 16));                                  /* WAIT slot 0 */
++	MALI_RING((0x01ULL << 56) | (92ULL << 48) | (MALI_STAMP_VA + 256 * st + 16 * (mali_fence % 16)));
++	MALI_RING((0x28ULL << 56) | (92ULL << 40) | 8);                             /* STORE_STATE timestamp -> [r92 + 8] */
 +	MALI_RING((0x03ULL << 56) | (1ULL << 16));                                  /* WAIT slot 0 */
 +	MALI_RING((0x01ULL << 56) | (92ULL << 48) | (MALI_FENCE_VA + 4 * st));
 +	MALI_RING((0x02ULL << 56) | (94ULL << 48) | mali_fence);
@@ -672,6 +690,21 @@ index 3f1f97a..700adc3 100644
 +					b++;
 +				}
 +				q->took[b]++;
++				if (q->stamps != NULL && (int32_t)(now_done - f) < 16) {
++					/* (the GPU's timestamp counts as this processor's counter does: the same system counter) */
++					uint64_t began = q->stamps[2 * (f % 16)], ended = q->stamps[2 * (f % 16) + 1], gns;
++
++					if (ended > began && began > q->given_at[f % 64]) {
++						absolutetime_to_nanoseconds(ended - began, &gns);
++						for (b = 0; b < 7 && gns >= (250000ull << b); b++) {
++						}
++						q->ran[b]++;
++						absolutetime_to_nanoseconds(began - q->given_at[f % 64], &gns);
++						for (b = 0; b < 7 && gns >= (250000ull << b); b++) {
++						}
++						q->queued[b]++;
++					}
++				}
 +			}
 +			q->seen = now_done;
 +		}
@@ -720,6 +753,14 @@ index 3f1f97a..700adc3 100644
 +		    "fence %u done, %u given\n", st, t[0], t[1], t[2], t[3], t[4], t[5], t[6], t[7], mali_stream[st].seen,
 +		    mali_stream[st].last);
 +		bzero(t, sizeof(mali_stream[st].took));
++		t = mali_stream[st].ran;
++		printf("mali: stream %u: on the GPU (its timestamps): <0.25 ms %u, <0.5 %u, <1 %u, <2 %u, <4 %u, <8 %u, <16 %u, "
++		    "longer %u\n", st, t[0], t[1], t[2], t[3], t[4], t[5], t[6], t[7]);
++		t = mali_stream[st].queued;
++		printf("mali: stream %u: given to its start: <0.25 ms %u, <0.5 %u, <1 %u, <2 %u, <4 %u, <8 %u, <16 %u, longer %u\n",
++		    st, t[0], t[1], t[2], t[3], t[4], t[5], t[6], t[7]);
++		bzero(mali_stream[st].ran, sizeof(mali_stream[st].ran));
++		bzero(mali_stream[st].queued, sizeof(mali_stream[st].queued));
 +	}
 +}
 +
@@ -1140,6 +1181,7 @@ index 3f1f97a..700adc3 100644
 +		q->insert = hs[3];
 +		q->fence_word = (volatile uint32_t *)(target + 0xc00 + 4 * st);
 +		*q->fence_word = 0;
++		q->stamps = (volatile uint64_t *)(target + (MALI_STAMP_VA - 0x200000u) + 256 * st);
 +		/* The loader's CS control blocks give the firmware VAs of each stream's input and output pages. */
 +		volatile uint32_t *ctl = (volatile uint32_t *)(shared + 0x1040 + st *
 +		    *(volatile uint32_t *)(shared + 0x1018));
@@ -1169,7 +1211,7 @@ index 3f1f97a..700adc3 100644
  void
  hakios_adreno_init(void)
  {
-@@ -3765,6 +4746,11 @@ hakios_adreno_init(void)
+@@ -3765,6 +4788,11 @@ hakios_adreno_init(void)
  	uint32_t only = 0, done = 0, failed = 0, keep = 0;
  	bool by_itself = false;
  
@@ -1182,7 +1224,7 @@ index 3f1f97a..700adc3 100644
  		display_probe();
  	}
 diff --git a/drivers/gpu/hakios.gpu.cpp b/drivers/gpu/hakios.gpu.cpp
-index 633b419..a3f082b 100644
+index 633b419..e8ee18b 100644
 --- a/drivers/gpu/hakios.gpu.cpp
 +++ b/drivers/gpu/hakios.gpu.cpp
 @@ -56,6 +56,13 @@ void hakios_gpu_mapped(void);
@@ -1242,7 +1284,14 @@ index 633b419..a3f082b 100644
  };
  
  struct msm_timespec {
-@@ -182,6 +225,9 @@ struct hakios_show {
+@@ -177,11 +220,16 @@ struct hakios_show {
+ #define GPU_SUBMIT_BOS          8192
+ #define GPU_PATIENCE_MS         5000            /* for a buffer or a submission that somebody waits for without a limit */
+ #define GPU_ASK_AGAIN_US        200             /* while waiting for the core: how long between two looks at how far it is */
++/* boot-arg gpu_spin_us=N: how long a wait for the GPU looks without sleeping before it sleeps between looks */
++static TUNABLE(uint32_t, gGPUSpinUs, "gpu_spin_us", 4000);
+ #define GPU_PUSH_AGAIN_MS       4               /* a surface is pushed out of the cache again for a submission this long after the last */
+ 
  static IOLock * gGPULock;                       /* around everything that is the GPU's (hakios_gpu_...) */
  static bool gGPUReported;
  static bool gGPUCached;                         /* boot-arg gpu_cached=1 */
@@ -1252,7 +1301,7 @@ index 633b419..a3f082b 100644
  
  /* What the last seconds' submissions were and cost here, for the log. */
  static struct {
-@@ -189,6 +235,7 @@ static struct {
+@@ -189,6 +237,7 @@ static struct {
  	uint64_t flushed;                       /* bytes sent out of the cache */
  	uint32_t submissions, commands, buffers, surfaces, waits, over;
  	uint32_t made, given_again;             /* buffers of their own made for programs, and of those kept ones given again */
@@ -1260,7 +1309,38 @@ index 633b419..a3f082b 100644
  	uint64_t making;                        /* ... and the time it took to make the others */
  } gGPUStat;
  
-@@ -256,6 +303,24 @@ slowWait(const char * kind, uint64_t began)
+@@ -196,9 +245,11 @@ static struct {
+ static bool
+ gpuWait(uint32_t fence, uint64_t milliseconds)
+ {
+-	uint64_t began = mach_absolute_time(), patience;
++	uint64_t began = mach_absolute_time(), patience, spin, step;
+ 
+ 	nanoseconds_to_absolutetime(milliseconds * NSEC_PER_MSEC, &patience);
++	nanoseconds_to_absolutetime((uint64_t) gGPUSpinUs * NSEC_PER_USEC, &spin);
++	nanoseconds_to_absolutetime(5 * NSEC_PER_USEC, &step);
+ 	for (bool waited = false;; waited = true) {
+ 		if (hakios_gpu_done(fence)) {
+ 			if (waited) {
+@@ -211,7 +262,16 @@ gpuWait(uint32_t fence, uint64_t milliseconds)
+ 			break;                  /* (a GPU that has stopped answering is not waited for again) */
+ 		}
+ 		IOLockUnlock(gGPULock);
+-		delay_for_interval(GPU_ASK_AGAIN_US, NSEC_PER_USEC);
++		if (mach_absolute_time() - began < spin) {
++			/*
++			 * the first gpu_spin_us of a wait: looked at again every few microseconds without giving the processor
++			 * up -- a 200 us sleep here came back after 15 ms on average (the GPU done in under one)
++			 */
++			for (uint64_t until = mach_absolute_time() + step; mach_absolute_time() < until;) {
++			}
++		} else {
++			delay_for_interval(GPU_ASK_AGAIN_US, NSEC_PER_USEC);
++		}
+ 		IOLockLock(gGPULock);
+ 	}
+ 	if (milliseconds >= 1000 && !gGPUReported) {
+@@ -256,6 +316,24 @@ slowWait(const char * kind, uint64_t began)
  	}
  }
  
@@ -1285,7 +1365,7 @@ index 633b419..a3f082b 100644
  /* How long from now a time of msm's is, in milliseconds; 0: now or past. */
  static uint64_t
  millisecondsUntil(const struct msm_timespec * when)
-@@ -263,7 +328,7 @@ millisecondsUntil(const struct msm_timespec * when)
+@@ -263,7 +341,7 @@ millisecondsUntil(const struct msm_timespec * when)
  	uint64_t now;
  	int64_t left, end;
  
@@ -1294,7 +1374,7 @@ index 633b419..a3f082b 100644
  	/* the seconds are the caller's: a number too big to be nanoseconds is a time far ahead (or far behind), not a wrapped one */
  	if (__builtin_mul_overflow(when->seconds, (int64_t) NSEC_PER_SEC, &end) || __builtin_add_overflow(end, when->nanoseconds, &end)) {
  		return when->seconds > 0 && when->nanoseconds >= 0 ? GPU_PATIENCE_MS : 0;
-@@ -292,7 +357,7 @@ waitOver(const struct msm_timespec * when, uint32_t fence)
+@@ -292,7 +370,7 @@ waitOver(const struct msm_timespec * when, uint32_t fence)
  	gGPUStat.over++;
  	if (told < 4) {
  		told++;
@@ -1303,7 +1383,7 @@ index 633b419..a3f082b 100644
  		IOLog("HakiosGPU: a wait for submission %u, which is not done, until %lld.%09lld s, asked for at %llu.%09llu s: "
  		    "over before it began\n", fence, when->seconds, when->nanoseconds, now / NSEC_PER_SEC, now % NSEC_PER_SEC);
  	}
-@@ -330,6 +395,13 @@ HakiosGPUStart(void)
+@@ -330,6 +408,13 @@ HakiosGPUStart(void)
  	uint32_t cached = 0;
  
  	gGPUCached = PE_parse_boot_argn("gpu_cached", &cached, sizeof(cached)) && cached != 0;
@@ -1317,7 +1397,7 @@ index 633b419..a3f082b 100644
  	gGPULock = IOLockAlloc();
  	gpu = OSTypeAlloc(HakiosGPU);
  	if (gpu == NULL || provider == NULL || !gpu->init() || !gpu->attach(provider)) {
-@@ -418,6 +490,8 @@ class HakiosGPUUserClient : public IOUserClient
+@@ -418,6 +503,8 @@ class HakiosGPUUserClient : public IOUserClient
  	uint32_t                fNextQueue;
  	uint32_t                fNextBuffer;            /* where the search for a free handle starts: one given back is not the next given */
  	uint32_t                fBufferCount;
@@ -1326,7 +1406,7 @@ index 633b419..a3f082b 100644
  	uint64_t                fBufferBytes;
  	uint32_t                fSubmits;
  	uint32_t                fStrangers;             /* requests that named a buffer the client does not have */
-@@ -433,6 +507,9 @@ class HakiosGPUUserClient : public IOUserClient
+@@ -433,6 +520,9 @@ class HakiosGPUUserClient : public IOUserClient
  	void dropKept(struct gpu_kept * k);
  	void reap(void);
  	IOReturn gemNew(struct msm_gem_new * request);
@@ -1336,7 +1416,7 @@ index 633b419..a3f082b 100644
  	IOReturn surfaceBuffer(struct hakios_surface * request);
  	IOReturn userBuffer(struct hakios_user_memory * request);
  	IOReturn gemInfo(struct msm_gem_info * request);
-@@ -944,6 +1021,119 @@ HakiosGPUUserClient::userBuffer(struct hakios_user_memory * request)
+@@ -944,6 +1034,119 @@ HakiosGPUUserClient::userBuffer(struct hakios_user_memory * request)
  	return kIOReturnSuccess;
  }
  
@@ -1456,7 +1536,7 @@ index 633b419..a3f082b 100644
  IOReturn
  HakiosGPUUserClient::gemInfo(struct msm_gem_info * request)
  {
-@@ -1216,6 +1406,11 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
+@@ -1216,6 +1419,11 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
  		struct hakios_surface surface;
  		struct hakios_user_memory user;
  		struct hakios_show show;
@@ -1468,7 +1548,7 @@ index 633b419..a3f082b 100644
  	} r;
  	size_t size = args->structureInputSize;
  	struct gpu_buffer * b;
-@@ -1276,6 +1471,11 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
+@@ -1276,6 +1484,11 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
  			if (patience == 0) {
  				waitOver(&r.waitFence.timeout, r.waitFence.fence);
  			}
@@ -1480,7 +1560,7 @@ index 633b419..a3f082b 100644
  		}
  		IOLockUnlock(gGPULock);
  		slowWait("fence", waitBegan);
-@@ -1298,6 +1498,7 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
+@@ -1298,6 +1511,7 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
  			ret = kIOReturnBadArgument;
  		} else {
  			freeBuffer(b);
@@ -1488,7 +1568,7 @@ index 633b419..a3f082b 100644
  			reap();
  		}
  		IOLockUnlock(gGPULock);
-@@ -1311,6 +1512,32 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
+@@ -1311,6 +1525,32 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
  	case kHakiosShow:
  		ret = show(&r.show);
  		break;
@@ -1860,6 +1940,119 @@ index 38c9ff2..fb2f22e 100644
  		thread_deallocate(thread);
  	}
  }
+diff --git a/drivers/power/hakios.battery.c b/drivers/power/hakios.battery.c
+index 54acd33..bad7027 100644
+--- a/drivers/power/hakios.battery.c
++++ b/drivers/power/hakios.battery.c
+@@ -7,6 +7,7 @@
+  * polls it, and publishes a read-only cache; XNU only consumes that cache.
+  * Charger limits and JEITA protection therefore remain firmware-owned.
+  */
++#include <stddef.h>
+ #include <kern/clock.h>
+ #include <kern/thread.h>
+ #include <libkern/libkern.h>
+@@ -35,13 +36,21 @@ struct loader_battery {
+ 	uint32_t flags;
+ 	int32_t soc_percent, voltage_mv, current_ma, temperature_c;
+ 	uint32_t charger_action, polls, failures, reserved;
++	/*
++	 * Only when `size` reaches them: what a loader that reads the fuel gauge itself adds (the Pixel 9 Pro's,
++	 * caiman probe/battery.c, from the MAX77779); with them the readings go on to Darwin's power source too.
++	 */
++	int32_t soc_hundredths, charge_mah, full_mah, design_mah, cycles, temperature_hundredths;
+ };
++#define LOADER_BATTERY_V1_SIZE          offsetof(struct loader_battery, soc_hundredths)
+ 
+ static volatile struct loader_battery *shared_battery;
+ static int battery_soc_percent = -1, battery_voltage_mv = -1, battery_current_ma;
+ static int battery_temperature_c = -273, battery_present, battery_charger_present;
+ static int battery_charging, battery_soc_estimated, battery_charger_action = -1;
+ static uint64_t battery_updates, battery_failures;
++static int battery_source_dsp;          /* (below, with the other values of the DSP's) */
++static uint32_t battery_flags;          /* the loader's last, for the log line */
+ 
+ /* for others in the kernel (the flashlight's thermal guard): -273 while it is not known */
+ int
+@@ -93,7 +102,7 @@ battery_poll(void)
+ 	struct loader_battery sample;
+ 
+ 	if (!battery_snapshot(&sample) || sample.magic != LOADER_BATTERY_MAGIC ||
+-	    sample.version != LOADER_BATTERY_VERSION || sample.size < sizeof(sample) ||
++	    sample.version != LOADER_BATTERY_VERSION || sample.size < LOADER_BATTERY_V1_SIZE ||
+ 	    !(sample.flags & LOADER_BATTERY_VALID) || sample.soc_percent < 0 || sample.soc_percent > 100) {
+ 		battery_failures++;
+ 		return;
+@@ -108,6 +117,33 @@ battery_poll(void)
+ 	battery_soc_estimated = (sample.flags & LOADER_BATTERY_SOC_ESTIMATED) != 0;
+ 	battery_charger_action = (int)sample.charger_action;
+ 	battery_updates++;
++	battery_flags = sample.flags;
++	if (sample.size >= sizeof(sample)) {
++		struct hakios_battery_state state = {
++			.size = sizeof(state),
++			.percent_hundredths = sample.soc_hundredths,
++			.voltage_uv = sample.voltage_mv * 1000,
++			.current_ua = sample.current_ma * 1000,
++			.temperature_hundredths = sample.temperature_hundredths,
++			.present = battery_present,
++			.external = battery_charger_present,
++			/*
++			 * POWER_SUPPLY_STATUS_*: charging; full when the charger says it is done (the MAX77779's CHG_DTLS, in
++			 * charger_action: 0 precharge, 1 fast CC, 2 fast CV, 3 top-off, 4 done); on a charger otherwise not
++			 * charging; discharging
++			 */
++			.status = battery_charging ? 1 : battery_charger_present && sample.charger_action == 4 ? 4 :
++			    battery_charger_present ? 3 : 2,
++			.charge_uah = sample.charge_mah * 1000,
++			.full_uah = sample.full_mah * 1000,
++			.design_uah = sample.design_mah * 1000,
++			.cycles = sample.cycles,
++			.usb_type = battery_charger_present ? 2 : 0,
++		};
++
++		hakios_battery_report(&state);
++		battery_source_dsp = 0;
++	}
+ }
+ 
+ /*
+@@ -115,7 +151,7 @@ battery_poll(void)
+  * the values that Android shows, from where Android takes them. They are kept here for the sysctls
+  * and passed on to the power source that Darwin reads (drivers/power/hakios.battery.cpp).
+  */
+-static int battery_full_uah, battery_design_uah, battery_cycles, battery_source_dsp;
++static int battery_full_uah, battery_design_uah, battery_cycles;
+ 
+ SYSCTL_INT(_kern_hakios, OID_AUTO, battery_full_uah, CTLFLAG_RD | CTLFLAG_LOCKED,
+     &battery_full_uah, 0, "the battery's full charge as the fuel gauge has learnt it, in uAh (0 if unknown)");
+@@ -165,10 +201,10 @@ battery_thread(__unused void *parameter, __unused wait_result_t result)
+ 		battery_poll();
+ 		if (tick % 12 == 0) {
+ 			printf("battery: SOC=%d%%%s, V=%d mV, I=%d mA, T=%d C, battery=%d charger=%d charging=%d "
+-			    "action=%d (%llu reads, %llu failed)\n", battery_soc_percent,
++			    "action=%d flags=%#x (%llu reads, %llu failed)\n", battery_soc_percent,
+ 			    battery_soc_estimated ? " (voltage estimate)" : "", battery_voltage_mv,
+ 			    battery_current_ma, battery_temperature_c, battery_present, battery_charger_present,
+-			    battery_charging, battery_charger_action, battery_updates, battery_failures);
++			    battery_charging, battery_charger_action, battery_flags, battery_updates, battery_failures);
+ 		}
+ 		delay_for_interval(5000, NSEC_PER_MSEC);
+ 	}
+@@ -195,11 +231,11 @@ hakios_battery_init(void)
+ 	page = ml_io_map((vm_offset_t)(shared_pa & ~(LOADER_PAGE_SIZE - 1)), LOADER_PAGE_SIZE);
+ 	shared_battery = (volatile struct loader_battery *)(page + (shared_pa & (LOADER_PAGE_SIZE - 1)));
+ 	if (shared_battery->magic != LOADER_BATTERY_MAGIC || shared_battery->version != LOADER_BATTERY_VERSION ||
+-	    shared_battery->size < sizeof(struct loader_battery)) {
++	    shared_battery->size < LOADER_BATTERY_V1_SIZE) {
+ 		printf("battery: bad xnuloader cache at %#llx (magic %#llx version %u size %u)\n", shared_pa,
+ 		    shared_battery->magic, shared_battery->version, shared_battery->size);
+ 		return;
+ 	}
+-	printf("battery: Qualcomm UEFI cache at pa %#llx; polling every 5 seconds\n", shared_pa);
++	printf("battery: the loader's cache at pa %#llx (%u bytes); polling every 5 seconds\n", shared_pa, shared_battery->size);
+ 	if (kernel_thread_start(battery_thread, NULL, &thread) == KERN_SUCCESS) thread_deallocate(thread);
+ }
 diff --git a/drivers/power/hakios.thermal.c b/drivers/power/hakios.thermal.c
 index 8d69400..f6ebbf9 100644
 --- a/drivers/power/hakios.thermal.c
@@ -2143,10 +2336,10 @@ index 3797eb7..458b2b2 100644
 +         };
 diff --git a/tools/mesa/hakios-panthor/hakios.panthor.c b/tools/mesa/hakios-panthor/hakios.panthor.c
 new file mode 100644
-index 0000000..2a05168
+index 0000000..80c2e45
 --- /dev/null
 +++ b/tools/mesa/hakios-panthor/hakios.panthor.c
-@@ -0,0 +1,1243 @@
+@@ -0,0 +1,1314 @@
 +/*
 + * The libdrm of xf86drm.h for PanVK: Linux's Panthor requests to the kernel's HakiosGPU on the Mali (boot-arg mali=1),
 + * the counterpart of hakios-drm (Adreno, msm). What the kernel has (caiman repo docs/gpu-plan.md, steps 10-14):
@@ -2727,8 +2920,15 @@ index 0000000..2a05168
 +			break;
 +		}
 +		if (have_fence && unknown == 0) {
++			/*
++			 * all of them: the earliest fence first, to the deadline. Any of them: 2 ms at a time (the kernel counts
++			 * whole milliseconds), the earliest fence named is not the first to be done when they are on different
++			 * streams (and the runtime's scheduler waits for any of a queue's dependencies so, up to 100 ms)
++			 */
++			int64_t until = all || count == 1 || deadline - now_ns() < 2000000 ? deadline : now_ns() + 2000000;
++
 +			pthread_mutex_unlock(&syncobj_lock);
-+			fence_done(wait_fence, deadline);
++			fence_done(wait_fence, until);
 +			pthread_mutex_lock(&syncobj_lock);
 +		} else {
 +			struct timeval tv;
@@ -3068,9 +3268,71 @@ index 0000000..2a05168
 +	return 0;
 +}
 +
-+/* a submission's (or a bind's) sync operations: the waits now, the signals given FENCE */
++/*
++ * Which kernel stream each recent fence was given on (REQ_MALI_SUBMIT's queue is the stream): a stream runs its
++ * submissions one after another, each to its end and out of the GPU's caches before the next begins
++ * (hakios.adreno.c mali_submit_on), so a submission need not wait on the processor for one before it on its own
++ * stream. Waiting there for everything held every submission until the GPU had finished the one before: the GPU
++ * idle while the next was being handed over, one blocking wait a frame (~15 ms) in the window server.
++ * HAKIOS_PANTHOR_SAME_STREAM=0: every wait on the processor, as before (for comparing).
++ */
++#define FENCE_STREAMS 256
++static struct { uint32_t fence, stream; } fence_streams[FENCE_STREAMS];
++
++static void
++fence_on(uint32_t fence, uint32_t stream)
++{
++	fence_streams[fence % FENCE_STREAMS].fence = fence;
++	fence_streams[fence % FENCE_STREAMS].stream = stream;
++}
++
++static bool
++same_streams(void)
++{
++	static int on = -1;
++
++	if (on < 0) {
++		const char *v = getenv("HAKIOS_PANTHOR_SAME_STREAM");
++		on = v == NULL || *v != '0';
++	}
++	return on;
++}
++
++/* the point is (or will be) reached by a fence given on STREAM: true when that is all there is to wait for */
++static bool
++same_stream(uint32_t handle, uint64_t point, int stream)
++{
++	struct syncobj *s;
++	bool same = false;
++
++	if (stream < 0 || !same_streams()) {
++		return false;
++	}
++	pthread_mutex_lock(&syncobj_lock);
++	s = syncobj_of(handle);
++	if (s != NULL) {
++		syncobj_poll(s);
++		if (s->reached >= point) {
++			same = true;
++		} else {
++			for (unsigned k = 0; k < s->pending; k++) {
++				uint32_t f = s->on_the_way[k].fence;
++
++				if (s->on_the_way[k].point >= point) {
++					same = fence_streams[f % FENCE_STREAMS].fence == f &&
++					    fence_streams[f % FENCE_STREAMS].stream == (uint32_t)stream;
++					break;
++				}
++			}
++		}
++	}
++	pthread_mutex_unlock(&syncobj_lock);
++	return same;
++}
++
++/* a submission's (or a bind's, STREAM -1) sync operations: the waits now, the signals given FENCE */
 +static int
-+syncs_wait(const struct drm_panthor_obj_array *syncs)
++syncs_wait(const struct drm_panthor_obj_array *syncs, int stream)
 +{
 +	for (uint32_t i = 0; i < syncs->count; i++) {
 +		const struct drm_panthor_sync_op *op = (const void *)(uintptr_t)(syncs->array + (uint64_t)i * syncs->stride);
@@ -3078,7 +3340,7 @@ index 0000000..2a05168
 +		uint64_t p = (op->flags & DRM_PANTHOR_SYNC_OP_HANDLE_TYPE_MASK) == DRM_PANTHOR_SYNC_OP_HANDLE_TYPE_TIMELINE_SYNCOBJ ?
 +		    op->timeline_value : 0;
 +
-+		if (!(op->flags & DRM_PANTHOR_SYNC_OP_SIGNAL) &&
++		if (!(op->flags & DRM_PANTHOR_SYNC_OP_SIGNAL) && !same_stream(h, p ? p : 1, stream) &&
 +		    drmSyncobjTimelineWait(0, &h, &p, 1, now_ns() + 10000000000LL,
 +		    DRM_SYNCOBJ_WAIT_FLAGS_WAIT_ALL | DRM_SYNCOBJ_WAIT_FLAGS_WAIT_FOR_SUBMIT, NULL) != 0) {
 +			return errno ? errno : ETIME;
@@ -3114,7 +3376,7 @@ index 0000000..2a05168
 +	for (uint32_t i = 0; i < b->ops.count; i++) {
 +		struct drm_panthor_vm_bind_op *op = (void *)(uintptr_t)(b->ops.array + (uint64_t)i * b->ops.stride);
 +		uint32_t type = op->flags & DRM_PANTHOR_VM_BIND_OP_TYPE_MASK;
-+		int error = syncs_wait(&op->syncs);
++		int error = syncs_wait(&op->syncs, -1);
 +
 +		if (error != 0) {
 +			b->ops.count = i;
@@ -3157,7 +3419,7 @@ index 0000000..2a05168
 +	for (uint32_t i = 0; i < g->queue_submits.count; i++) {
 +		struct drm_panthor_queue_submit *q = (void *)(uintptr_t)(g->queue_submits.array + (uint64_t)i * g->queue_submits.stride);
 +		uint32_t fence;
-+		int error = syncs_wait(&q->syncs);
++		int error = syncs_wait(&q->syncs, q->stream_size != 0 ? (int)q->queue_index : -1);
 +
 +		if (error != 0) {
 +			return error;
@@ -3174,6 +3436,7 @@ index 0000000..2a05168
 +				return error;
 +			}
 +			fence = k.fence;
++			fence_on(fence, q->queue_index);
 +			__atomic_store_n(&last_fence, fence, __ATOMIC_RELEASE);
 +		}
 +		if (tracing()) {
@@ -3250,6 +3513,7 @@ index 0000000..2a05168
 +
 +		if ((error = call(REQ_MALI_SUBMIT, &k, sizeof(k))) == 0) {
 +			fence = k.fence;
++			fence_on(fence, q);
 +			__atomic_store_n(&last_fence, fence, __ATOMIC_RELEASE);
 +		}
 +	}

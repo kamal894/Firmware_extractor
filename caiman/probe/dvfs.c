@@ -163,11 +163,15 @@ static void show_rates(const char *when)
  * and DISP at 400: with the CPUs writing 14 MB a frame, iOS's framebuffer took 8-12 ms a frame there, 2-7
  * with MIF at 2028 (17 November). want: a step of Android's devfreq tables, 0 to leave it.
  */
+/* the GPU's shader clock: a step of the DT's gpu_dvfs_table_v2 (580000 ... 940000) */
+#ifndef PROBE_G3D_KHZ
+#define PROBE_G3D_KHZ 580000
+#endif
 static const struct {
 	char name[8];
 	u32 domain, want;
 } other[] = { { "MIF", 0, 2028000 }, { "INT", 1, 664000 }, { "DSU", 5, 0 }, { "BCI", 6, 0 }, { "DISP", 0xe, 533000 },
-	    { "G3D", 7, 580000 } };
+	    { "G3D", 7, PROBE_G3D_KHZ } };
 
 /*
  * Temperatures (drivers/thermal/samsung/exynos_acpm_tmu.c, TMU_IPC_READ_TEMP): on ACPM's TMU channel (9 in

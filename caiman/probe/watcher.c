@@ -320,6 +320,10 @@ void watcher_main(void)
 		if (s >= PROBE_SHOTS)
 			shot(s);
 #endif
+#if PROBE_BATTERY
+		if (!(s % 5))
+			battery_poll(!(s % 60));	/* the kernel's page every 5 s; a line in the log every minute */
+#endif
 		for (q = 0; q < 4; q++) {
 			wdt_kick();
 			delay_us(250000);

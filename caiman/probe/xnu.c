@@ -856,6 +856,21 @@ void xnu_boot(void)
 		n = append(ba->commandLine, n, " ");
 		n = append_no_epoch(ba->commandLine, n, pl.cmdline);
 	}
+#if PROBE_BATTERY
+	{
+		/* the watcher's battery page (battery.c), for the kernel's drivers/power/hakios.battery.c */
+		char arg[64] = " battery=1 battery_shared_pa=0x";
+		u64 pa = battery_shared_pa();
+		u32 k = strlen(arg);
+		int d;
+
+		for (d = 60; d >= 0; d -= 4)
+			if ((pa >> d) || d == 0 || k > 30)
+				arg[k++] = "0123456789abcdef"[(pa >> d) & 15];
+		arg[k] = 0;
+		n = append(ba->commandLine, n, arg);
+	}
+#endif
 	pr("xnu: device tree 0x%llx (%u bytes), boot_args 0x%llx, top 0x%llx\n", dt_pa, dt_len, ba_pa,
 	   top);
 	pr("xnu: uart for the kernel 0x%llx%s, framebuffer 0x%llx\n", xnu.uart_pa,
