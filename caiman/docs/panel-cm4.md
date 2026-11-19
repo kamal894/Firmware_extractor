@@ -57,3 +57,7 @@ F0 A5 A5
   iOS's own choice (no panel error); not looked into yet.
 - **Not done yet.** Frames are still sent while the panel is off, the CPU and GPU stay at their clocks, and there is
   no system suspend.
+- **Frames skipped while off (ws63).** `show()` and `settle()` draw nothing while the panel is off. The swap is
+  still handed on, so backboardd does not wait. On both key presses the panel went off and on again with nothing
+  stuck. Swipe speed is unchanged (34-42 a second), m2v_test PASS. Codex's fuller plan (masking DECON's trigger,
+  lower clocks while off) is in `docs/screen-off-power.md`.

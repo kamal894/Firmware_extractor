@@ -5826,7 +5826,7 @@ index c390093..de72f4d 100755
  		log "downloading the macOS 13.3 SDK for its DriverKit headers"
  		curl -L --fail --retry 3 -s -o macos-sdk.tar.xz "$MACOS_SDK_URL" || die "download failed: $MACOS_SDK_URL"
 diff --git a/xnu/files/iokit/Kernel/MiniIOMobileFramebuffer.cpp b/xnu/files/iokit/Kernel/MiniIOMobileFramebuffer.cpp
-index 724e156..cc9fdf8 100644
+index 724e156..b0be343 100644
 --- a/xnu/files/iokit/Kernel/MiniIOMobileFramebuffer.cpp
 +++ b/xnu/files/iokit/Kernel/MiniIOMobileFramebuffer.cpp
 @@ -261,6 +261,7 @@ static TUNABLE(uint32_t, gMeasure, "fb_measure", 0);
@@ -5855,7 +5855,7 @@ index 724e156..cc9fdf8 100644
  
  static vm_offset_t
  panelInterface(void)
-@@ -282,6 +294,94 @@ panelInterface(void)
+@@ -282,6 +294,102 @@ panelInterface(void)
  	return physical != 0 ? ml_io_map((vm_offset_t) (physical & ~0x3fffULL), 0x4000) + (vm_offset_t) (physical & 0x3fffULL) : 0;
  }
  
@@ -5881,6 +5881,13 @@ index 724e156..cc9fdf8 100644
 +
 +static volatile uint32_t * gDsim;
 +static int gPanelOn = 1;
++static uint32_t gPanelSkipped;          /* frames not drawn while the panel was off */
++
++static inline bool
++panelDark(void)
++{
++	return gDsim != NULL && !gPanelOn;
++}
 +
 +static bool
 +dsimWait(uint32_t reg, uint32_t bits)
@@ -5942,15 +5949,16 @@ index 724e156..cc9fdf8 100644
 +		IODelay(20000);
 +	}
 +	gPanelOn = on;
-+	IOLog("MiniIOMobileFramebuffer: the panel %s (display %s %s; power mode now 0x%x) in %llu us\n", on ? "on" : "off",
-+	    on ? "on" : "off", sent ? "sent" : "NOT sent (the FIFO did not empty)", panelPowerMode(),
-+	    micros(mach_absolute_time() - t0));
++	IOLog("MiniIOMobileFramebuffer: the panel %s (display %s %s; power mode now 0x%x) in %llu us; %u frames not drawn while it was off\n",
++	    on ? "on" : "off", on ? "on" : "off", sent ? "sent" : "NOT sent (the FIFO did not empty)", panelPowerMode(),
++	    micros(mach_absolute_time() - t0), gPanelSkipped);
++	gPanelSkipped = 0;
 +}
 +
  static void
  measurePanel(__unused void * arg, __unused wait_result_t wr)
  {
-@@ -346,7 +446,15 @@ class IOMobileFramebuffer : public IOService
+@@ -346,7 +454,15 @@ class IOMobileFramebuffer : public IOService
  
  public:
  	IOLock *        fLock;
@@ -5967,7 +5975,7 @@ index 724e156..cc9fdf8 100644
  	uint32_t        fPanelWidth, fPanelHeight, fRowBytes;
  	uint32_t        fWidth, fHeight;        /* the display as user space sees it */
  	MiniIOSurface * fDefaultSurface;
-@@ -431,6 +539,9 @@ public:
+@@ -431,6 +547,9 @@ public:
  	void present(const uint8_t * swap);
  	void show(const uint8_t * swap, MiniIOSurface ** surfaces);
  	void settle(const uint8_t * swap, MiniIOSurface ** surfaces);
@@ -5977,7 +5985,7 @@ index 724e156..cc9fdf8 100644
  	bool fSettling;                 /* drawing the last frame again, filtered (fb_filter=2) */
  	bool fFilterFrame;              /* this frame came slowly: filtered as it is (fb_filter=2) */
  	void presenter(void);
-@@ -603,6 +714,9 @@ IOMobileFramebuffer::start(IOService * provider)
+@@ -603,6 +722,9 @@ IOMobileFramebuffer::start(IOService * provider)
  	fPanelWidth = vinfo.v_width;
  	fPanelHeight = vinfo.v_height;
  	fRowBytes = vinfo.v_rowbytes;
@@ -5987,7 +5995,7 @@ index 724e156..cc9fdf8 100644
  	fWidth = gFBWidth ? gFBWidth : fPanelWidth;
  	fHeight = gFBHeight ? gFBHeight : fPanelHeight;
  	if (gFBScale != 0 && gFBScale != kFBDefaultScale) {
-@@ -1168,6 +1282,8 @@ IOMobileFramebuffer::drawLayer(MiniIOSurface * s, const int32_t * src, const int
+@@ -1168,6 +1290,8 @@ IOMobileFramebuffer::drawLayer(MiniIOSurface * s, const int32_t * src, const int
  			fColumn[x] = (uint32_t) (sx + (int64_t) (x - px0) * sw / (px1 - px0));
  		}
  	}
@@ -5996,7 +6004,7 @@ index 724e156..cc9fdf8 100644
  	job.pixels = s->pixels();
  	job.stride = s->info.bytesPerRow;
  	job.sx = sx;
-@@ -1396,6 +1512,89 @@ IOMobileFramebuffer::presenter(void)
+@@ -1396,6 +1520,89 @@ IOMobileFramebuffer::presenter(void)
  	}
  }
  
@@ -6086,7 +6094,12 @@ index 724e156..cc9fdf8 100644
  /*
   * The frame on the panel once more, filtered (fb_filter=2): the same layers from the same surfaces where show() put
   * them, nothing else (no turn to wait for, no swap to hand on, nothing counted). Its surfaces were held since.
-@@ -1409,6 +1608,7 @@ IOMobileFramebuffer::settle(const uint8_t * swap, MiniIOSurface ** surfaces)
+@@ -1405,10 +1612,11 @@ IOMobileFramebuffer::settle(const uint8_t * swap, MiniIOSurface ** surfaces)
+ {
+ 	int32_t src[4], dst[4];
+ 
+-	if (!fGraphics) {
++	if (!fGraphics || panelDark()) {
  		return;
  	}
  	fSettling = true;
@@ -6094,7 +6107,7 @@ index 724e156..cc9fdf8 100644
  	for (unsigned layer = 0; layer < SWAP_LAYERS; layer++) {
  		MiniIOSurface * s = surfaces[layer];
  
-@@ -1419,6 +1619,7 @@ IOMobileFramebuffer::settle(const uint8_t * swap, MiniIOSurface ** surfaces)
+@@ -1419,6 +1627,7 @@ IOMobileFramebuffer::settle(const uint8_t * swap, MiniIOSurface ** surfaces)
  		memcpy(dst, swap + SWAP_DEST(layer), sizeof(dst));
  		drawLayer(s, src, dst);
  	}
@@ -6102,7 +6115,19 @@ index 724e156..cc9fdf8 100644
  	fSettling = false;
  	fStatSettled++;
  }
-@@ -1494,6 +1695,7 @@ IOMobileFramebuffer::show(const uint8_t * swap, MiniIOSurface ** surfaces)
+@@ -1488,12 +1697,19 @@ IOMobileFramebuffer::show(const uint8_t * swap, MiniIOSurface ** surfaces)
+ 		}
+ 	}
+ 	fLastFrame = began;
++	if (panelDark()) {
++		/* the panel is off: nothing to draw into its memory (the swap is done with all the same) */
++		IOLockUnlock(fLock);
++		gPanelSkipped++;
++		return;
++	}
+ 	report = fSwapsShown < 8;
+ 	if (report) {
+ 		IOLog("MiniIOMobileFramebuffer: swap %u (#%u): surfaces %u %u %u %u, layers set 0x%x cleared 0x%x\n",
  		    swapWord(swap, SWAP_ID), fSwapsShown, swapWord(swap, SWAP_SURFACE(0)), swapWord(swap, SWAP_SURFACE(1)),
  		    swapWord(swap, SWAP_SURFACE(2)), swapWord(swap, SWAP_SURFACE(3)), set, swapWord(swap, SWAP_LAYERS_CLEARED));
  	}
@@ -6110,7 +6135,7 @@ index 724e156..cc9fdf8 100644
  	for (unsigned layer = 0; layer < SWAP_LAYERS; layer++) {
  		uint32_t sid = swapWord(swap, SWAP_SURFACE(layer));
  		int32_t src[4], dst[4];
-@@ -1543,6 +1745,7 @@ IOMobileFramebuffer::show(const uint8_t * swap, MiniIOSurface ** surfaces)
+@@ -1543,6 +1759,7 @@ IOMobileFramebuffer::show(const uint8_t * swap, MiniIOSurface ** surfaces)
  			}
  		}
  	}
@@ -6118,7 +6143,7 @@ index 724e156..cc9fdf8 100644
  	drawn = mach_absolute_time();
  	if (recorded != NULL) {
  		record(recorded);
-@@ -1885,9 +2088,16 @@ IOMobileFramebufferUserClient::externalMethod(uint32_t selector, IOExternalMetho
+@@ -1885,9 +2102,16 @@ IOMobileFramebufferUserClient::externalMethod(uint32_t selector, IOExternalMetho
  	case kFBMethodSwapSignal:
  	case kFBMethodSwapCancel:
  	case kFBMethodSwapCancelAll:
@@ -6136,7 +6161,7 @@ index 724e156..cc9fdf8 100644
  
  	case kFBMethodNotifications:                    /* in: callback (0 = off), its argument, type, 0 */
  		if (args->scalarInputCount < 3 || in[2] >= kFBNotifyTypes) {
-@@ -1938,12 +2148,19 @@ IOMobileFramebufferUserClient::externalMethod(uint32_t selector, IOExternalMetho
+@@ -1938,12 +2162,19 @@ IOMobileFramebufferUserClient::externalMethod(uint32_t selector, IOExternalMetho
  		break;
  	}
  
@@ -6159,7 +6184,7 @@ index 724e156..cc9fdf8 100644
  	}
  	/* a request that only sets something is accepted; one that wants an answer gets zeros */
  	if (args->scalarOutputCount != 0) {
-@@ -2024,7 +2241,12 @@ publishAccelerator(IOService * provider)
+@@ -2024,7 +2255,12 @@ publishAccelerator(IOService * provider)
  		 * Metal for the screen; until that device can draw, a screen drawn without it is the working one.
  		 */
  		if (PE_parse_boot_argn("metal", &metal, sizeof(metal)) && metal != 0) {
