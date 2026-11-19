@@ -208,3 +208,24 @@ why the first three msgbuf runs got no answer.
 
 Next: the CLM blob download (bcmdhd_clm.blob_4390_b1, "clmload" iovar) and the country, the event buffers, then
 "up" and a scan (escan) with results over the event path.
+
+## Step 11: CLM, up, and the first scan (PROBE_WIFI=11)
+
+From bare metal over msgbuf, polled (docs/probe-log-wifi11-scan.txt; network names and addresses blanked):
+- `clmload` (WLC_SET_VAR 263): bcmdhd_clm.blob_4390_b1 (26272 bytes) in 1408-byte wl_dload_data_t pieces
+  (flag 1 << 12 | DL_BEGIN 2 / DL_END 4, type DL_TYPE_CLM 2), 305 ms, every piece status 0, `clmload_status` 0;
+  the firmware answers with event 47 (country code changed)
+- events: this firmware has no `event_msgs` (-23 BCME_UNSUPPORTED); `event_msgs_ext` works (ver 1, command
+  SET_MASK 3, length 27, mask) with only WLC_E_ESCAN_RESULT (69); 8 event buffers of 4 KiB (MSG_TYPE_EVENT_BUF_POST
+  0xd), each re-posted after its MSG_TYPE_WL_EVENT (0xe); the event is ethernet + bcmeth headers, the big-endian
+  wl_event_msg_t at +24 and its data at +72
+- WLC_UP (2): status 0
+- `scan_ver`: interface major 4; escan v1 is refused with -37 (BCME_VERSION); **escan v4** works:
+  wl_escan_params_v4 (version 4, action 1, sync id) + wl_scan_params_v4 (version 4, length 76, no SSID,
+  broadcast BSSID, BSS type any 2, scan_type 0, scan_type_ext 0, nprobes/active/passive/home -1, channel_num 0)
+- results: WLC_E_ESCAN_RESULT status 8 (partial) with one wl_bss_info each (v109 layout: BSSID +8, SSID_len +18,
+  SSID +19, chanspec +72, RSSI +78), then status 0: **145 results across 2.4, 5 and 6 GHz in 4.7 s**; no trap,
+  no S2MPU fault
+
+Next: join a WPA2/WPA3 network (the supplicant: wsec/wpa_auth/"sup_wpa" in-firmware 4-way handshake, or
+"wsec_key"/PMK), the TX/RX flow rings for data, then hand frames to the iOS network stack.

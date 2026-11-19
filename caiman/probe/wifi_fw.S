@@ -10,3 +10,13 @@
 wifi_blob_start:
 	.incbin	WIFI_BLOB_PATH
 wifi_blob_end:
+
+#ifdef WIFI_CLM_PATH
+/* the CLM blob (bcmdhd_clm.blob_4390_b1, WIFI_CLM=path; PROBE_WIFI >= 11): regulatory data for "clmload" */
+	.balign	64
+	.globl	wifi_clm_start
+	.globl	wifi_clm_end
+wifi_clm_start:
+	.incbin	WIFI_CLM_PATH
+wifi_clm_end:
+#endif

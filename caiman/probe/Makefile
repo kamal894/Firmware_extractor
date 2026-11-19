@@ -107,6 +107,10 @@ ifdef WIFI_BLOB
 CFLAGS += -DWIFI_BLOB_PATH='"$(WIFI_BLOB)"'
 SRCS += wifi_fw.S
 endif
+# WIFI_CLM=path: the CLM blob (bcmdhd_clm.blob_4390_b1) in the image too, for PROBE_WIFI >= 11
+ifdef WIFI_CLM
+CFLAGS += -DWIFI_CLM_PATH='"$(WIFI_CLM)"'
+endif
 OBJS := $(patsubst %,$(OUT)/%.o,$(SRCS))
 
 all: $(OUT)/probe.Image $(if $(filter caiman,$(PLATFORM)),$(if $(filter 0,$(LOADER)),$(OUT)/probe-boot.img))
