@@ -131,6 +131,74 @@ static void wifi_link(void)
 		   w[0] >> 16, w[2] >> 8, w[2] & 0xff, (w[3] >> 16) & 0x7f);
 		for (k = 0; k < 16; k += 4)
 			pr("wifi: endpoint +0x%02x: %08x %08x %08x %08x\n", 4 * k, w[k], w[k + 1], w[k + 2], w[k + 3]);
+#if PROBE_WIFI >= 5
+		/*
+		 * PROBE_WIFI=5: the BARs sized and placed in the RC's memory window (DT ranges: 0x60000000, 0xff0000),
+		 * outbound iATU region 1 as MEM there, memory decoding on (no bus master: the chip cannot write to RAM),
+		 * then the chip's own registers through BAR0 (Broadcom: the window at config 0x80 picks the backplane
+		 * address; ChipCommon at 0x18000000 holds the chip ID at +0).
+		 */
+		{
+			const u64 cfg = 0x60ffe000ULL;
+			u64 at = 0x60000000ULL, bar[3] = { 0 }, size[3] = { 0 };
+			u32 b;
+
+			for (b = 0; b < 3; b++) {
+				u32 off = 0x10 + 8 * b, lo, hi;
+
+				wr32(cfg + off, 0xffffffffu);
+				wr32(cfg + off + 4, 0xffffffffu);
+				lo = rd32(cfg + off) & ~0xfu;
+				hi = rd32(cfg + off + 4);
+				size[b] = ~(((u64)hi << 32) | lo) + 1;
+				if (size[b] == 0 || size[b] > 0x800000) {
+					pr("wifi: BAR%u: size 0x%llx: not placed\n", 2 * b, size[b]);
+					wr32(cfg + off, 0);
+					wr32(cfg + off + 4, 0);
+					continue;
+				}
+				at = (at + size[b] - 1) & ~(size[b] - 1);
+				bar[b] = at;
+				wr32(cfg + off, (u32)at);
+				wr32(cfg + off + 4, 0);
+				at += size[b];
+				pr("wifi: BAR%u: 0x%llx bytes at 0x%llx\n", 2 * b, size[b], bar[b]);
+			}
+			wr32(DBI + 0x20, (0x60fu << 20) | (0x600u << 4));	/* bridge memory window 0x60000000-0x60ffffff */
+			wr32(DBI + 0x300200, 0x0);				/* region 1: MEM */
+			wr32(DBI + 0x300208, 0x60000000);
+			wr32(DBI + 0x30020c, 0);
+			wr32(DBI + 0x300210, 0x60feffff);
+			wr32(DBI + 0x300214, 0x60000000);
+			wr32(DBI + 0x300218, 0);
+			wr32(DBI + 0x300204, 0x80000000u);
+			(void)rd32(DBI + 0x300204);
+			wr32(cfg + 0x4, (rd32(cfg + 0x4) & ~0x7u) | 0x2);	/* memory space only */
+			pr("wifi: endpoint command 0x%08x, BAR0 window (config 0x80) 0x%08x\n", rd32(cfg + 0x4), rd32(cfg + 0x80));
+			if (bar[0]) {
+				u32 win = rd32(cfg + 0x80);
+
+				for (k = 0; k < 8; k++) {
+					ok = 1;
+					w[k] = safe_rd32(bar[0] + 4 * k, &ok);
+				}
+				pr("wifi: BAR0 at the chip's window 0x%08x: %08x %08x %08x %08x %08x %08x %08x %08x\n", win, w[0], w[1],
+				   w[2], w[3], w[4], w[5], w[6], w[7]);
+				wr32(cfg + 0x80, 0x18000000);		/* the window to ChipCommon */
+				(void)rd32(cfg + 0x80);
+				for (k = 0; k < 8; k++) {
+					ok = 1;
+					w[k] = safe_rd32(bar[0] + 4 * k, &ok);
+					if (!ok)
+						w[k] = 0xdeadbeef;
+				}
+				pr("wifi: BAR0 +0x00: %08x %08x %08x %08x %08x %08x %08x %08x\n", w[0], w[1], w[2], w[3], w[4], w[5],
+				   w[6], w[7]);
+				pr("wifi: ChipCommon chip ID 0x%04x, rev %u, package %u, %u cores\n", w[0] & 0xffff, (w[0] >> 16) & 0xf,
+				   (w[0] >> 20) & 0xf, (w[0] >> 24) & 0xf);
+			}
+		}
+#endif
 	}
 #endif
 	/* leave the chip off again and the link down */

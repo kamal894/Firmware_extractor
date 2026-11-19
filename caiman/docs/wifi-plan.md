@@ -76,3 +76,17 @@
 - **Next:** size and assign the BARs inside the RC's memory window (DT ranges of pcie@13120000), set up outbound
   iATU region 1 as MEM, and read the chip's own registers through BAR0 (Broadcom ChipCommon: chip ID). After that
   comes the DHD port in the kernel: firmware download and the message rings.
+
+## Run wifi5: inside the chip (PROBE_WIFI=5)
+
+- **BARs** were sized and placed in the RC window:
+  - BAR0: 64 KiB at 0x60000000 (register window);
+  - BAR2: 4 MiB at 0x60400000 (taken to be the TCM, where the firmware goes);
+  - BAR4: 1 MiB at 0x60800000.
+- Outbound iATU region 1 is MEM over 0x60000000-0x60feffff, and memory decoding is on. Bus master stays off, so the
+  chip cannot write to RAM.
+- **BAR0 window.** Config 0x80 was left at 0x18001000. Set to 0x18000000 (ChipCommon), BAR0+0 reads 0x60054390:
+  **chip ID 0x4390, rev 5**.
+- **Next:** the firmware, `/vendor/firmware/fw_bcmdhd.bin_4390_a0`, with CLM and NVRAM. The download path is DHD's:
+  halt the ARM core, write the firmware into the TCM through BAR2, put the NVRAM at the end of RAM, release the
+  core, then wait for the shared area.
