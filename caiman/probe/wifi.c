@@ -528,6 +528,12 @@ void wifi_probe(void)
 	dump("soc", 0x13130000ULL, 0x20);
 	dump("phy", 0x13160000ULL, 0x20);
 	dump("dbi", 0x13400000ULL, 0x40);
+	/* the HSI2 S2MPU (s2mpu_s0_hsi2, google,s2mpu-v9, always-on): what stands between the chip's DMA and RAM */
+	dump("s2mpu-hsi2", 0x131f0000ULL, 0x200);
+	dump("s2mpu-hsi2+1000", 0x131f0000ULL + 0x1000, 0x40);
+	dump("s2mpu-hsi2+2000", 0x131f0000ULL + 0x2000, 0x40);
+	dump("s2mpu-hsi2+4000", 0x131f0000ULL + 0x4000, 0x80);
+	dump("s2mpu-hsi2+8000", 0x131f0000ULL + 0x8000, 0x40);
 #if PROBE_WIFI >= 2
 	/*
 	 * PROBE_WIFI=2: the PHY out of isolation, as Linux's exynos_pcie_phy_isolation(PCIE_PHY_BYPASS) at power-on:
