@@ -33,3 +33,14 @@
 - **Probes now end in fastboot** (`PROBE_TO_FASTBOOT=1` in `psci.c` too): `boot_a` holds iOS, and a plain reset
   would boot it and overwrite pstore. Script: scratchpad `runprobe.sh` (probe from RAM, then fastboot, then
   Android from RAM, then the log).
+
+## Run wifi2: the PHY answers once its isolation is lifted
+
+- PMU+0x3ec8 bit 0 is Linux's PCIE_PHY_CONTROL_MASK (1 = bypass), found in Google's `pcie-exynos-rc.c`
+  `exynos_pcie_phy_isolation`. The bootloader leaves it 0xc0, bit 0 clear: isolated.
+- The set-bit alias was written through EL3, as for UFS: SMC 0x82000504 (0x15460000 + (0x3ec8 | 0xc000), 1, bit 0).
+  It returned 0, and the register then read **0x1**. Bits 6-7 went to 0 with it; what they are is not known.
+- After that the **PHY answers**: +0x0 8, +0x14 3, +0x1c 0x55. UDBG +0xc700 reads 0x00010140, and PCS answers too.
+- Next: gph3 pins (bank +0x00: PERST# out low, CLKREQ# function 2, WL_REG_ON out high), then the channel-1 path of
+  `pcie-exynos-zuma-rc-cal.c`: `phy_all_pwrdn_clear`, then `pcie_phy_config`. Sources are in
+  `~/caiman-work/ref/pcie` (soc/gs `android-gs-akita-5.15-android15`).

@@ -45,4 +45,22 @@ void wifi_probe(void)
 	dump("soc", 0x13130000ULL, 0x20);
 	dump("phy", 0x13160000ULL, 0x20);
 	dump("dbi", 0x13400000ULL, 0x40);
+#if PROBE_WIFI >= 2
+	/*
+	 * PROBE_WIFI=2: the PHY out of isolation, as Linux's exynos_pcie_phy_isolation(PCIE_PHY_BYPASS) at power-on:
+	 * bit 0 of PMU+0x3ec8 (pcie-exynos-rc.h PCIE_PHY_CONTROL_MASK). EL3 owns PMU writes: the set-bit alias
+	 * (offset | 0xc000) with the bit number, as ufs.c does for the UFS PHY.
+	 */
+	if (!(v & 1)) {
+		s64 r = psci_call(0x82000504u, 0x15460000ULL + (0x3ec8 | 0xc000), 1, 0);
+
+		ok = 1;
+		pr("wifi: PCIe 1 PHY isolation bypass via SMC: %lld, PMU +0x3ec8 now 0x%08x\n", r,
+		   safe_rd32(0x15460000ULL + 0x3ec8, &ok));
+		delay_us(100);
+	}
+	dump("phy", 0x13160000ULL, 0x20);
+	dump("udbg+c700", 0x13150000ULL + 0xc700, 0x10);
+	dump("pcs", 0x13140000ULL, 0x20);
+#endif
 }
