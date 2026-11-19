@@ -41,3 +41,19 @@ F0 A5 A5
 
 - **AOD.** `panel-gs-cm4.c:cm4_set_lp_mode` enforces manual/peak refresh and waits for VSYNC completion, then sends `F0 5A 5A; 53 24; B9 51; B0 00 E8 BD; BD 00; B0 00 10 BD; BD 22; B0 00 82 BD; BD 22 22 22 22; F7 0F; F0 A5 A5`. It then applies LP refresh/DBI settings and the night/low/high brightness bin (`51 00 B0`, `51 01 6D`, or `51 02 F6`). `cm4_set_nolp_mode` waits for VSYNC completion, enforces manual/peak refresh, waits again and sleeps 5.0–5.1 ms, then sends `F0 5A 5A; 53 20; F0 A5 A5` and reapplies normal-mode features and refresh. These LP entry/exit paths use vendor refresh programming and `53` rather than DCS idle commands `39`/`38`.
 - **DECON/DSIM.** The local `exynos_drm_decon.c:decon_wait_for_flip_done` masks the command-mode trigger after the flip unless `keep_unmask` is set. `_decon_wait_for_framedone` drains pending frames before controller shutdown. In `~/caiman-work/ref/disp/exynos_drm_dsim.c`, `dsim_write_data_locked` and `dsim_cmd_flush_locked` show command queue/flush handling. **Inference for the powered loader path:** stop new frame submissions, let any in-flight frame finish, mask DECON’s HW trigger, and send the panel commands through the working DSIM command path without depending on a new TE. After `29`, rearm the frame path, using a fresh TE if HW-triggered. The simple `28`/`29` paths contain no unconditional extra frame wait beyond the 20 ms off delay. `cm4_enable` does have a conditional VSYNC wait before DSC programming for a refresh transition.
+
+## Screen off and on from iOS (2026-11-18, runs ws60-ws62)
+
+- **What iOS asks.** backboardd calls IOMobileFramebuffer selector 12 (`kFBMethodRequestPowerChange`) with 0 for
+  off and 1 for on: once while SpringBoard starts (off, then on 1.7 s later), and on the power key (run ws60,
+  `fb_log_all=1 press_power=200`).
+- **What the kernel does now.** `MiniIOMobileFramebuffer.cpp` `panelPower()`: with boot-arg `panel_dsim=<pa>` (the
+  loader adds `panel_dsim=0x19440000`), 0 sends DCS `28` (display off) and waits 20 ms, and 1 sends `29` (display
+  on). This is the warm path above: no reset and no `10`/`11`. Packet-go must be off, as the bootloader leaves it.
+  DCS `0a` is read back for the log.
+- **Result (ws61).** Off reads back power mode 0x99 (bit 2, display on, is clear) in 21 ms. On reads back 0x9d in
+  15 us. Each off and on was seen at boot and on both key presses.
+- **Open.** The first press is answered off, then on 170 ms later; the second press leaves the screen off. This is
+  iOS's own choice (no panel error); not looked into yet.
+- **Not done yet.** Frames are still sent while the panel is off, the CPU and GPU stay at their clocks, and there is
+  no system suspend.

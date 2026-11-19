@@ -871,6 +871,8 @@ void xnu_boot(void)
 		n = append(ba->commandLine, n, arg);
 	}
 #endif
+	/* the panel's DSI (DSIM0, command mode, as the bootloader left it): the kernel turns the panel off and on with it */
+	n = append(ba->commandLine, n, " panel_dsim=0x19440000");
 	pr("xnu: device tree 0x%llx (%u bytes), boot_args 0x%llx, top 0x%llx\n", dt_pa, dt_len, ba_pa,
 	   top);
 	pr("xnu: uart for the kernel 0x%llx%s, framebuffer 0x%llx\n", xnu.uart_pa,
