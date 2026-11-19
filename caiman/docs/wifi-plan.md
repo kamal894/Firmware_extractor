@@ -177,6 +177,6 @@ the last word moves to the real shared area (0x521000 in wifi9d; 0x55b800 in ano
   "Notify host through MSI - FW boot complete". No trap.
 
 So the host side must wait for the last word to settle (not take the first non-token value), as dhdpcie_readshared
-does by checking the shared version. Log: docs/probe-logs/wifi9.txt.
+does by checking the shared version. Log: docs/probe-log-wifi9.txt.
 Next: host DMA buffers + the five common rings (H2D control/rxpost, D2H control/txcpl/rxcpl), bus master on behind
 the PCIe S2MPU, MSI or polling of the D2H indices; then the first ioctl (GET_VERSION / "ver" iovar).
