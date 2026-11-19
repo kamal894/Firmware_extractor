@@ -2059,7 +2059,7 @@ index 54acd33..bad7027 100644
  	if (kernel_thread_start(battery_thread, NULL, &thread) == KERN_SUCCESS) thread_deallocate(thread);
  }
 diff --git a/drivers/power/hakios.thermal.c b/drivers/power/hakios.thermal.c
-index 8d69400..f6ebbf9 100644
+index 8d69400..ff0c39d 100644
 --- a/drivers/power/hakios.thermal.c
 +++ b/drivers/power/hakios.thermal.c
 @@ -41,6 +41,7 @@
@@ -2070,7 +2070,15 @@ index 8d69400..f6ebbf9 100644
   *   thermal_poll=<ms>  how often (200 to 60000; 2000)
   *   thermal_log=<s>    a summary line this often (0: only on a rise; 60)
   *   thermal_stop=<C>   stop the run at this temperature (0: never; 105)
-@@ -245,6 +246,217 @@ tick(__unused thread_call_param_t p0, __unused thread_call_param_t p1)
+@@ -51,6 +52,7 @@
+ #include <kern/clock.h>
+ #include <kern/startup.h>
+ #include <kern/thread_call.h>
++#include <kern/locks.h>
+ #include <libkern/libkern.h>
+ #include <mach/mach_types.h>
+ #include <pexpert/pexpert.h>
+@@ -245,6 +247,264 @@ tick(__unused thread_call_param_t p0, __unused thread_call_param_t p1)
  	thread_call_enter_delayed(call, deadline);
  }
  
@@ -2098,6 +2106,15 @@ index 8d69400..f6ebbf9 100644
 +
 +static vm_offset_t zuma_sram, zuma_mbox;
 +static uint32_t zuma_seq, zuma_level, zuma_errors;
++static uint32_t zuma_applied;           /* the CPU level set (zuma_level is what the temperature allows) */
++static bool zuma_screen_off;            /* the panel is off: CPUs at the slowest level, the memory at its idle clock */
++static LCK_GRP_DECLARE(zuma_grp, "hakios.thermal");
++static LCK_MTX_DECLARE(zuma_lock, &zuma_grp);   /* one ACPM user at a time: the thermal tick and the framebuffer */
++
++#define ZUMA_DVFS_MIF           0
++#define ZUMA_MIF_ON_KHZ         2028000 /* what the loader set (probe/dvfs.c) */
++#define ZUMA_MIF_OFF_KHZ        546000  /* Android's idle clock */
++#define ZUMA_LEVEL_SLOW         3
 +
 +static const struct {
 +	uint32_t below;                 /* the level holds while the hottest zone is below this */
@@ -2200,9 +2217,46 @@ index 8d69400..f6ebbf9 100644
 +			zuma_errors++;
 +		}
 +	}
-+	say("thermal: %d C: CPU clocks %u, %u, %u MHz (level %u, was %u)\n", hottest, zuma_levels[level].khz[0] / 1000,
-+	    zuma_levels[level].khz[1] / 1000, zuma_levels[level].khz[2] / 1000, level, zuma_level);
-+	zuma_level = level;
++	say("thermal: %d C: CPU clocks %u, %u, %u MHz (level %u, was %u)%s\n", hottest, zuma_levels[level].khz[0] / 1000,
++	    zuma_levels[level].khz[1] / 1000, zuma_levels[level].khz[2] / 1000, level, zuma_applied,
++	    zuma_screen_off ? " (the screen is off)" : "");
++	zuma_applied = level;
++}
++
++/* the level to have: the temperature's, or the slowest while the screen is off */
++static void
++zuma_apply(int hottest)
++{
++	uint32_t want = zuma_screen_off ? ZUMA_LEVEL_SLOW : zuma_level;
++
++	if (want != zuma_applied) {
++		zuma_set_level(want, hottest);
++	}
++}
++
++/*
++ * The framebuffer's panel went off (on == 0) or is about to come on: slow the CPUs and the memory while nothing is
++ * shown, give them back before the panel shows something again (MiniIOMobileFramebuffer.cpp panelPower()).
++ */
++void hakios_thermal_screen(int on);
++void
++hakios_thermal_screen(int on)
++{
++	uint32_t cmd[4] = { ZUMA_DVFS_MIF, on ? ZUMA_MIF_ON_KHZ : ZUMA_MIF_OFF_KHZ, 0 /* FREQ_REQ */, 0 };
++	uint32_t get[4] = { ZUMA_DVFS_MIF, 0, 1 /* FREQ_GET */, 0 };
++	int sent, got;
++
++	if (zuma_sram == 0 || zuma_mbox == 0) {
++		return;
++	}
++	lck_mtx_lock(&zuma_lock);
++	zuma_screen_off = !on;
++	sent = zuma_acpm(ZUMA_DVFS_CHANNEL, cmd);
++	got = zuma_acpm(ZUMA_DVFS_CHANNEL, get);
++	zuma_apply((int)(thermal_max_mc / 1000));
++	lck_mtx_unlock(&zuma_lock);
++	say("thermal: screen %s: memory clock %u MHz asked (%s), reads %u MHz\n", on ? "on" : "off", cmd[1] / 1000,
++	    sent == 0 ? "answered" : "no answer", got == 0 ? get[1] / 1000 : 0);
 +}
 +
 +static void
@@ -2241,9 +2295,8 @@ index 8d69400..f6ebbf9 100644
 +	if (want < zuma_level && hottest + 5 >= (int)zuma_levels[want].below) {
 +		want = zuma_level;
 +	}
-+	if (want != zuma_level) {
-+		zuma_set_level(want, hottest);
-+	}
++	zuma_level = want;
++	zuma_apply(hottest);
 +
 +	absolutetime_to_nanoseconds(now - last_log, &nanos);
 +	if (log_seconds != 0 && nanos >= (uint64_t)log_seconds * NSEC_PER_SEC) {
@@ -2265,7 +2318,9 @@ index 8d69400..f6ebbf9 100644
 +{
 +	uint64_t deadline;
 +
++	lck_mtx_lock(&zuma_lock);
 +	zuma_look();
++	lck_mtx_unlock(&zuma_lock);
 +	clock_interval_to_deadline(poll_ms, NSEC_PER_MSEC, &deadline);
 +	thread_call_enter_delayed(call, deadline);
 +}
@@ -2288,7 +2343,7 @@ index 8d69400..f6ebbf9 100644
  __startup_func
  static void
  thermal_init(void)
-@@ -259,6 +471,10 @@ thermal_init(void)
+@@ -259,6 +519,10 @@ thermal_init(void)
  	}
  	(void)PE_parse_boot_argn("thermal_tm0", &tm_pa[0], sizeof(tm_pa[0]));
  	(void)PE_parse_boot_argn("thermal_tm1", &tm_pa[1], sizeof(tm_pa[1]));
@@ -2299,7 +2354,7 @@ index 8d69400..f6ebbf9 100644
  	if (PE_parse_boot_argn("thermal_poll", &value, sizeof(value)) && value >= 200 && value <= 60000) {
  		poll_ms = value;
  	}
-@@ -268,6 +484,10 @@ thermal_init(void)
+@@ -268,6 +532,10 @@ thermal_init(void)
  	if (PE_parse_boot_argn("thermal_stop", &value, sizeof(value)) && value <= 160) {
  		stop_celsius = value;
  	}
@@ -5826,7 +5881,7 @@ index c390093..de72f4d 100755
  		log "downloading the macOS 13.3 SDK for its DriverKit headers"
  		curl -L --fail --retry 3 -s -o macos-sdk.tar.xz "$MACOS_SDK_URL" || die "download failed: $MACOS_SDK_URL"
 diff --git a/xnu/files/iokit/Kernel/MiniIOMobileFramebuffer.cpp b/xnu/files/iokit/Kernel/MiniIOMobileFramebuffer.cpp
-index 724e156..b0be343 100644
+index 724e156..8e0de79 100644
 --- a/xnu/files/iokit/Kernel/MiniIOMobileFramebuffer.cpp
 +++ b/xnu/files/iokit/Kernel/MiniIOMobileFramebuffer.cpp
 @@ -261,6 +261,7 @@ static TUNABLE(uint32_t, gMeasure, "fb_measure", 0);
@@ -5855,7 +5910,7 @@ index 724e156..b0be343 100644
  
  static vm_offset_t
  panelInterface(void)
-@@ -282,6 +294,102 @@ panelInterface(void)
+@@ -282,6 +294,110 @@ panelInterface(void)
  	return physical != 0 ? ml_io_map((vm_offset_t) (physical & ~0x3fffULL), 0x4000) + (vm_offset_t) (physical & 0x3fffULL) : 0;
  }
  
@@ -5878,6 +5933,8 @@ index 724e156..b0be343 100644
 +#define DSIM_FIFO_EMPTY_PH      (1u << 10)
 +#define DSIM_CMD_CONFIG         0x80
 +#define DSIM_CMD_PKT_GO_EN      (1u << 16)
++
++extern "C" void hakios_thermal_screen(int on);   /* drivers/power/hakios.thermal.c: slower clocks while off */
 +
 +static volatile uint32_t * gDsim;
 +static int gPanelOn = 1;
@@ -5942,6 +5999,9 @@ index 724e156..b0be343 100644
 +		IOLog("MiniIOMobileFramebuffer: the panel's DSI has packet-go on: its power is left alone\n");
 +		return;
 +	}
++	if (on) {
++		hakios_thermal_screen(1);       /* the clocks back first: what comes next is drawn at full speed */
++	}
 +	gDsim[DSIM_INTSRC / 4] = DSIM_INTSRC_PH_EMPTY;
 +	gDsim[DSIM_PKTHDR / 4] = 0x05 | (on ? 0x29u : 0x28u) << 8;     /* DCS short write, no parameter */
 +	sent = dsimWait(DSIM_FIFOCTRL, DSIM_FIFO_EMPTY_PH);
@@ -5953,12 +6013,15 @@ index 724e156..b0be343 100644
 +	    on ? "on" : "off", on ? "on" : "off", sent ? "sent" : "NOT sent (the FIFO did not empty)", panelPowerMode(),
 +	    micros(mach_absolute_time() - t0), gPanelSkipped);
 +	gPanelSkipped = 0;
++	if (!on) {
++		hakios_thermal_screen(0);
++	}
 +}
 +
  static void
  measurePanel(__unused void * arg, __unused wait_result_t wr)
  {
-@@ -346,7 +454,15 @@ class IOMobileFramebuffer : public IOService
+@@ -346,7 +462,15 @@ class IOMobileFramebuffer : public IOService
  
  public:
  	IOLock *        fLock;
@@ -5975,7 +6038,7 @@ index 724e156..b0be343 100644
  	uint32_t        fPanelWidth, fPanelHeight, fRowBytes;
  	uint32_t        fWidth, fHeight;        /* the display as user space sees it */
  	MiniIOSurface * fDefaultSurface;
-@@ -431,6 +547,9 @@ public:
+@@ -431,6 +555,9 @@ public:
  	void present(const uint8_t * swap);
  	void show(const uint8_t * swap, MiniIOSurface ** surfaces);
  	void settle(const uint8_t * swap, MiniIOSurface ** surfaces);
@@ -5985,7 +6048,7 @@ index 724e156..b0be343 100644
  	bool fSettling;                 /* drawing the last frame again, filtered (fb_filter=2) */
  	bool fFilterFrame;              /* this frame came slowly: filtered as it is (fb_filter=2) */
  	void presenter(void);
-@@ -603,6 +722,9 @@ IOMobileFramebuffer::start(IOService * provider)
+@@ -603,6 +730,9 @@ IOMobileFramebuffer::start(IOService * provider)
  	fPanelWidth = vinfo.v_width;
  	fPanelHeight = vinfo.v_height;
  	fRowBytes = vinfo.v_rowbytes;
@@ -5995,7 +6058,7 @@ index 724e156..b0be343 100644
  	fWidth = gFBWidth ? gFBWidth : fPanelWidth;
  	fHeight = gFBHeight ? gFBHeight : fPanelHeight;
  	if (gFBScale != 0 && gFBScale != kFBDefaultScale) {
-@@ -1168,6 +1290,8 @@ IOMobileFramebuffer::drawLayer(MiniIOSurface * s, const int32_t * src, const int
+@@ -1168,6 +1298,8 @@ IOMobileFramebuffer::drawLayer(MiniIOSurface * s, const int32_t * src, const int
  			fColumn[x] = (uint32_t) (sx + (int64_t) (x - px0) * sw / (px1 - px0));
  		}
  	}
@@ -6004,7 +6067,7 @@ index 724e156..b0be343 100644
  	job.pixels = s->pixels();
  	job.stride = s->info.bytesPerRow;
  	job.sx = sx;
-@@ -1396,6 +1520,89 @@ IOMobileFramebuffer::presenter(void)
+@@ -1396,6 +1528,89 @@ IOMobileFramebuffer::presenter(void)
  	}
  }
  
@@ -6094,7 +6157,7 @@ index 724e156..b0be343 100644
  /*
   * The frame on the panel once more, filtered (fb_filter=2): the same layers from the same surfaces where show() put
   * them, nothing else (no turn to wait for, no swap to hand on, nothing counted). Its surfaces were held since.
-@@ -1405,10 +1612,11 @@ IOMobileFramebuffer::settle(const uint8_t * swap, MiniIOSurface ** surfaces)
+@@ -1405,10 +1620,11 @@ IOMobileFramebuffer::settle(const uint8_t * swap, MiniIOSurface ** surfaces)
  {
  	int32_t src[4], dst[4];
  
@@ -6107,7 +6170,7 @@ index 724e156..b0be343 100644
  	for (unsigned layer = 0; layer < SWAP_LAYERS; layer++) {
  		MiniIOSurface * s = surfaces[layer];
  
-@@ -1419,6 +1627,7 @@ IOMobileFramebuffer::settle(const uint8_t * swap, MiniIOSurface ** surfaces)
+@@ -1419,6 +1635,7 @@ IOMobileFramebuffer::settle(const uint8_t * swap, MiniIOSurface ** surfaces)
  		memcpy(dst, swap + SWAP_DEST(layer), sizeof(dst));
  		drawLayer(s, src, dst);
  	}
@@ -6115,7 +6178,7 @@ index 724e156..b0be343 100644
  	fSettling = false;
  	fStatSettled++;
  }
-@@ -1488,12 +1697,19 @@ IOMobileFramebuffer::show(const uint8_t * swap, MiniIOSurface ** surfaces)
+@@ -1488,12 +1705,19 @@ IOMobileFramebuffer::show(const uint8_t * swap, MiniIOSurface ** surfaces)
  		}
  	}
  	fLastFrame = began;
@@ -6135,7 +6198,7 @@ index 724e156..b0be343 100644
  	for (unsigned layer = 0; layer < SWAP_LAYERS; layer++) {
  		uint32_t sid = swapWord(swap, SWAP_SURFACE(layer));
  		int32_t src[4], dst[4];
-@@ -1543,6 +1759,7 @@ IOMobileFramebuffer::show(const uint8_t * swap, MiniIOSurface ** surfaces)
+@@ -1543,6 +1767,7 @@ IOMobileFramebuffer::show(const uint8_t * swap, MiniIOSurface ** surfaces)
  			}
  		}
  	}
@@ -6143,7 +6206,7 @@ index 724e156..b0be343 100644
  	drawn = mach_absolute_time();
  	if (recorded != NULL) {
  		record(recorded);
-@@ -1885,9 +2102,16 @@ IOMobileFramebufferUserClient::externalMethod(uint32_t selector, IOExternalMetho
+@@ -1885,9 +2110,16 @@ IOMobileFramebufferUserClient::externalMethod(uint32_t selector, IOExternalMetho
  	case kFBMethodSwapSignal:
  	case kFBMethodSwapCancel:
  	case kFBMethodSwapCancelAll:
@@ -6161,7 +6224,7 @@ index 724e156..b0be343 100644
  
  	case kFBMethodNotifications:                    /* in: callback (0 = off), its argument, type, 0 */
  		if (args->scalarInputCount < 3 || in[2] >= kFBNotifyTypes) {
-@@ -1938,12 +2162,19 @@ IOMobileFramebufferUserClient::externalMethod(uint32_t selector, IOExternalMetho
+@@ -1938,12 +2170,19 @@ IOMobileFramebufferUserClient::externalMethod(uint32_t selector, IOExternalMetho
  		break;
  	}
  
@@ -6184,7 +6247,7 @@ index 724e156..b0be343 100644
  	}
  	/* a request that only sets something is accepted; one that wants an answer gets zeros */
  	if (args->scalarOutputCount != 0) {
-@@ -2024,7 +2255,12 @@ publishAccelerator(IOService * provider)
+@@ -2024,7 +2263,12 @@ publishAccelerator(IOService * provider)
  		 * Metal for the screen; until that device can draw, a screen drawn without it is the working one.
  		 */
  		if (PE_parse_boot_argn("metal", &metal, sizeof(metal)) && metal != 0) {

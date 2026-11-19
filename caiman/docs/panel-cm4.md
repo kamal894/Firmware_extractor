@@ -61,3 +61,8 @@ F0 A5 A5
   still handed on, so backboardd does not wait. On both key presses the panel went off and on again with nothing
   stuck. Swipe speed is unchanged (34-42 a second), m2v_test PASS. Codex's fuller plan (masking DECON's trigger,
   lower clocks while off) is in `docs/screen-off-power.md`.
+- **Slower clocks while off (ws64).** `hakios_thermal_screen()` in `hakios.thermal.c` runs under one lock with
+  the thermal tick (both use ACPM). When the panel is off, the CPUs go to level 3 (1098/1065/1164 MHz) and MIF
+  (memory) to 546 MHz, which read back as 546. Before `29` they come back: MIF 2028 and the thermal level. Both
+  presses worked; swipe speed and m2v_test are unchanged. INT, DISP and G3D are left as they are (see
+  `screen-off-power.md`).
