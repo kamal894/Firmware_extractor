@@ -111,6 +111,10 @@ endif
 ifdef WIFI_CLM
 CFLAGS += -DWIFI_CLM_PATH='"$(WIFI_CLM)"'
 endif
+# WIFI_SSID=file WIFI_PSK=file: the network to join, for PROBE_WIFI >= 12 (the owner's files; keep them out of git)
+ifdef WIFI_PSK
+CFLAGS += -DWIFI_SSID_PATH='"$(WIFI_SSID)"' -DWIFI_PSK_PATH='"$(WIFI_PSK)"'
+endif
 OBJS := $(patsubst %,$(OUT)/%.o,$(SRCS))
 
 all: $(OUT)/probe.Image $(if $(filter caiman,$(PLATFORM)),$(if $(filter 0,$(LOADER)),$(OUT)/probe-boot.img))

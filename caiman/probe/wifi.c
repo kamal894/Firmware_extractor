@@ -149,6 +149,7 @@ struct mb {
 	u16 trans;
 	int done, status;		/* the ioctl completion seen, and its status */
 	u32 resp_len, scan_bss, scan_done;
+	u32 link, keyed, failed;	/* PROBE_WIFI >= 12: the join's outcome from its events */
 };
 
 static u32 rd_le32(const volatile u8 *p) { return p[0] | p[1] << 8 | p[2] << 16 | (u32)p[3] << 24; }
@@ -218,9 +219,20 @@ static void wifi_event(struct mb *m, u32 b, u32 len)
 			pr("wifi: scan finished, status %u, %u networks seen\n", status, m->scan_bss);
 			m->scan_done = 1;
 		}
-	} else
-		pr("wifi: event %u status %u reason %u, %u bytes (buffer %u, %u)\n", type, status, rd_be32(e + 36), dlen,
-		   b, len);
+	} else {
+		/* 0 SET_SSID, 1 JOIN, 3 AUTH, 5 DEAUTH, 6 DEAUTH_IND, 7 ASSOC, 11 DISASSOC, 12 DISASSOC_IND, 16 LINK,
+		 * 46 PSK_SUP, 47 COUNTRY_CODE_CHANGED, 54 IF (no string table: the image takes no relocations) */
+		u32 flags = (u32)e[26] << 8 | e[27], reason = rd_be32(e + 36);
+
+		pr("wifi: event %u status %u reason %u flags 0x%x, %u bytes\n", type, status, reason, flags, dlen);
+		if (type == 16)		/* WLC_E_LINK: flags bit 0 WLC_EVENT_MSG_LINK */
+			m->link = flags & 1;
+		else if (type == 46 && status == 6)	/* WLC_E_PSK_SUP, WLC_SUP_KEYED */
+			m->keyed = 1;
+		else if (type == 46 || type == 5 || type == 6 || type == 11 || type == 12 || (type == 0 && status != 0))
+			m->failed = 1;
+	}
+	(void)len;
 	buf_post(m, 0x0d, 0x200 + b, M_EVT + 0x1000 * b, 0x1000);	/* the buffer back to the firmware */
 }
 
@@ -265,6 +277,7 @@ static void d2h_poll(struct mb *m, u64 us, int (*stop)(struct mb *))
 static int ioctl_done(struct mb *m) { return m->done; }
 static int never(struct mb *m) { (void)m; return 0; }
 static int scan_over(struct mb *m) { return (int)m->scan_done; }
+static int join_over(struct mb *m) { return (m->link && m->keyed) || m->failed; }
 
 /* one ioctl (dhd_fillup_ioct_reqst): a response buffer, then the request; 'buf' in, the answer back in it */
 static int wifi_ioctl(struct mb *m, u32 cmd, void *buf, u32 len, u32 outlen)
@@ -458,6 +471,87 @@ static void wifi_msgbuf(u64 cfg, u64 bar2, u32 sh, u32 ri, u32 cons, u32 cidx)
 		if (r == 0)
 			d2h_poll(m, 10000000, scan_over);
 		pr("wifi: scan: %llu ms, %u networks\n", (timer_us() - t0) / 1000, m->scan_bss);
+#if PROBE_WIFI >= 12 && defined(WIFI_PSK_PATH)
+		{
+			/*
+			 * PROBE_WIFI=12: join the owner's WPA2-PSK network with the firmware's own supplicant (sup_wpa),
+			 * as brcmfmac does with firmware supplicant: infra 1, open auth 0, wsec AES 4, wpa_auth WPA2_AUTH_PSK
+			 * 0x80, the passphrase as wsec_pmk_t (WLC_SET_WSEC_PMK 268, flags WSEC_PASSPHRASE 1), then
+			 * WLC_SET_SSID 26; success is WLC_E_LINK up plus WLC_E_PSK_SUP keyed (6). The passphrase is never
+			 * printed.
+			 */
+			extern const u8 wifi_ssid_start[] __attribute__((visibility("hidden")));
+			extern const u8 wifi_ssid_end[] __attribute__((visibility("hidden")));
+			extern const u8 wifi_psk_start[] __attribute__((visibility("hidden")));
+			extern const u8 wifi_psk_end[] __attribute__((visibility("hidden")));
+			static u8 pmk[264], ssid[36];
+			u32 sl = (u32)(wifi_ssid_end - wifi_ssid_start), kl = (u32)(wifi_psk_end - wifi_psk_start), v;
+			u8 bssid[8] = { 0 };
+
+			while (kl && (wifi_psk_start[kl - 1] == '\n' || wifi_psk_start[kl - 1] == '\r'))
+				kl--;
+			while (sl && (wifi_ssid_start[sl - 1] == '\n' || wifi_ssid_start[sl - 1] == '\r'))
+				sl--;
+			if (sl > 32 || kl < 8 || kl > 63) {
+				pr("wifi: join: SSID length %u or passphrase length %u out of range\n", sl, kl);
+				goto join_out;
+			}
+			for (i = 0; i < 31; i++)
+				mask[4 + i] = 0;
+			for (i = 0; i < 13; i++) {
+				static const u8 ev[13] = { 0, 1, 3, 5, 6, 7, 11, 12, 16, 46, 47, 54, 69 };
+
+				mask[4 + ev[i] / 8] |= 1 << (ev[i] % 8);
+			}
+			r = wifi_iovar(m, 1, "event_msgs_ext", mask, 4 + 27, 0, 0);
+			v = 1;
+			r |= wifi_ioctl(m, 20, &v, 4, 4);	/* WLC_SET_INFRA */
+			v = 0;
+			r |= wifi_ioctl(m, 22, &v, 4, 4);	/* WLC_SET_AUTH: open */
+			v = 4;
+			r |= wifi_ioctl(m, 134, &v, 4, 4);	/* WLC_SET_WSEC: AES_ENABLED */
+			v = 1;
+			r |= wifi_iovar(m, 1, "sup_wpa", &v, 4, 0, 0);
+			v = 0x80;
+			r |= wifi_ioctl(m, 165, &v, 4, 4);	/* WLC_SET_WPA_AUTH: WPA2_AUTH_PSK */
+			pr("wifi: join: security set up, status %d\n", r);
+			for (i = 0; i < sizeof(pmk); i++)
+				pmk[i] = i >= 4 && i < 4 + kl ? wifi_psk_start[i - 4] : 0;
+			pmk[0] = (u8)kl;
+			pmk[2] = 1;	/* WSEC_PASSPHRASE */
+			r = wifi_ioctl(m, 268, pmk, 262, 262);
+			for (i = 0; i < sizeof(pmk); i++)	/* no copy of the passphrase left behind */
+				pmk[i] = 0;
+			for (i = 0; i < 0x1000; i++)
+				wifi_mem[M_IOCTBUF + i] = 0;
+			pr("wifi: join: passphrase (%u characters) handed over, status %d\n", kl, r);
+			for (i = 0; i < sizeof(ssid); i++)
+				ssid[i] = i >= 4 && i < 4 + sl ? wifi_ssid_start[i - 4] : 0;
+			ssid[0] = (u8)sl;
+			m->link = m->keyed = m->failed = 0;
+			t0 = timer_us();
+			r = wifi_ioctl(m, 26, ssid, 36, 36);	/* WLC_SET_SSID */
+			pr("wifi: join: WLC_SET_SSID (%u-character SSID): status %d\n", sl, r);
+			d2h_poll(m, 15000000, join_over);
+			if (m->link && m->keyed) {
+				int rssi = 0;
+
+				wifi_ioctl(m, 23, bssid, 6, 6);	/* WLC_GET_BSSID */
+				wifi_ioctl(m, 127, &rssi, 4, 4);	/* WLC_GET_RSSI */
+				pr("wifi: JOINED in %llu ms: BSSID %02x:%02x:%02x:%02x:%02x:%02x, RSSI %d dBm, WPA2 keys in place\n",
+				   (timer_us() - t0) / 1000, bssid[0], bssid[1], bssid[2], bssid[3], bssid[4], bssid[5], rssi);
+				d2h_poll(m, 3000000, never);	/* 3 s on the network */
+				v = 0;
+				r = wifi_ioctl(m, 52, &v, 4, 4);	/* WLC_DISASSOC: leave cleanly */
+				pr("wifi: join: left the network, status %d\n", r);
+				d2h_poll(m, 300000, never);
+			} else
+				pr("wifi: join: not joined after %llu ms (link %u, keyed %u, failed %u)\n",
+				   (timer_us() - t0) / 1000, m->link, m->keyed, m->failed);
+join_out:
+			m->cidx = cons_print(cfg, bar2, cons, m->cidx);
+		}
+#endif
 	}
 #endif
 	pr("wifi: msgbuf: H2D ctrl w %u (TCM r %u), D2H ctrl r %u; S2MPU fault 0x%x; shared flags 0x%08x trap 0x%x\n",

@@ -20,3 +20,20 @@ wifi_clm_start:
 	.incbin	WIFI_CLM_PATH
 wifi_clm_end:
 #endif
+
+#ifdef WIFI_PSK_PATH
+/* the network to join (WIFI_SSID=file, WIFI_PSK=file; PROBE_WIFI >= 12): the owner's own files, never committed;
+ * the passphrase is never printed */
+	.balign	8
+	.globl	wifi_ssid_start
+	.globl	wifi_ssid_end
+wifi_ssid_start:
+	.incbin	WIFI_SSID_PATH
+wifi_ssid_end:
+	.balign	8
+	.globl	wifi_psk_start
+	.globl	wifi_psk_end
+wifi_psk_start:
+	.incbin	WIFI_PSK_PATH
+wifi_psk_end:
+#endif
