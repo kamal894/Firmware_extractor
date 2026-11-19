@@ -15,3 +15,21 @@
 **Kernel milestone → station traffic.** Port Google DHD’s BCM4390 PCIe FullMAC path first. It has the chip ID, dongle bootstrap and board-file selection. Upstream brcmfmac’s PCIe table lacks BCM4390 support. That route needs chip recognition, firmware mapping and validation of the boot and message-ring ABI. Reuse generic primitives in `wifi/lx` where applicable. `lx_bus.c` and `tools/mk-ath11k.sh` are Qualcomm-specific. Add PCI config/BARs, MSI, noncoherent DMA/cache handling and scoped S2MPU mappings if required, then firmware loading, DHD ring startup and minimal cfg80211/netdev glue. Test firmware-ready → scan → association → DHCP and traffic, then reset/recovery before suspend or BT coexistence. [Google DHD PCIe](https://android.googlesource.com/kernel/google-modules/wlan/bcmdhd/bcm4390/+/2f66b21f47d4f6ab5bd87511c894b1782d04e742/dhd_pcie.c) · [Upstream brcmfmac PCIe ID table](https://github.com/torvalds/linux/blob/master/drivers/net/wireless/broadcom/brcm80211/brcmfmac/pcie.c)
 
 **Guardrails.** Use RAM-only boots and matching stock calibration/CLM. Avoid OTP/eFuse programming, persistent partition writes and PMIC voltage changes. Wrong rail programming can damage hardware, and unrestricted DMA can corrupt memory. Keep the first probe confined to RC1 and log the first failing stage before retrying.
+
+## Run wifi1 (2026-11-18): what the bootloader leaves (read only, `PROBE_WIFI=1`)
+
+- **HSI2 pinctrl (0x13040000).** Two banks.
+  - +0x00 has 6 pins (PUD 0x00111111): taken to be **gph3**. CON is 0 (all inputs); DAT 0x2 (pin 1, CLKREQ#, high;
+    PERST# and WL_REG_ON low: the chip is off).
+  - +0x20 has 7 pins: taken to be gph4. CON is 0.
+  - Android's settings are not there: PERST# out, CLKREQ# function 2, WL_REG_ON out.
+- **PMU +0x3ec8** (PCIe 1 PHY isolation): 0xc0.
+- **SYSREG HSI2.** Words +0x0 and +0x4 read (0, 0xffffffff). Reads from +0x14 on fault.
+- **ELBI** answers: +0x4 0x100, +0x8 0x8000, +0x20/+0x24 1. **SoC** answers, all 0.
+- **DBI** answers: the root complex's own ID is 0xa5a5:144d (Samsung), class 0x060400 (a bridge). The bridge's bus
+  numbers are 0.
+- **PHY (0x13160000) does not answer.** Its clock or power is off, so the PHY bring-up (CMU HSI2 gates, CAL tables)
+  comes first.
+- **Probes now end in fastboot** (`PROBE_TO_FASTBOOT=1` in `psci.c` too): `boot_a` holds iOS, and a plain reset
+  would boot it and overwrite pstore. Script: scratchpad `runprobe.sh` (probe from RAM, then fastboot, then
+  Android from RAM, then the log).

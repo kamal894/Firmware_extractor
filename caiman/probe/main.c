@@ -497,6 +497,9 @@ void c_entry(u64 dtb, u64 load_base, u64 cur_el)
 #if PROBE_PANEL
 	panel_probe();
 #endif
+#if PROBE_WIFI
+	wifi_probe();
+#endif
 #if PROBE_GPU
 	gpu_probe();
 #endif

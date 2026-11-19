@@ -71,6 +71,10 @@ void probe_finish(const char *why)
 		}
 	}
 
+#ifdef PROBE_TO_FASTBOOT
+	/* into fastboot, not the boot partition (which may hold iOS now): reboot mode "bootloader" (watcher.c) */
+	psci_call(0x82000504, 0x15460810, 1, 0xfc);
+#endif
 	if (mode == 0 && g.psci_reset2 >= 0)
 		psci_call(PSCI_SYSTEM_RESET2_64, 0 /* SYSTEM_WARM_RESET */, 0, 0);
 	psci_call(PSCI_SYSTEM_RESET, 0, 0, 0);
