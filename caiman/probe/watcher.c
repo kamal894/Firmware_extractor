@@ -306,12 +306,18 @@ void watcher_main(void)
 	}
 
 	log_uart_enable(0);	/* the UART is the kernel's now */
-	pr("watcher: running on MPIDR 0x%llx at EL%u; XNU gets %u s\n", read_sysreg(mpidr_el1), el,
-	   PROBE_XNU_SECONDS);
+	if (PROBE_XNU_SECONDS)
+		pr("watcher: running on MPIDR 0x%llx at EL%u; XNU gets %u s\n", read_sysreg(mpidr_el1), el,
+		   PROBE_XNU_SECONDS);
+	else
+		pr("watcher: running on MPIDR 0x%llx at EL%u; XNU runs with no end set\n", read_sysreg(mpidr_el1), el);
 	log_flush();
 	base = log_pos();
 
-	for (s = 0; s < PROBE_XNU_SECONDS; s++) {
+	/* PROBE_XNU_SECONDS=0: no end (the phone on its own: XNU runs until it stops itself or the battery does) */
+	u32 held = 0;
+
+	for (s = 0; PROBE_XNU_SECONDS == 0 || s < PROBE_XNU_SECONDS; s++) {
 		int q;
 
 		if (!(s % 2))
@@ -327,9 +333,35 @@ void watcher_main(void)
 		for (q = 0; q < 4; q++) {
 			wdt_kick();
 			delay_us(250000);
+			/* both volume keys held 3 s: out to fastboot (the way back to Android on a phone that boots this) */
+			if (!(rd32(0x154d0000ULL + 0x80 + 4) & 2) && !(rd32(0x154d0000ULL + 0xa0 + 4) & 4)) {
+				if (++held == 12) {
+					pr("watcher: both volume keys held 3 s: to fastboot\n");
+					goto out;
+				}
+			} else {
+				held = 0;
+			}
 		}
 	}
+out:
 	snapshot(base, s, 1);
+#if defined(PROBE_TO_FASTBOOT) || PROBE_XNU_SECONDS == 0
+	/*
+	 * PROBE_TO_FASTBOOT=1: the reset lands in the bootloader's fastboot, as Android's pixel-reboot.ko asks for it
+	 * ("bootloader"): 0xfc in PMU+0x810 (DT pixel-reboot: syscon PMU, reboot-cmd-offset 0x810), written through EL3
+	 * as set_priv_reg() in exynos-pd_el3.ko does: SMC 0x82000504 (address, 1 = write, value). So a phone that
+	 * boots this from its own boot partition can be taken back to Android from the Mac (fastboot set_active).
+	 */
+#if !defined(PROBE_TO_FASTBOOT)
+	if (held >= 12)	/* (with no end set: only when the keys asked for it) */
+#endif
+	{
+		s64 r = psci_call(0x82000504, 0x15460810, 1, 0xfc);
+
+		pr("watcher: reboot mode bootloader (0xfc) asked of EL3: %lld\n", r);
+	}
+#endif
 	pr("watcher: %u s are up; resetting the phone\n", s);
 	log_flush();
 	if (g.psci_reset2 >= 0)

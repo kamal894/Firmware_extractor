@@ -14,6 +14,7 @@
 #   PROBE_TOUCH=9           with LOADER=1: the touch chip powered, its SPI set up and the chip identified for XNU (touchscreen=2)
 #   PROBE_SHOTS=N           50 pictures of the panel, one a second from XNU's N-th, into pstore's pmsg zone (watcher.c)
 #   PROBE_DVFS=1|2          CPU cluster clocks through ACPM: 1 read them, 2 also raise them (dvfs.c)
+#   PROBE_TO_FASTBOOT=1     the watcher's reset at the end lands in fastboot (reboot mode 0xfc)
 #   PROBE_PANEL=1           the panel over DSIM0: power mode and brightness read, brightness set and put back (panel.c)
 #   PROBE_BATTERY=1         the battery read from the MAX77779 (hsi2c_6) and shared with XNU (battery.c)
 #   PROBE_G3D_KHZ=N         with PROBE_DVFS=2: the GPU's clock (default 580000; the DT's steps go to 940000)
@@ -76,6 +77,9 @@ CFLAGS += -DPROBE_G3D_KHZ=$(PROBE_G3D_KHZ)
 endif
 ifdef PROBE_TOUCH
 CFLAGS += -DPROBE_TOUCH=$(PROBE_TOUCH)
+endif
+ifdef PROBE_TO_FASTBOOT
+CFLAGS += -DPROBE_TO_FASTBOOT=$(PROBE_TO_FASTBOOT)
 endif
 ifdef PROBE_XNU_SECONDS
 CFLAGS += -DPROBE_XNU_SECONDS=$(PROBE_XNU_SECONDS)
