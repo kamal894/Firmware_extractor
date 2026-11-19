@@ -118,7 +118,7 @@ static u32 cons_print(u64 cfg, u64 bar2, u32 cons, u32 from)
 #define WIFI_DB0	(WIFI_PCIEREGS + 0x140)	/* hosttodev0doorbell0: ring updates */
 #define WIFI_DB1	(WIFI_PCIEREGS + 0x144)	/* hosttodev0doorbell1: host ready (dhd_bus_hostready) */
 
-static u8 wifi_mem[0x24000] __attribute__((aligned(4096)));
+static u8 wifi_mem[0x34000] __attribute__((aligned(4096)));
 
 enum { R_CTRL_SUB, R_RXPOST, R_CTRL_CPL, R_TXCPL, R_RXCPL };
 static const u16 ring_items[5] = { 64, 512, 64, 1024, 512 };
@@ -132,6 +132,9 @@ static const u32 ring_off[5] = { 0x00000, 0x02000, 0x06000, 0x07000, 0x0d000 };
 				 * D2H WR, D2H RD, 0x100 apart, 4-byte entries */
 #define M_EVT		0x1c000	/* event buffers: 8 x 4 KiB (PROBE_WIFI >= 11) */
 #define N_EVT		8
+#define M_RX		0x24000	/* receive buffers: 32 x 2 KiB on the RX post ring (PROBE_WIFI >= 12): the chip DMAs
+				 * received data frames, EAPOL too, straight into host buffers */
+#define N_RX		32
 
 /* the PCIe core at BAR0 + 8K: only the doorbells and the DAR block (+0xa00..) may be read; other offsets (+0x004,
  * +0x020..) are secure on this chip, and reading them from the host makes the firmware trap ("AXI Slave Err ...
@@ -150,6 +153,8 @@ struct mb {
 	int done, status;		/* the ioctl completion seen, and its status */
 	u32 resp_len, scan_bss, scan_done;
 	u32 link, keyed, failed;	/* PROBE_WIFI >= 12: the join's outcome from its events */
+	u32 rxwr, rxrd, rx_count;	/* RX post write, RX complete read, frames seen */
+	u8 rx_epoch, rxc_epoch;
 };
 
 static u32 rd_le32(const volatile u8 *p) { return p[0] | p[1] << 8 | p[2] << 16 | (u32)p[3] << 24; }
@@ -189,6 +194,63 @@ static int buf_post(struct mb *m, u8 type, u32 reqid, u32 off, u32 len)
 	return h2d_post(m, type, w);
 }
 
+/* MSG_TYPE_RXBUF_POST 0x11 on the RX post ring (H2D ring 1, 32-byte items): data_buf_len +10, data_buf_addr +24;
+ * 'ring' says whether to update the index and ring the doorbell now */
+static void rx_post(struct mb *m, u32 b, int ring)
+{
+	u8 *it = wifi_mem + ring_off[R_RXPOST] + 32 * m->rxwr;
+	u32 i;
+
+	for (i = 0; i < 32; i += 4)
+		wr_le(it, i, 0);
+	wr_le(it, 4, 0x300 + b);
+	wr_le(it, 8, 2048u << 16);
+	wr_le(it, 24, (u32)mem_pa(M_RX + 2048 * b));
+	wr_le(it, 0, 0x11 | (u32)m->rx_epoch << 24);
+	m->rx_epoch = m->rx_epoch == 252 ? 0 : m->rx_epoch + 1;
+	m->rxwr = (m->rxwr + 1) % ring_items[R_RXPOST];
+	if (!ring)
+		return;
+	__asm__ volatile("dsb sy" ::: "memory");
+	*(volatile u32 *)(wifi_mem + M_IDX + 4) = m->rxwr;
+	__asm__ volatile("dsb sy" ::: "memory");
+	dram_w(m->cfg, m->bar2, m->h2dw + 4, m->rxwr);
+	wr32(WIFI_DB0, 0xff000000u | 1u << 16 | m->rxwr);
+}
+
+/* the RX complete ring (D2H ring 4, 40-byte MSG_TYPE_RX_CMPLT 0x12 items): buffer by request id, data_len +14,
+ * data_offset +16; the frame is printed by its ethertype, the buffer posted again */
+static void rx_poll(struct mb *m)
+{
+	u32 dw = *(volatile u32 *)(wifi_mem + M_IDX + 0x200 + 8);
+
+	while (m->rxrd != dw) {
+		volatile u8 *c = wifi_mem + ring_off[R_RXCPL] + 40 * m->rxrd;
+		u32 k, id, dl, doff;
+
+		for (k = 0; k < 1000 && c[3] != m->rxc_epoch; k++)
+			delay_us(50);
+		id = rd_le32(c + 4) - 0x300;
+		dl = c[14] | c[15] << 8;
+		doff = c[16] | c[17] << 8;
+		if (c[0] == 0x12 && id < N_RX) {
+			const volatile u8 *f = wifi_mem + M_RX + 2048 * id + doff;
+			u32 et = dl >= 14 ? (u32)f[12] << 8 | f[13] : 0;
+
+			if (m->rx_count < 40)
+				pr("wifi: RX frame %u: %u bytes, ethertype 0x%04x%s, from %02x:%02x:%02x:%02x:%02x:%02x\n",
+				   m->rx_count, dl, et, et == 0x888e ? " (EAPOL)" : "", f[6], f[7], f[8], f[9], f[10], f[11]);
+			m->rx_count++;
+			rx_post(m, id, 1);
+		} else
+			pr("wifi: RX complete item type 0x%x id 0x%x\n", c[0], id + 0x300);
+		m->rxc_epoch = m->rxc_epoch == 252 ? 0 : m->rxc_epoch + 1;
+		m->rxrd = (m->rxrd + 1) % ring_items[R_RXCPL];
+		*(volatile u32 *)(wifi_mem + M_IDX + 0x300 + 8) = m->rxrd;
+		dram_w(m->cfg, m->bar2, m->d2hr + 8, m->rxrd);
+	}
+}
+
 /* an event the firmware DMA'd into event buffer 'b' (ethernet + bcmeth headers, then the big-endian
  * wl_event_msg_t at +24, its data at +72) */
 static void wifi_event(struct mb *m, u32 b, u32 len)
@@ -225,6 +287,28 @@ static void wifi_event(struct mb *m, u32 b, u32 len)
 		u32 flags = (u32)e[26] << 8 | e[27], reason = rd_be32(e + 36);
 
 		pr("wifi: event %u status %u reason %u flags 0x%x, %u bytes\n", type, status, reason, flags, dlen);
+		if (type == 46 && dlen <= 64) {	/* PSK_SUP's data, whole */
+			u32 j;
+
+			for (j = 0; j < dlen; j += 16)
+				pr("wifi:   data +%02u: %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x\n",
+				   j, e[72 + j], e[73 + j], e[74 + j], e[75 + j], e[76 + j], e[77 + j], e[78 + j], e[79 + j],
+				   e[80 + j], e[81 + j], e[82 + j], e[83 + j], e[84 + j], e[85 + j], e[86 + j], e[87 + j]);
+		} else if (type == 7 && dlen < 1000) {	/* ASSOC: the IEs; the RSN IE (48) and its AKM/capabilities */
+			u32 j = 0;
+
+			while (j + 2 <= dlen) {
+				u32 id = e[72 + j], l = e[73 + j], q;
+
+				if (id == 48) {
+					pr("wifi:   RSN IE at +%u, %u bytes:", j, l);
+					for (q = 0; q < l && q < 40; q++)
+						pr(" %02x", e[74 + j + q]);
+					pr("\n");
+				}
+				j += 2 + l;
+			}
+		}
 		if (type == 16)		/* WLC_E_LINK: flags bit 0 WLC_EVENT_MSG_LINK */
 			m->link = flags & 1;
 		else if (type == 46 && status == 6)	/* WLC_E_PSK_SUP, WLC_SUP_KEYED */
@@ -270,6 +354,7 @@ static void d2h_poll(struct mb *m, u64 us, int (*stop)(struct mb *))
 			*(volatile u32 *)(wifi_mem + M_IDX + 0x300) = m->rd;
 			dram_w(m->cfg, m->bar2, m->d2hr, m->rd);
 		}
+		rx_poll(m);
 		delay_us(500);
 	}
 }
@@ -339,7 +424,7 @@ static void wifi_msgbuf(u64 cfg, u64 bar2, u32 sh, u32 ri, u32 cons, u32 cidx)
 	m->d2hr = dram_r(cfg, bar2, ri + 16);
 	m->cons = cons;
 	m->cidx = cidx;
-	m->h2d_epoch = m->d2h_epoch = 1;
+	m->h2d_epoch = m->d2h_epoch = m->rx_epoch = m->rxc_epoch = 1;
 	pr("wifi: msgbuf: host block at 0x%llx (0x%x bytes); ringmem 0x%x, H2D w/r 0x%x/0x%x, D2H w/r 0x%x/0x%x\n",
 	   mem_pa(0), (u32)sizeof(wifi_mem), ringmem, m->h2dw, m->h2dr, m->d2hw, m->d2hr);
 	if (mem_pa(sizeof(wifi_mem)) > 0x100000000ULL) {
@@ -488,11 +573,11 @@ static void wifi_msgbuf(u64 cfg, u64 bar2, u32 sh, u32 ri, u32 cons, u32 cidx)
 			u32 sl = (u32)(wifi_ssid_end - wifi_ssid_start), kl = (u32)(wifi_psk_end - wifi_psk_start), v;
 			u8 bssid[8] = { 0 };
 
-			while (kl && (wifi_psk_start[kl - 1] == '\n' || wifi_psk_start[kl - 1] == '\r'))
+			while (kl != 32 && kl && (wifi_psk_start[kl - 1] == '\n' || wifi_psk_start[kl - 1] == '\r'))
 				kl--;
 			while (sl && (wifi_ssid_start[sl - 1] == '\n' || wifi_ssid_start[sl - 1] == '\r'))
 				sl--;
-			if (sl > 32 || kl < 8 || kl > 63) {
+			if (sl > 32 || kl < 8 || kl > 64) {
 				pr("wifi: join: SSID length %u or passphrase length %u out of range\n", sl, kl);
 				goto join_out;
 			}
@@ -504,27 +589,43 @@ static void wifi_msgbuf(u64 cfg, u64 bar2, u32 sh, u32 ri, u32 cons, u32 cidx)
 				mask[4 + ev[i] / 8] |= 1 << (ev[i] % 8);
 			}
 			r = wifi_iovar(m, 1, "event_msgs_ext", mask, 4 + 27, 0, 0);
+			pr("wifi: join: event_msgs_ext %d\n", r);
+			/* the RX pool first, then bus:host_access=1, as bcmdhd does before its preinit (docs/wifi-join-analysis.md) */
+			for (i = 0; i < N_RX; i++)
+				rx_post(m, i, i == N_RX - 1);
 			v = 1;
-			r |= wifi_ioctl(m, 20, &v, 4, 4);	/* WLC_SET_INFRA */
+			r = wifi_iovar(m, 1, "bus:host_access", &v, 4, 0, 0);
+			pr("wifi: join: %u receive buffers posted; bus:host_access=1: %d\n", N_RX, r);
+			/* brcmfmac's order: infra, auth, wsec, the AKM, then sup_wpa, then the key; each status on its own */
+			v = 1;
+			r = wifi_ioctl(m, 20, &v, 4, 4);	/* WLC_SET_INFRA */
+			pr("wifi: join: infra 1: %d\n", r);
 			v = 0;
-			r |= wifi_ioctl(m, 22, &v, 4, 4);	/* WLC_SET_AUTH: open */
+			r = wifi_ioctl(m, 22, &v, 4, 4);	/* WLC_SET_AUTH: open */
+			pr("wifi: join: auth open: %d\n", r);
 			v = 4;
-			r |= wifi_ioctl(m, 134, &v, 4, 4);	/* WLC_SET_WSEC: AES_ENABLED */
-			v = 1;
-			r |= wifi_iovar(m, 1, "sup_wpa", &v, 4, 0, 0);
+			r = wifi_ioctl(m, 134, &v, 4, 4);	/* WLC_SET_WSEC: AES_ENABLED */
+			pr("wifi: join: wsec AES: %d\n", r);
 			v = 0x80;
-			r |= wifi_ioctl(m, 165, &v, 4, 4);	/* WLC_SET_WPA_AUTH: WPA2_AUTH_PSK */
-			pr("wifi: join: security set up, status %d\n", r);
+			r = wifi_ioctl(m, 165, &v, 4, 4);	/* WLC_SET_WPA_AUTH: WPA2_AUTH_PSK */
+			pr("wifi: join: wpa_auth PSK: %d\n", r);
+			v = 1;
+			r = wifi_iovar(m, 1, "sup_wpa", &v, 4, 0, 0);
+			pr("wifi: join: sup_wpa 1: %d\n", r);
+			/*
+			 * wsec_pmk_t: a 32-byte file is the PMK itself (PBKDF2 of passphrase and SSID, made on the Mac), sent as
+			 * Google's PSK-offload path does: flags 0, sizeof(wsec_pmk_t) + 1 = 263 bytes; anything else is a
+			 * passphrase (flags WSEC_PASSPHRASE 1)
+			 */
 			for (i = 0; i < sizeof(pmk); i++)
 				pmk[i] = i >= 4 && i < 4 + kl ? wifi_psk_start[i - 4] : 0;
 			pmk[0] = (u8)kl;
-			pmk[2] = 1;	/* WSEC_PASSPHRASE */
-			r = wifi_ioctl(m, 268, pmk, 262, 262);
-			for (i = 0; i < sizeof(pmk); i++)	/* no copy of the passphrase left behind */
+			pmk[2] = kl == 32 ? 0 : 1;
+			r = wifi_ioctl(m, 268, pmk, 263, 263);
+			for (i = 0; i < sizeof(pmk); i++)	/* no copy of the key left behind */
 				pmk[i] = 0;
 			for (i = 0; i < 0x1000; i++)
 				wifi_mem[M_IOCTBUF + i] = 0;
-			pr("wifi: join: passphrase (%u characters) handed over, status %d\n", kl, r);
 			for (i = 0; i < sizeof(ssid); i++)
 				ssid[i] = i >= 4 && i < 4 + sl ? wifi_ssid_start[i - 4] : 0;
 			ssid[0] = (u8)sl;
@@ -548,6 +649,8 @@ static void wifi_msgbuf(u64 cfg, u64 bar2, u32 sh, u32 ri, u32 cons, u32 cidx)
 			} else
 				pr("wifi: join: not joined after %llu ms (link %u, keyed %u, failed %u)\n",
 				   (timer_us() - t0) / 1000, m->link, m->keyed, m->failed);
+			pr("wifi: join: %u frames received; RX post: host wr %u, firmware rd TCM %u host %u\n", m->rx_count, m->rxwr,
+			   dram_r(cfg, bar2, m->h2dr + 4), *(volatile u32 *)(wifi_mem + M_IDX + 0x100 + 4));
 join_out:
 			m->cidx = cons_print(cfg, bar2, cons, m->cidx);
 		}
