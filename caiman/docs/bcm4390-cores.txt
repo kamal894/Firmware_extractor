@@ -1,0 +1,78 @@
+core  0: 0x800 ChipCommon unit 0 rev  79  info in OOBR+0x140, DMP control at 0x18006148
+         master node 0x1851a000 (Booker)
+         slave  node 0x1851e000 (Booker)  [0x18000000-0x18001000)
+         slave  node 0x1851c000 (Booker)  [0x1c000000-0x20000000)
+core  1: 0x83c PCIe2      unit 0 rev 133  info in OOBR+0x1c0, DMP control at 0x180061c8
+         master node 0x1851b000 (Booker)
+         slave  node 0x1851e000 (Booker)  [0x18001000-0x18003fff)
+         slave  node 0x1851d000 (Booker)  [0x08000000-0x10000000)  [0x00000000-0x00000000)
+core  2: 0x847 ARM CA7    unit 0 rev  15  info in OOBR+0x240, DMP control at 0x18006248
+         master node 0x18504000 (Booker)
+         slave  node 0x18516000 (Booker)  [0x18080000-0x18081000)
+core  3: 0x812 D11        unit 0 rev  89  info in OOBR+0x2c0, DMP control at 0x180062c8
+         master node 0x1850b000 (Booker)
+         master node 0x1850c000 (Booker)
+         master node 0x1850d000 (Booker)
+         slave  node 0x18516000 (Booker)  [0x18082000-0x18084000)
+         slave  node 0x18511000 (Booker)  [0xe8000000-0xe8800000)
+core  4: 0x812 D11        unit 1 rev  89  info in OOBR+0x340, DMP control at 0x18006348
+         master node 0x18508000 (Booker)
+         master node 0x18509000 (Booker)
+         master node 0x1850a000 (Booker)
+         slave  node 0x18516000 (Booker)  [0x18084000-0x18086000)
+         slave  node 0x18510000 (Booker)  [0xe8800000-0xe9000000)
+core  5: 0x812 D11        unit 2 rev  89  info in OOBR+0x3c0, DMP control at 0x180063c8
+         master node 0x1850e000 (Booker)
+         slave  node 0x18516000 (Booker)  [0x18086000-0x18088000)
+         slave  node 0x18512000 (Booker)  [0xe9000000-0xe9800000)
+core  6: 0x863            unit 0 rev   3  info in OOBR+0x440, DMP control at 0x18006448
+         master node 0x1850f000 (Booker)
+         slave  node 0x18516000 (Booker)  [0x18081000-0x18082000)
+core  7: 0x849 SYSMEM     unit 0 rev  16  info in OOBR+0x4c0, DMP control at 0x180064c8
+         slave  node 0x18516000 (Booker)  [0x18088000-0x18089000)
+         slave  node 0x18505000 (Booker)  [0x00000000-0x08000000)
+core  8: 0x857            unit 0 rev  19  info in OOBR+0x540, DMP control at 0x18006548
+         master node 0x18523000 (Booker)
+         slave  node 0x18524000 (Booker)  [0x19000000-0x1a000000)
+core  9: 0x840 GCI        unit 0 rev  32  info in OOBR+0x640, DMP control at 0x18006648
+         slave  node 0x1851f000 (Booker)  [0x18010000-0x18014fff)
+         slave  node 0x18528000 (Booker)  [0x1a000000-0x1a01efff)
+         master node 0x18527000 (Booker)
+core 10: 0x865            unit 0 rev   0  info in EROM1+0x000, DMP control at 0x18006008
+         slave  node 0x1851f000 (Booker)  [0x1808d000-0x180e2fff)
+core 11: 0x83b            unit 0 rev  63  info in EROM1+0x008, DMP control at 0x18006010
+         slave  node 0x18514000 (Booker)  [0xe7800000-0xe7a00000)
+core 12: 0x83b            unit 1 rev  63  info in EROM1+0x010, DMP control at 0x18006018
+         slave  node 0x18513000 (Booker)  [0xe7a00000-0xe7c00000)
+core 13: 0x83b            unit 2 rev  64  info in EROM1+0x018, DMP control at 0x18006020
+         slave  node 0x18515000 (Booker)  [0xe7c00000-0xe8000000)
+core 14: 0x827 PMU        unit 0 rev  48  info in EROM1+0x020, DMP control at 0x18006028
+         slave  node 0x1851f000 (Booker)  [0x18018000-0x18019000)
+core 15: 0x85f            unit 0 rev   5  info in EROM1+0x028, DMP control at 0x18006030
+         slave  node 0x1851f000 (Booker)  [0x18020000-0x18028000)
+core 16: 0x85e            unit 0 rev   9  info in EROM1+0x030, DMP control at 0x18006038
+         slave  node 0x1851f000 (Booker)  [0x18019000-0x1801a000)
+core 17: 0x85e            unit 1 rev   9  info in EROM1+0x038, DMP control at 0x18006040
+         slave  node 0x18516000 (Booker)  [0x18089000-0x1808a000)
+core 18: 0x855            unit 0 rev  12  info in EROM1+0x040, DMP control at 0x18006048
+         slave  node 0x1851e000 (Booker)  [0x18004000-0x18005000)
+core 19: 0x855            unit 1 rev  12  info in EROM1+0x048, DMP control at 0x18006050
+         slave  node 0x1851e000 (Booker)  [0x18005000-0x18006000)
+core 20: 0x85c            unit 0 rev   4  info in EROM1+0x050, DMP control at 0x18006058
+         slave  node 0x1851e000 (Booker)  [0x18006000-0x18008000)
+core 21: 0x841            unit 0 rev  14  info in EROM1+0x058, DMP control at 0x18006060
+         slave  node 0x1851e000 (Booker)  [0x18009000-0x1800a000)
+core 22: 0x841            unit 1 rev  14  info in EROM1+0x060, DMP control at 0x18006068
+         slave  node 0x1851e000 (Booker)  [0x1800a000-0x1800b000)
+core 23: 0x841            unit 2 rev  14  info in EROM1+0x068, DMP control at 0x18006070
+         slave  node 0x1851e000 (Booker)  [0x1800b000-0x1800c000)
+core 24: 0x841            unit 3 rev  14  info in EROM1+0x070, DMP control at 0x18006078
+         slave  node 0x1851e000 (Booker)  [0x1800c000-0x1800d000)
+core 25: 0x867            unit 0 rev   0  info in EROM1+0x078, DMP control at 0x18006080
+         slave  node 0x1851e000 (Booker)  [0x1800d000-0x1800e000)
+core 26: 0x868            unit 0 rev   0  info in EROM1+0x080, DMP control at 0x18006088
+         slave  node 0x1851f000 (Booker)  [0x1801a000-0x1801b000)
+core 27: 0x43b            unit 0 rev   0  info in EROM1+0x088, DMP control at 0x18006090
+         slave  node 0x00000000 (Booker)  [0x18500000-0x18540000)
+core 28: 0x420            unit 0 rev   0  info in EROM1+0x090, DMP control at 0x18006098
+         slave  node 0x18505000 (Booker)  [0x18400000-0x18410000)

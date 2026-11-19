@@ -208,12 +208,23 @@ static void wifi_link(void)
 					pr("wifi: EROM pointer (ChipCommon +0xfc) 0x%08x; BAR1 window (config 0x84) 0x%08x\n", erom,
 					   rd32(cfg + 0x84));
 					if (erom >= 0x18000000 && erom < 0x19000000) {
-						wr32(cfg + 0x80, erom & ~0xfffu);
+						/* the OOBR page first (EROM2 base & ~0x1fff: core info of the OOBR cores), then EROM1 */
+						wr32(cfg + 0x80, erom & ~0x1fffu);
 						(void)rd32(cfg + 0x80);
-						for (e = 0; e < 0x200; e += 32) {
+						for (e = 0; e < 0x1000; e += 32) {
 							for (k = 0; k < 8; k++) {
 								ok = 1;
-								w[k] = safe_rd32(bar[0] + (erom & 0xfff) + e + 4 * k, &ok);
+								w[k] = safe_rd32(bar[0] + e + 4 * k, &ok);
+							}
+							pr("wifi: OOBR +0x%03x: %08x %08x %08x %08x %08x %08x %08x %08x\n", e, w[0], w[1], w[2],
+							   w[3], w[4], w[5], w[6], w[7]);
+						}
+						wr32(cfg + 0x80, erom & ~0xfffu);
+						(void)rd32(cfg + 0x80);
+						for (e = 0; e < 0x1000; e += 32) {	/* the whole 4 KiB page from 0x18007000 */
+							for (k = 0; k < 8; k++) {
+								ok = 1;
+								w[k] = safe_rd32(bar[0] + e + 4 * k, &ok);
 							}
 							pr("wifi: EROM +0x%03x: %08x %08x %08x %08x %08x %08x %08x %08x\n", e, w[0], w[1], w[2],
 							   w[3], w[4], w[5], w[6], w[7]);

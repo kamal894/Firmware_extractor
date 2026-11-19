@@ -120,3 +120,18 @@
   - So the host can write RAM while the chip is as the bootloader left it.
 - **Next:** parse EROM (NCI) for CA7's DMP/OOBR control and wrapper, check whether CA7 is halted (DMP bit 5), then
   the download.
+
+## The BCM4390's cores (run wifi6c, decoded by `tools/nci_erom.py`)
+
+- **What was read:** the OOBR page (0x18006000) and EROM1 (0x18007000), both dumped. EROM2 starts at 0x180070b0.
+- **How it was decoded:** the way `nciutils.c` reads it (`nci_scan`, `nci_initial_parse`, `nci_save_iface1_reg`
+  with the "one less address region" rule). The result is 29 cores (`docs/bcm4390-cores.txt`).
+- **Check:** PCIe2 decodes as rev 133, the same as Android's buscorerev.
+- **The cores that matter:**
+  - ChipCommon rev 79, at 0x18000000.
+  - PCIe2 rev 133, at 0x18001000.
+  - **ARM CA7 rev 15**: registers at 0x18080000, master node 0x18504000, DMP control 0x18006248 (OOBR +0x240 +8).
+  - **SYSMEM rev 16**: registers at 0x18088000, DMP 0x180064c8.
+  - D11 x3, rev 89.
+  - PMU rev 48, at 0x18018000.
+  - GCI rev 32.
