@@ -108,3 +108,15 @@
   6. Dongle RAM is **3276800 bytes at 0x2a0000**.
   7. Then `dhdpcie_download_code_file`.
 - The PCIe core is buscorerev 133. Android's RC is 144d:eced (ours reads 144d:a5a5 before Linux's set-up).
+
+## Run wifi6: the core table, and dongle RAM takes writes (PROBE_WIFI=6)
+
+- **EROM.** ChipCommon +0xfc (EromPtrOffset) = 0x180070b0. Its first 0x200 bytes are in `docs/probe-log-wifi6.txt`.
+  They are in NCI format, not AI: they have to be parsed as `nciutils.c` does to find CA7 (0x847), SYSMEM (0x849)
+  and PCIe2 (0x83c).
+- **Dongle RAM through BAR2, window 0x400000 (config 0x84).**
+  - 0x5b0000 held leftover data. A 16-byte pattern written there read back the same.
+  - The last word (0x5bfffc) read 0x3fc2553b before anything was written.
+  - So the host can write RAM while the chip is as the bootloader left it.
+- **Next:** parse EROM (NCI) for CA7's DMP/OOBR control and wrapper, check whether CA7 is halted (DMP bit 5), then
+  the download.

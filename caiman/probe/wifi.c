@@ -196,6 +196,50 @@ static void wifi_link(void)
 				   w[6], w[7]);
 				pr("wifi: ChipCommon chip ID 0x%04x, rev %u, package %u, %u cores\n", w[0] & 0xffff, (w[0] >> 16) & 0xf,
 				   (w[0] >> 20) & 0xf, (w[0] >> 24) & 0xf);
+#if PROBE_WIFI >= 6
+				/*
+				 * PROBE_WIFI=6: the chip's core table (EROM: ChipCommon +0xfc, EromPtrOffset) read through the BAR0
+				 * window; then a pattern written into dongle RAM near its top and read back through BAR2 (DHD's
+				 * "BAR1": window at config 0x84, 4 MiB; RAM 0x2a0000..0x5c0000), the last word left alone.
+				 */
+				{
+					u32 erom = rd32(bar[0] + 0xfc), e, pat[4] = { 0x12345678, 0x9abcdef0, 0x0f1e2d3c, 0xa5a55a5a };
+
+					pr("wifi: EROM pointer (ChipCommon +0xfc) 0x%08x; BAR1 window (config 0x84) 0x%08x\n", erom,
+					   rd32(cfg + 0x84));
+					if (erom >= 0x18000000 && erom < 0x19000000) {
+						wr32(cfg + 0x80, erom & ~0xfffu);
+						(void)rd32(cfg + 0x80);
+						for (e = 0; e < 0x200; e += 32) {
+							for (k = 0; k < 8; k++) {
+								ok = 1;
+								w[k] = safe_rd32(bar[0] + (erom & 0xfff) + e + 4 * k, &ok);
+							}
+							pr("wifi: EROM +0x%03x: %08x %08x %08x %08x %08x %08x %08x %08x\n", e, w[0], w[1], w[2],
+							   w[3], w[4], w[5], w[6], w[7]);
+						}
+						wr32(cfg + 0x80, 0x18000000);
+					}
+					if (bar[1]) {
+						u64 a = 0x5b0000, base;
+
+						wr32(cfg + 0x84, 0x400000);
+						(void)rd32(cfg + 0x84);
+						base = bar[1] + (a - 0x400000);
+						for (k = 0; k < 4; k++)
+							w[k] = rd32(base + 4 * k);
+						pr("wifi: dongle RAM 0x%llx before: %08x %08x %08x %08x; last word 0x5bfffc: %08x\n", a, w[0], w[1],
+						   w[2], w[3], rd32(bar[1] + 0x1bfffc));
+						for (k = 0; k < 4; k++)
+							wr32(base + 4 * k, pat[k]);
+						for (k = 0; k < 4; k++)
+							w[k] = rd32(base + 4 * k);
+						pr("wifi: dongle RAM 0x%llx after writing: %08x %08x %08x %08x (%s)\n", a, w[0], w[1], w[2], w[3],
+						   w[0] == pat[0] && w[3] == pat[3] ? "the RAM takes writes" : "NOT as written");
+						wr32(cfg + 0x84, 0);
+					}
+				}
+#endif
 			}
 		}
 #endif
