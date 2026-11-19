@@ -31,5 +31,11 @@ Verified 2026-11-19: the same probe run twice from RAM; the second run saved the
 (71340 bytes, bootloader lines through "=== caiman-probe end ===") as save 1 in slot 0, CRC ok, read back
 through Android with dd.
 
-Next: the daily loader with PROBE_UFSLOG=1, so every boot keeps the previous boot's iOS log; then a way to see
+Verified with iOS, 2026-11-19 (scratchpad runselflog.sh): loader `out/loader-fbl` (loader-fb + PROBE_UFSLOG=1)
+and the kernel flashed into boot_a; the phone booted iOS by itself, ran 200 s, went to fastboot (warm reset),
+booted iOS by itself again from boot_a, and that boot's loader saved the first boot's whole log as save 2:
+1174937 bytes, CRC ok (bootloader lines, loader, XNU, launchd, SpringBoard). No Android was involved in
+keeping it; Android only read boot_b back afterwards to check.
+
+Then: the daily loader with PROBE_UFSLOG=1, so every boot keeps the previous boot's iOS log; then a way to see
 the saves without Android (the loader showing the last one on the panel, or the kernel exposing them).
