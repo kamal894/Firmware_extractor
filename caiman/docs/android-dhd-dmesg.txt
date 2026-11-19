@@ -1,0 +1,60 @@
+[    5.574611] [04:52:59.586887][dhd][wlan]_dhd_module_init in, retry=1
+[    5.579684] [04:52:59.591963][dhd][wlan]dhd_wifi_init_gpio: gpio_request WL_REG_ON done - WLAN_EN: GPIO 107
+[    5.579708] [04:52:59.591990][dhd][wlan]dhd_wifi_init_gpio: WL_REG_ON is pulled up
+[    5.790900] [04:52:59.803167][dhd][wlan]dhd_wifi_init_gpio: gpio_request WLAN_HOST_WAKE done - WLAN_HOST_WAKE: GPIO 184
+[    5.794755] [04:52:59.807031][dhd][wlan]dhd_wlan_init_hardware_info: hw_sku is GEC77, val_sku is ROW
+[    5.807952] [04:52:59.820223][dhd][wlan]dhd_wlan_init: FINISH.......
+[    5.915099] [04:52:59.927379][dhd][wlan]dhdpcie_init: found adapter info 'DHD generic adapter'
+[    5.916506] [04:52:59.928786][dhd][wlan]dhdpcie_chip_specific_init: programmed ASR WAR and restored bar0(0x80) to 0x18000000 and ssctrl(0x88) to 0x80080
+[    5.916587] [04:52:59.928868][dhd][wlan]dhdpcie_cto_init: ctoctrl(0x8a058000) enable/disable 1 for chipid(0x4390)
+[    5.917086] [04:52:59.929366][dhd][wlan]dhdpcie_dongle_attach: before si_attach
+[    5.921108] [04:52:59.933386][dhd][wlan]dhdpcie_dongle_attach: after si_attach
+[    5.921486] [04:52:59.933766][dhd][wlan]dhdpcie_dongle_attach: FISCtrlStatus:0x0
+[    5.921681] [04:52:59.933961][dhd][wlan]dhdpcie_check_reset_sysmem: sysmem core is already up
+[    5.921928] [04:52:59.934209][dhd][wlan]DHD: dongle ram size is set to 3276800(orig 3276800) at 0x2a0000
+[    6.194963] [04:53:00.207244][cfg80211][wlan] wl_set_ota_nvram_ext : info is null
+[    6.198065] [cfg80211][wlan] wl_cfgvif_get_channel : device is not ready
+[    6.198077] [04:53:00.210358][cfg80211][wlan] wl_cfg80211_get_tx_power : device is not ready
+[    6.198116] [04:53:00.210398][dhd][wlan]dhd_log_dump_init: kernel log buf size = 128KB; logdump_prsrv_tailsize = 80KB; limit prsrv tail size to = 19KB
+[    6.199758] [04:53:00.212038][dhd][wlan]dhd_log_dump_init: ewphw - default initlog_len=65536; regdump_len=131072; moddump_len=32768
+[    6.200670] [04:53:00.212950][dhd][wlan]dhd_rx_pktpool_init(): thread:dhd_rx_pktpool_thread:3d9 started
+[    6.200955] [04:53:00.213236][dhd][wlan]dhd_deferred_work_init: work queue initialized
+[    6.200988] [04:53:00.213270][dhd][wlan]dhd_cpumasks_init CPU masks set8(bigger)=0x100 set4(big)=0xf0 set0(little)=0xe
+[    6.201073] [04:53:00.213350][dhd][wlan]dhd_cpu_startup_callback(): LB data is not initialized yet.
+[    6.201165] [04:53:00.213443][dhd][wlan]dhd_cpu_startup_callback(): LB data is not initialized yet.
+[    6.202474] [04:53:00.214750][dhd][wlan]dhd_cpu_startup_callback(): LB data is not initialized yet.
+[    6.202746] [04:53:00.215025][dhd][wlan]dhd_cpu_startup_callback(): LB data is not initialized yet.
+[    6.204866] [04:53:00.217145][dhd][wlan]dhd_cpu_startup_callback(): LB data is not initialized yet.
+[    6.204941] [04:53:00.217221][dhd][wlan]dhd_cpu_startup_callback(): LB data is not initialized yet.
+[    6.207340] [04:53:00.219616][dhd][wlan]dhd_cpu_startup_callback(): LB data is not initialized yet.
+[    6.207723] [04:53:00.220003][dhd][wlan]dhd_cpu_startup_callback(): LB data is not initialized yet.
+[    6.226686] [04:53:00.238959][dhd][wlan]dhd_init_logtrace_process(): thread:dhd_logtrace_thread:3dc started
+[    6.226751] [04:53:00.239031][dhd][wlan]dhd_init_logtrace_process: thr_logtrace_ctl(988) not inited
+[    6.250240] [04:53:00.262514][dhd][wlan]dhd_edl_mem_init: EDL buffer allocated of size 524288
+[    6.251273] [04:53:00.263554][dhd][wlan]dhd_coredump_mempool_init: coredump size:4513856 socram:3276800 sssr_mem:1048576 sdtc:65536
+[    6.252254] [04:53:00.264536][dhd][wlan]dhdpcie_chip_support_msi: buscorerev=133 chipid=0x4390
+[    6.252289] [04:53:00.264570][dhd][wlan]dhdpcie_init: rc_dev from dev->bus->self (144d:eced) is 0000000000000000
+[    6.252529] [04:53:00.264810][dhd][wlan]dhdpcie_init: rc_ep_aspm_cap: 1 rc_ep_l1ss_cap: 1
+[    6.261649] [04:53:00.273927][cfg80211][wlan] wl_cfgvif_get_channel : device is not ready
+[    6.261681] [04:53:00.273962][cfg80211][wlan] wl_cfg80211_get_tx_power : device is not ready
+[    6.264589] [04:53:00.276870][dhd][wlan]dhd_bus_devreset: == Power OFF ==
+[    6.362306] [04:53:00.374586][dhd][wlan]dhd_bus_devreset:  WLAN OFF Done
+[    6.362351] [04:53:00.374632][dhd][wlan]dhd_net_bus_devreset: power off case, don't check bus errors 
+[    6.362376] [04:53:00.374657][dhd][wlan]wl_android_wifi_off() platform set power off is skipped due to init
+[    6.363965] [04:53:00.376246][cfg80211][wlan] wl_cfgvif_get_channel : device is not ready
+[    6.363984] [04:53:00.376266][cfg80211][wlan] wl_cfg80211_get_tx_power : device is not ready
+[    6.364262] [04:53:00.376543][dhd][wlan]wl_android_post_init: 0[04:53:00.376626][dhd][wlan]Error creating socket.
+[    6.365217] [04:53:00.377499][dhd][wlan]_dhd_module_init out
+[    6.447588] [04:53:00.459867][dhd][wlan]wifi_platform_set_power: wl_reg_on gpio already high
+[    6.447705] [04:53:00.459986][dhd][wlan]dhd_bus_devreset: == Power ON ==
+[    6.565058] [04:53:00.577339][dhd][wlan]dhdpcie_chip_specific_init: programmed ASR WAR and restored bar0(0x80) to 0x18000000 and ssctrl(0x88) to 0x80080
+[    6.565155] [04:53:00.577435][dhd][wlan]dhdpcie_cto_init: ctoctrl(0x8a058000) enable/disable 1 for chipid(0x4390)
+[    6.565636] [04:53:00.577917][dhd][wlan]dhdpcie_dongle_attach: before si_attach
+[    6.569392] [04:53:00.581669][dhd][wlan]dhdpcie_dongle_attach: after si_attach
+[    6.569761] [04:53:00.582041][dhd][wlan]dhdpcie_dongle_attach: FISCtrlStatus:0x0
+[    6.570249] [04:53:00.582528][dhd][wlan]dhdpcie_check_reset_sysmem: sysmem core is already up
+[    6.570569] [04:53:00.582849][dhd][wlan]DHD: dongle ram size is set to 3276800(orig 3276800) at 0x2a0000
+[    6.571210] [04:53:00.583490][dhd][wlan]dhd_get_fw_nvram_names, chiprev string(b1) found for chipid:0x4390 chiprev:0x5
+[    6.580780] [04:53:00.593057][dhd][wlan]dhd_get_fw_nvram_names: fw path = fw_bcmdhd.bin_4390_b1; nvram path = bcmdhd.cal_USI_G6BB_6327_V27; map path = fw_bcmdhd.map_4390_b1
+[    6.581495] [04:53:00.593776][dhd][wlan]dhd_bus_download_firmware: Platform's NVRAMs file don't exist. Download default NVRAM file.
+[    6.583177] [04:53:00.595458][dhd][wlan]dhd_bus_download_firmware: firmware path=fw_bcmdhd.bin_4390_b1, nvram path=bcmdhd.cal_USI_G6BB_6327_V27

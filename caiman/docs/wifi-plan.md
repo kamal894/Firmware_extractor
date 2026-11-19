@@ -90,3 +90,21 @@
 - **Next:** the firmware, `/vendor/firmware/fw_bcmdhd.bin_4390_a0`, with CLM and NVRAM. The download path is DHD's:
   halt the ARM core, write the firmware into the TCM through BAR2, put the NVRAM at the end of RAM, release the
   core, then wait for the shared area.
+
+## Firmware files and Android's DHD start (2026-11-18)
+
+- **Files.** Android picks them by chip revision: rev 5 = "b1" (`dhd_get_fw_nvram_names`).
+  - Firmware: `fw_bcmdhd.bin_4390_b1` (2516975 bytes).
+  - NVRAM: `bcmdhd.cal_USI_G6BB_6327_V27`.
+  - CLM: `bcmdhd_clm.blob_4390_b1`; txcap: `bcmdhd_txcap.blob_4390_b1`.
+  - Copies are in `~/caiman-work/wifi-fw` (not in git: Broadcom's files).
+- **What Android's DHD does at start** (`docs/android-dhd-dmesg.txt`):
+  1. WL_REG_ON goes high.
+  2. `dhdpcie_chip_specific_init`: an ASR workaround, BAR0 window (0x80) put back to 0x18000000, ssctrl (0x88) to
+     0x80080.
+  3. ctoctrl 0x8a058000 (completion timeout).
+  4. `si_attach` (the core list).
+  5. The sysmem core is already up.
+  6. Dongle RAM is **3276800 bytes at 0x2a0000**.
+  7. Then `dhdpcie_download_code_file`.
+- The PCIe core is buscorerev 133. Android's RC is 144d:eced (ours reads 144d:a5a5 before Linux's set-up).
