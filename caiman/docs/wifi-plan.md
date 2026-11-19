@@ -44,3 +44,20 @@
 - Next: gph3 pins (bank +0x00: PERST# out low, CLKREQ# function 2, WL_REG_ON out high), then the channel-1 path of
   `pcie-exynos-zuma-rc-cal.c`: `phy_all_pwrdn_clear`, then `pcie_phy_config`. Sources are in
   `~/caiman-work/ref/pcie` (soc/gs `android-gs-akita-5.15-android15`).
+
+## Run wifi3 (2026-11-18): **the link is up** (PROBE_WIFI=3)
+
+- **Pins (gph3, HSI2 pinctrl bank +0x00).** PERST# out low, CLKREQ# function 2, WL_REG_ON out high, then 200 ms:
+  CON 0x00010021, DAT 0x12.
+- **Then Linux's channel-1 path:**
+  - soc +0x4000 = 0x15;
+  - the CAL `phy_all_pwrdn_clear` and `pcie_phy_config`, generated into `probe/wifi_cal.inc` straight from Google's
+    source (EP_BCM_WIFI = 1, checked against `cmp #1` in the module);
+  - PMU 0x3ec8 bit 10, UDBG 0xc800 = 0x421, PHY 0x32c = 0, DBI 0x890 = 0x12000;
+  - PERST# high and 15 ms;
+  - the ELBI set-up;
+  - LTSSM enable.
+- **PHY:** external PLL lock, PLL lock, CDR lock and offset calibration were all set.
+- **LTSSM: 0x2, then 0x11 = L0 after 40 us.** DBI link status 0x30110000: Gen1 x1, data link active.
+- Afterwards the probe drops the link and turns the chip off again.
+- **Next:** iATU CFG0 to bus 1 at 0x60ffe000, then read the endpoint's vendor:device (14e4:4438 expected).

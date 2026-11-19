@@ -1,0 +1,1464 @@
+[   0.000000] [I] secure payload loading took 0ms
+[   0.000000] [I] platform info binded: true
+[   0.000000] [I] platform info: 060906010000
+[   0.799414] [I] 
+welcome to lk/MP
+
+[   0.799442] [I] boot args 0x1 0x0 0x0 0x0
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   0.800125] [I] acpm locks regulators
+[   0.800179] [I] Soc Product ID: 0x09875
+[   0.800217] [I] Soc rev: A1
+[   0.800244] [I] Soc ID: 0x12b44c577850
+[   0.800276] [I] DVFS version: 2
+[   0.800308] [E] vendor combined_checksum must be 0x13656bf5 but 0x1db2e2fe
+[   0.800364] [E] magic_number must be 0xcceeddff but 0xcceeddfb
+[   0.800448] [I] S2MPG_M CHIPID read: 0x10
+[   0.800512] [I] S2MPG_S CHIPID read: 0x10
+[   0.800576] [I] S2MPG_M PWRONSRC read: 0x20
+[   0.800640] [I] S2MPG_M OFFSRC1 read: 0x10
+[   0.800712] [I] S2MPG_M OFFSRC2 read: 0x0
+[   0.800777] [I] S2MPG_M RTC_WTSR read: 0x7e
+[   0.800818] [I] S2MPG_M INT1: 0x30
+[   0.800847] [I] S2MPG_M INT2: 0x0
+[   0.800873] [I] S2MPG_M INT3: 0x0
+[   0.800900] [I] S2MPG_M INT4: 0x0
+[   0.800929] [I] S2MPG_M INT5: 0x0
+[   0.800989] [I] S2MPG_S OFFSRC1 read: 0x11
+[   0.801030] [I] S2MPG_S INT1: 0x83
+[   0.801058] [I] S2MPG_S INT2: 0x80
+[   0.801085] [I] S2MPG_S INT3: 0x0
+[   0.801115] [I] S2MPG_S INT4: 0x0
+[   0.801141] [I] S2MPG_S INT5: 0x0
+APC Bootmetrics:
+  BL1: MT:1 / DT:ENTRY / 96712 us
+  BL1: MT:2 / DT:LOAD  / 7360 us
+  BL1: MT:F / DT:EXIT  / 147680 us
+  PBL: MT:1 / DT:ENTRY / 147808 us
+  PBL: MT:2 / DT:LOAD  / 19592 us
+  PBL: MT:F / DT:EXIT  / 212912 us
+  BL2: MT:1 / DT:ENTRY / 214472 us
+  BL2: MT:2 / DT:LOAD  / 160 us
+  BL2: MT:3 / DT:LOAD  / 152 us
+  BL2: MT:4 / DT:CHECK / 342432 us
+  BL2: MT:5 / DT:CHECK / 2096 us
+  BL2: MT:6 / DT:LOAD  / 62384 us
+  BL2: MT:7 / DT:CHECK / 157712 us
+  BL2: MT:8 / DT:CHECK / 157856 us
+  BL2: MT:9 / DT:LOAD  / 44328 us
+  BL2: MT:A / DT:LOAD  / 31496 us
+  BL2: MT:B / DT:LOAD  / 324120 us
+  BL2: MT:C / DT:LOAD  / 8 us
+  BL2: MT:F / DT:EXIT  / 607104 us
+  PBL: MT:3 / DT:LOAD  / 81272 us
+  PBL: MT:4 / DT:LOAD  / 28168 us
+  PBL: MT:5 / DT:LOAD  / 6184 us
+  PBL: MT:6 / DT:CHECK / 722904 us
+  PBL: MT:7 / DT:CHECK / 723040 us
+  EL3: MT:1 / DT:ENTRY / 725816 us
+  EL3: MT:D / DT:CHECK / 741376 us
+  EL3: MT:E / DT:CHECK / 788280 us
+  EL3: MT:F / DT:EXIT  / 788312 us
+APC Breadcrumbs(v2.4):
+ stages(S): 00000000 / 0000404F
+  flags(S): 00000000 / 000022C0
+stages(NS): 00000000 / 00005004
+ flags(NS): 00000000 / 0000D400
+    status: 00000000 / 00000000
+    device: 00000000 / 00000001
+   tmutrip: 00000000 / 00000000
+     reset: 00000000 / 00180000
+[   0.802135] [E] GSA Breadcrumb:
+00000000 0000000d 00000000 00000000  |................|
+00000000 00000000 00000001           |............    |
+[   0.802272] [I] SBDP initialized: chipid allowed=0, dpm_state=0x0000
+[   0.802323] [E] check header failed
+[   0.802450] [I] initializing device i2c:usi00
+[   0.802493] [I] usi00: version 2.2
+[   0.802541] [I] initializing device i2c:usi04
+[   0.802583] [I] usi04: version 2.2
+[   0.802628] [I] initializing device i2c:usi06
+[   0.802668] [I] usi06: version 2.2
+[   0.802713] [I] initializing device i2c:usi09
+[   0.802750] [I] usi09: version 2.2
+[   0.802799] [I] initializing device i2cm:i2cm0
+[   0.802842] [I] DVFS init
+[   0.805102] [I] DVFS init done
+[   0.805133] [I] UFS EVT version 0
+[   0.805173] [I] controller version 3.0 found
+[   0.805208] [I] capabilities 0x1383ff1f
+[   0.805415] [I] UFS device found
+zuma_ufs_device_init_done
+[   0.805459] [E] ufshc_notify done
+[   0.805536] [I] ufshc_power_mode_change HS gear 4
+[   0.815730] [I] ufshc: bBootLunEn 0x1
+[   0.815880] [I] UFS device SAMSUNG KLUDG4UHGC-B0E1 version 3.1
+[   0.815932] [I] Enabled LUNs found 4
+[   0.815993] [I] UFS device total size 127984992256
+[   0.816096] [I] Temp too high enabled
+[   0.816189] [I] Temp too low enabled
+[   0.818940] [I] Write Booster: available buffer=0x6 lifetime=0x2 current buffer=0x1dcb
+[   0.819033] [I] boot slot: a
+[   0.821242] [I] slot data a: 0x00001e02
+[   0.821273] [I] slot data b: 0x00001000
+[   0.822086] [I] platform info: 060906010000
+[   0.822328] [I] initializing device cs40l2x:cs40l26
+[   0.832815] [I] CS40L26 found
+[   0.834480] [I] initializing device nfc:st21nfc
+[   0.836360] [I] tcpc vendor id 56
+[   0.837268] found 77779 on usi6
+[   0.837296] bms_init init usi10 as sec_i2c
+[   0.837330] [I] initializing device i2c:usi10
+[   0.837370] [I] usi10: version 2.2
+[   0.837564] [I] FG device name 0x5100
+[   0.838071] [I] [max77779fg] SOC(100), VCELL(4396), INOW(-353), IAVG(-182)
+[   0.838698] [I] fship 0x0
+[   0.838815] [I] master disconnect reason 0x0
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   0.841646] [I] LCS state:PRODUCTION
+[   0.841785] [I] no valid file
+[TMU:0] 36
+[TMU:1] 35
+[   0.845171] [I] dsim_probe dsim0+
+[   0.845209] [I] using data lane count(4)
+[   0.845925] [E] 
+Reboot Info:
+  RST_STAT: 0x180000 - PIN_RESET | PO_RESET
+  GSA_RESET_STATUS: 0x1 - GSA_PINRESET
+  Reboot reason: 0xcafe - User Reboot(S/W Reboot)
+  Reboot mode: 0xfc - Bootloader
+[   0.865506] [E] failed to get eUSB revision -62
+[   0.865541] [I] Set EUSB Ref clock auto
+[   0.865862] [I] LK build date: Apr 14 2026, time: 06:16:15
+[   0.865905] [I] BL version: ripcurrentpro-17.0-15199480
+[   0.865945] [I] BL type: official build
+starting app pixel_loader
+[   0.866414] [I] sota: empty signature.
+[   0.866446] [I] ABL start time (METRICS_BL3): 788ms
+[   0.866487] [I] AB Decision: active slot boot ok
+[   0.866524] [I] AB Decisions: 00000000
+[   0.866746] [I] TCPC BC1.2, type: 2 val:2
+[   0.866949] [I] boot voltage threshold=3400mV
+[   0.867066] [I] bootloader message:bootonce-bootloader
+[   0.867542] [I] fastboot enter reason: reboot bootloader
+[   0.867591] [W] power on source: 20
+starting app pixel_charger
+[   0.875742] [E] dsim0 wait phy pll stable
+[   0.896927] [I] Succeeded to read panel product id : 0x22a8a00a
+[   0.897001] [E] is_compatible is not defined!
+[   0.897040] [I] panel_rev: 0x1000
+[   0.902229] [I] use panel google-cm4 for dsim0
+[   0.902266] [I] dsim_probe -: dsim0 driver(cmd mode) has been probed.
+[   0.902317] [I] dsim_probe dsim1+
+[   0.902350] [I] using data lane count(4)
+[   0.902416] [E] dsim1 wait phy pll stable
+[   0.953519] [E] timeout!! wait for DSIM interrupt (0x40300000)
+[   0.953607] [E] MIPI DSIM (id=6) read Timeout! 0x4
+[   0.953647] [E] dsim fail to get panel operation
+[   0.953720] [E] dsim has error.
+[   0.953747] [E] dsim_probe -: dsim1 probe failed.
+[   0.953783] [I] dsim1 probe was failed
+[   0.953819] [I] dsim_init -: set dsim0 driver as primary.
+[   0.965060] [E] dsim0 wait phy pll stable
+[   0.984230] [I] dpp_probe +
+[   0.984254] [I] dpp-0's attr is (0x004d0047)
+[   0.984290] [I] dpp(0) init resources.
+[   0.984352] [I] dpp_probe -: dpp0 is probed successfully
+[   0.984400] [I] decon-int: max win6, command mode, hw trigger
+[   0.984449] [I] single dsi mode
+[   0.984485] [I] [decon0] d_path(0xB1) DSCC DSC_ENC1 DSC_ENC0 OFIFO.0
+[   0.984595] [I] [decon0] sel(0x0) OFIFO.0 - dsim0 - google-cm4
+[   0.984643] [I] Display 1st window(5) xres(1280) yres(2856) win_start_pos(0) win_end_pos(b2704ff)
+[   1.036990] [I] port connected
+[   1.051624] [I] TCPC BC1.2, type: 2 val:2
+[   1.119934] [I] decon0 registered successfully
+[   1.155179] [I] version: g5400c-260317-260429-B-15308590
+USB Pipe3 Initialization...
+[dwc3_dptx] CR write failed to 0x31c5
+[dwc3_dptx] CR write failed to 0x32c5
+[dwc3_dptx] CR write failed to 0x402d
+[dwc3_dptx] CR write failed to 0x412d
+[dwc3_dptx] CR write failed to 0x422d
+[dwc3_dptx] CR write failed to 0x432d
+[dwc3_dptx] CR write failed to 0x2021
+[dwc3_dptx] CR write failed to 0x2024
+[dwc3_dptx] CR write failed to 0x2027
+[dwc3_dptx] CR write failed to 0x202a
+[dwc3_dptx] CR write failed to 0x202d
+[dwc3_dptx] CR write failed to 0x2030
+[dwc3_dptx] CR write failed to 0x2033
+[dwc3_dptx] CR write failed to 0x2036
+[dwc3_dptx] CR write failed to 0x2022
+[dwc3_dptx] CR write failed to 0x2025
+[dwc3_dptx] CR write failed to 0x2028
+[dwc3_dptx] CR write failed to 0x202b
+[dwc3_dptx] CR write failed to 0x202e
+[dwc3_dptx] CR write failed to 0x2031
+[dwc3_dptx] CR write failed to 0x2034
+[dwc3_dptx] CR write failed to 0x2037
+[dwc3_dptx] PMA version:0x4604
+[dwc3_dptx] PCS ID:0x6790
+[dwc3_dptx] Firmware ID:0x6044, 0x04b3
+[   1.230227] [I] TCPC BC1.2, type: 2 val:2
+[   1.504774] [I] TCPC BC1.2, type: 2 val:2
+[   1.518301] [I] new high-speed device found
+[   1.518461] [I] TCPC BC1.2, type: 2 val:2
+[   1.526596] [I] TCPC BC1.2, type: 2 val:2
+[   2.559315] [I] Accept cmd:download:0000f000
+[   2.559421] [I] Downloading. Download size is 61440 bytes
+[   2.559517] [I] DATA0000f000
+[   2.561062] [I] OKAY
+[   2.561314] [I] Accept cmd:boot
+[   2.568426] [I] OKAY
+[   2.584038] [I] TCPC BC1.2, type: 2 val:2
+[   2.584859] [I] TCPC BC1.2, type: 2 val:2
+[   2.686142] [E] avb_property(com.android.build.boot.security_patch): not found
+[   2.686256] [E] boot_spl: can't find property
+[   2.686331] [I] boot_state: 160000:20261100:20000000
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   2.689359] [I] using init_boot ramdisk
+[   2.689429] [I] using vendor_kernel_boot ramdisk
+[   2.689636] [I] kernel: addr:0xffff000090701000, size:c284
+[   2.689777] [I] kernel: total_time:0
+[   2.689845] [I] vendor kernel ramdisk copy
+[   2.689912] [I] ramdisk dst addr: 0xffff000086000000 src addr: 0xffff0000a5901000 size: 0x67591e(6773022)
+[   2.690059] [I] padding prepended: 0
+[   2.693760] [I] vendor ramdisk copy
+[   2.693818] [I] ramdisk dst addr: 0xffff00008667591e src addr: 0xffff0000a0001000 size: 0x1663ae2(23476962)
+[   2.693961] [I] padding prepended: 18
+[   2.706386] [I] ramdisk copy
+[   2.706448] [I] ramdisk dst addr: 0xffff000087cd9412 src addr: 0xffff0000a5101000 size: 0x250d04(2428164)
+[   2.706598] [I] padding prepended: 14
+[   2.707947] [I] Ramdisk load size with padding: 32678180
+[   2.708090] [I] rev: 09865.00.00
+[   2.708169] [I] rev: 09865.00.00
+[   2.708237] [I] rev: 09865.01.00
+[   2.708290] [I] rev: 09865.01.01
+[   2.708357] [I] rev: 09865.01.00
+[   2.708411] [I] rev: 09865.01.01
+[   2.708477] [I] rev: 09875.00.00
+[   2.708540] [I] rev: 09875.00.00
+[   2.708607] [I] rev: 09875.00.00
+[   2.708661] [I] rev: 09875.00.01
+[   2.708726] [I] rev: 09875.00.00
+[   2.708779] [I] rev: 09875.00.01
+[   2.708830] [I] SOC DTB: index:6
+[   2.708906] [I] DTBO match: id 0x60906, rev 0x10000
+[   2.731603] [I] dpm not merged
+[   2.733812] [I] MTE S: 0, NS: 0, tag base: 0x0
+[   2.770830] [W] power on source: 20
+[   2.770902] [I] bootmode:
+[   2.771039] [I] DDR size: 16GiB
+[   2.771088] [I] DDR Manufacturer: Samsung
+[   2.773329] [I] ro.misctrl.16kb_before=0
+[   2.773414] [I] console is disabled
+[   2.773610] [I] secure dram base 0xb6200000, size 0x9e00000
+[   2.773751] [I] secure PGTBL base 0xe0000000, size 58720256
+[   2.777947] [I] MTE S: 0, NS: 0, tag base: 0x0
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   2.794905] [I] device: /reserved-memory/debug_snapshot/log_s2d path not found (-1)
+[   2.795177] [I] device: /reserved-memory/debug_snapshot/log_array_reset path not found (-1)
+[   2.795426] [I] device: /reserved-memory/debug_snapshot/log_kevents path not found (-1)
+[   2.795674] [I] device: /reserved-memory/debug_snapshot/log_itmon path not found (-1)
+[   2.795902] [I] device: /reserved-memory/debug_snapshot/log_s2d_extract path not found (-1)
+[   2.797450] [I] device: /google,mitigation enabled ret=0
+[   2.817641] [I] ro.boot.hardware.cpu.pagesize=4096
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   2.818507] [I] panel settings after overriding: google-cm4.22a8a00a@dsim0 null@dsim1
+[   2.834201] [I] linux,initrd-start: 0x86000000, linux,initrd-end: 0x87f32125
+[   2.835812] [E] Query failure: ocs=0xf query_response=0x0
+[   2.835903] [E] query command failed (-1): func=0x1 op=0x3 idn=0x18 index=0x0 sel=0X0
+[   2.836036] [E] Failed to read bDeviceCaseRoughTemp attribute ret=-1
+[   2.845002] [E] avb_property(com.android.build.microdroid-vendor.root_digest): not found
+[   2.845129] [W] failed to get microdroid vendor hashtree digest from avb property, skip appending value
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   2.847417] [W] no avf debug policy, because dpm is NULL
+[  12.908107] [I] slot data a: 0x00001e02
+[  12.908171] [I] slot data b: 0x00001000
+[  12.911697] [E] avb_property(com.android.build.boot.fingerprint): not found
+[  12.911802] [E] fingerprint property not found 
+[  13.421701] [I] shutdown complete
+[  13.421785] [I] thread stats (cpu 0): total idle time: 12181061, total busy time: 1240722
+Heap dump (using miniheap):
+	base 0xffff0000f8b93000, len 0x527000
+	free list:
+		base 0xffff0000f8d1b220, end 0xffff0000f8d3b660, len 0x20440
+		base 0xffff0000f8d3b6f0, end 0xffff0000f8d3b710, len 0x20
+		base 0xffff0000f8d783b0, end 0xffff0000f8d783d0, len 0x20
+		base 0xffff0000f8d7b510, end 0xffff0000f8d7b680, len 0x170
+		base 0xffff0000f8d7be00, end 0xffff0000f8d7be40, len 0x40
+		base 0xffff0000f8d7e7d0, end 0xffff0000f8d7e9a0, len 0x1d0
+		base 0xffff0000f8d7f820, end 0xffff0000f8d85980, len 0x6160
+		base 0xffff0000f8e07da0, end 0xffff0000f8e07dd0, len 0x30
+		base 0xffff0000f8e081a0, end 0xffff0000f8e09000, len 0xe60
+		base 0xffff0000f8e31020, end 0xffff0000f8e32000, len 0xfe0
+		base 0xffff0000f8ee03e0, end 0xffff0000f8f20240, len 0x3fe60
+		base 0xffff0000f8f30320, end 0xffff0000f90ba000, len 0x189ce0
+[  13.423008] [I] Starting Linux kernel ...
+=== caiman-probe d3c693c-dirty on caiman (Pixel 9 Pro, Tensor G4 / zumapro) ===
+hello from bare metal: loaded at 0x80000000 (file 0xc290 bytes, 0x38000 with bss+stack), x0/DTB=0x8a000000
+entry: EL2 SCTLR=0x30c50990 MMU=off D-cache=off I-cache=off
+
+--- cpu ---
+cpu: CurrentEL=2  MPIDR=0x81000000 (aff2.1.0 = 0.0.0)
+cpu: MIDR=0x410fd801 (Cortex-A520 r0p1) REVIDR=0x3
+cpu: SCTLR_EL2=0x30c50990 HCR_EL2=0x100000080000000 CPTR_EL2=0x33ff CNTHCTL_EL2=0x1ff5f
+cpu: entered at EL2 (hypervisor level): a loader for XNU must drop to EL1
+cpu: DAIF=0x3c0 ISR_EL1=0x0 CNTFRQ=24576000 Hz CNTVCT=330403066
+cpu: ID_AA64PFR0=0x1201111123111111 PFR1=0x0000000000010321
+cpu: ID_AA64ISAR0=0x0221111110212120 ISAR1=0x0111111100211002 ISAR2=0x0000000001005102
+cpu: ID_AA64MMFR0=0x2100022200101122 MMFR1=0x1001111011312122 MMFR2=0x1221011110101011
+cpu: ID_AA64DFR0=0x100f11f010305719 ZFR0=0x0000110100110021 SMFR0=0x0000000000000000
+cpu: CTR_EL0=0x49444c004 DCZID_EL0=0x4 CLIDR_EL1=0x54c3000123
+
+--- device tree ---
+dt: blob at 0x8a000000, 505098 bytes, version 17
+dt: memory 0xb80000000 - 0xc00000000 (2048 MiB)
+dt: memory 0xb00000000 - 0xb80000000 (2048 MiB)
+dt: memory 0xa80000000 - 0xb00000000 (2048 MiB)
+dt: memory 0xa00000000 - 0xa80000000 (2048 MiB)
+dt: memory 0x980000000 - 0xa00000000 (2048 MiB)
+dt: memory 0x900000000 - 0x980000000 (2048 MiB)
+dt: memory 0x880000000 - 0x900000000 (2048 MiB)
+dt: rsv pkvm_guest_firmware                  0x8b000000+0xd0000 no-map [linux,pkvm-guest-firmware-memory]
+dt: rsv abl@f8800000                         0xf8800000+0x1000000 no-map
+dt: rsv sec_pt                               0xe0000000+0x3800000 no-map
+dt: rsv sec_dram                             0xb6200000+0x9e00000 no-map
+dt: rsv ect_binary                           0x90000000+0x60000 [exynos,ect_rmem]
+dt: rsv gsa@90200000                         0x90200000+0x3ff000 no-map
+dt: rsv gsa@905FF000                         0x905ff000+0x1000 no-map
+dt: rsv gxp_scratchpad@91300000              0x91300000+0x60000 no-map
+dt: rsv iif_wait_table@91360000              0x91360000+0x20000 no-map
+dt: rsv iif_signal_table@91380000            0x91380000+0x20000 no-map
+dt: rsv gxp_secure_data@91400000             0x91400000+0x900000 no-map
+dt: rsv gxp_fw@91D00000                      0x91d00000+0x300000 no-map
+dt: rsv gxp_mcu_fw@92000000                  0x92000000+0x400000 no-map
+dt: rsv tpu_fw@92e00000                      0x92e00000+0x1200000 no-map
+dt: rsv aoc@94000000                         0x94000000+0x3000000 no-map
+dt: rsv dss_log_reserved@fd3f0000            0xfd3f0000+0xe000 no-map
+dt: rsv debug_kinfo_reserved@fd3fe000        0xfd3fe000+0x1000 no-map
+dt: rsv ramoops_mem@fd3ff000                 0xfd3ff000+0x400000 [ramoops]
+dt: rsv bldr_log_reserved@fd800000           0xfd800000+0x100000 no-map
+dt: rsv cp_rmem                              0xea400000+0xc00000 [exynos,modem_if]
+dt: rsv cp_msi_rmem                          0xf6200000+0x1000 [exynos,modem_if]
+dt: rsv cp_rmem_1                            0xe8000000+0x2000000 [exynos,modem_if]
+dt: rsv cp_aoc_rmem                          0x197fd000+0x3000 [exynos,modem_if]
+dt: rsv header                               0xd8100000+0x10000 no-map
+dt: rsv log_kevents                          0xd8110000+0x700000 no-map
+dt: rsv log_bcm                              0xdd610000+0x400000 no-map
+dt: rsv log_s2d                              0xd8810000+0x1800000 no-map
+dt: rsv log_array_reset                      0xda010000+0xa00000 no-map
+dt: rsv log_array_panic                      0xdaa10000+0xa00000 no-map
+dt: rsv log_slcdump                          0xdb410000+0x1100000 no-map
+dt: rsv log_preslcdump                       0xdc510000+0x1100000 no-map
+dt: rsv log_itmon                            0xdda10000+0x10000 no-map
+dt: rsv log_s2d_extract                      0xdda20000+0x600000 no-map
+dt: rsv seclog_mem                           0xc3000000+0x80000 [exynos,seclog]
+dt: rsv xhci_dma_buffer@17BB5000             0x17bb5000+0xb000 no-map [xhci-dma-pool]
+dt: rsv xhci_dma@17BC0000                    0x17bc0000+0x40000 no-map [xhci-dma-pool]
+dt: rsv xhci_dma_dram@97000000               0x97000000+0x400000 no-map [xhci-dma-pool]
+dt: rsv vstream                              [shared-dma-pool]
+dt: rsv vframe                               [shared-dma-pool]
+dt: rsv vscaler                              [shared-dma-pool]
+dt: rsv tui                                 
+dt: rsv gcma_camera                         
+dt: rsv faceauth_dsp                        
+dt: rsv faceauth_tpu                        
+dt: rsv famodel                             
+dt: rsv faimg                                [shared-dma-pool]
+dt: rsv farawimg                            
+dt: rsv faeval                              
+dt: rsv faprev                               [shared-dma-pool]
+dt: rsv mfc_fw                              
+dt: rsv dpado-rmem                           [exynos,dp_ado_rmem]
+dt: psci method=smc
+dt: memory 0x80000000 - 0x100000000 (2048 MiB)
+dt: /chosen bootargs: root=/dev/ram0 rw clocksource=arch_sys_counter clk_ignore_unused loop.max_part=7 loop.hw_queue_depth=31 coherent_pool=4M firmware_class.path=/vendor/firmware irqaffinity=0 sysrq_always_enabled no_console_suspend softlockup_panic=1 kasan_multi_shot kvm-arm.protected_modules=exynos-pd,pkvm_s2mpu-v9 fips140.load_sequential=1 exynos_drm.load_sequential=1 g2d.load_sequential=1 samsung_iommu_v9.load_sequential=1 vh_sched.load_sequential=1 pcie_exynos_gs.load_sequential=1 dyndbg="func alloc_contig_dump_pages +p" printk.devkmsg=on cma_sysfs.experimental=Y cgroup.memory=nokmem rcupdate.rcu_expedited=1 rcu_nocbs=all rcutree.enable_rcu_lazy swiotlb=noforce disable_dma32=on sysctl.kernel.sched_pelt_multiplier=4 rodata=on kasan=off at24.write_timeout=100 log_buf_len=1024K android_arch_task_struct_size=512 bootconfig console=null exynos_drm.panel_name=google-cm4.22a8a00a tcpci_max77759.conf_sbu=0 arm64.nomte ufs_pixel_fips140.fips_first_lba=151942 ufs_pixel_fips140.fips_last_lba=152453 ufs_pixel_fips140.fips_lu=0 ufs_pixel_fips140.use_hw_keys=true id_aa64mmfr1.vh=0  bootconfig
+dt: /chosen initrd 0x86000000 - 0x87f32125
+ramoops: DT ramoops_mem@fd3ff000: 0xfd3ff000 size 0x400000 record 0x0 console 0x200000 ftrace 0x0 pmsg 0x200000 ecc 0
+ramoops: console zone 0xfd3ff000 size 0x200000 matches the built-in default
+
+--- uart ---
+uart: samsung @ 0x10870000: reading ULCON/UCON/UFCON
+uart: ULCON=0x00000000 UCON=0x00003000 UFCON=0x00000000
+uart: transmitter disabled (UCON tx mode 0): bootloader did not enable the
+      debug UART. Try `fastboot oem uart enable` before `fastboot boot`.
+
+--- psci ---
+psci: conduit=smc version=1.1 (raw 0x10001)
+psci: SYSTEM_RESET2 supported (PSCI_FEATURES=0)
+
+--- bootloader log @ 0xfd800000 (0x100000 bytes) ---
+bldr: first 64 bytes:
+  fd800000: da 34 00 00 00 00 00 00 f0 ff 07 00 00 00 00 00  |.4..............|
+  fd800010: 5b 20 20 20 30 2e 30 30 30 30 30 30 5d 20 5b 49  |[   0.000000] [I|
+  fd800020: 5d 20 73 65 63 75 72 65 20 70 61 79 6c 6f 61 64  |] secure payload|
+  fd800030: 20 6c 6f 61 64 69 6e 67 20 74 6f 6f 6b 20 30 6d  | loading took 0m|
+bldr: printable text (runs of >= 4 chars), up to 524288 bytes:
+[   0.000000] [I] secure payload loading took 0ms
+[   0.000000] [I] platform info binded: true
+[   0.000000] [I] platform info: 060906010000
+[   0.799414] [I] 
+welcome to lk/MP
+
+[   0.799442] [I] boot args 0x1 0x0 0x0 0x0
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   0.800125] [I] acpm locks regulators
+[   0.800179] [I] Soc Product ID: 0x09875
+[   0.800217] [I] Soc rev: A1
+[   0.800244] [I] Soc ID: 0x12b44c577850
+[   0.800276] [I] DVFS version: 2
+[   0.800308] [E] vendor combined_checksum must be 0x13656bf5 but 0x1db2e2fe
+[   0.800364] [E] magic_number must be 0xcceeddff but 0xcceeddfb
+[   0.800448] [I] S2MPG_M CHIPID read: 0x10
+[   0.800512] [I] S2MPG_S CHIPID read: 0x10
+[   0.800576] [I] S2MPG_M PWRONSRC read: 0x20
+[   0.800640] [I] S2MPG_M OFFSRC1 read: 0x10
+[   0.800712] [I] S2MPG_M OFFSRC2 read: 0x0
+[   0.800777] [I] S2MPG_M RTC_WTSR read: 0x7e
+[   0.800818] [I] S2MPG_M INT1: 0x30
+[   0.800847] [I] S2MPG_M INT2: 0x0
+[   0.800873] [I] S2MPG_M INT3: 0x0
+[   0.800900] [I] S2MPG_M INT4: 0x0
+[   0.800929] [I] S2MPG_M INT5: 0x0
+[   0.800989] [I] S2MPG_S OFFSRC1 read: 0x11
+[   0.801030] [I] S2MPG_S INT1: 0x83
+[   0.801058] [I] S2MPG_S INT2: 0x80
+[   0.801085] [I] S2MPG_S INT3: 0x0
+[   0.801115] [I] S2MPG_S INT4: 0x0
+[   0.801141] [I] S2MPG_S INT5: 0x0
+APC Bootmetrics:
+  BL1: MT:1 / DT:ENTRY / 96712 us
+  BL1: MT:2 / DT:LOAD  / 7360 us
+  BL1: MT:F / DT:EXIT  / 147680 us
+  PBL: MT:1 / DT:ENTRY / 147808 us
+  PBL: MT:2 / DT:LOAD  / 19592 us
+  PBL: MT:F / DT:EXIT  / 212912 us
+  BL2: MT:1 / DT:ENTRY / 214472 us
+  BL2: MT:2 / DT:LOAD  / 160 us
+  BL2: MT:3 / DT:LOAD  / 152 us
+  BL2: MT:4 / DT:CHECK / 342432 us
+  BL2: MT:5 / DT:CHECK / 2096 us
+  BL2: MT:6 / DT:LOAD  / 62384 us
+  BL2: MT:7 / DT:CHECK / 157712 us
+  BL2: MT:8 / DT:CHECK / 157856 us
+  BL2: MT:9 / DT:LOAD  / 44328 us
+  BL2: MT:A / DT:LOAD  / 31496 us
+  BL2: MT:B / DT:LOAD  / 324120 us
+  BL2: MT:C / DT:LOAD  / 8 us
+  BL2: MT:F / DT:EXIT  / 607104 us
+  PBL: MT:3 / DT:LOAD  / 81272 us
+  PBL: MT:4 / DT:LOAD  / 28168 us
+  PBL: MT:5 / DT:LOAD  / 6184 us
+  PBL: MT:6 / DT:CHECK / 722904 us
+  PBL: MT:7 / DT:CHECK / 723040 us
+  EL3: MT:1 / DT:ENTRY / 725816 us
+  EL3: MT:D / DT:CHECK / 741376 us
+  EL3: MT:E / DT:CHECK / 788280 us
+  EL3: MT:F / DT:EXIT  / 788312 us
+APC Breadcrumbs(v2.4):
+ stages(S): 00000000 / 0000404F
+  flags(S): 00000000 / 000022C0
+stages(NS): 00000000 / 00005004
+ flags(NS): 00000000 / 0000D400
+    status: 00000000 / 00000000
+    device: 00000000 / 00000001
+   tmutrip: 00000000 / 00000000
+     reset: 00000000 / 00180000
+[   0.802135] [E] GSA Breadcrumb:
+00000000 0000000d 00000000 00000000  |................|
+00000000 00000000 00000001           |............    |
+[   0.802272] [I] SBDP initialized: chipid allowed=0, dpm_state=0x0000
+[   0.802323] [E] check header failed
+[   0.802450] [I] initializing device i2c:usi00
+[   0.802493] [I] usi00: version 2.2
+[   0.802541] [I] initializing device i2c:usi04
+[   0.802583] [I] usi04: version 2.2
+[   0.802628] [I] initializing device i2c:usi06
+[   0.802668] [I] usi06: version 2.2
+[   0.802713] [I] initializing device i2c:usi09
+[   0.802750] [I] usi09: version 2.2
+[   0.802799] [I] initializing device i2cm:i2cm0
+[   0.802842] [I] DVFS init
+[   0.805102] [I] DVFS init done
+[   0.805133] [I] UFS EVT version 0
+[   0.805173] [I] controller version 3.0 found
+[   0.805208] [I] capabilities 0x1383ff1f
+[   0.805415] [I] UFS device found
+zuma_ufs_device_init_done
+[   0.805459] [E] ufshc_notify done
+[   0.805536] [I] ufshc_power_mode_change HS gear 4
+[   0.815730] [I] ufshc: bBootLunEn 0x1
+[   0.815880] [I] UFS device SAMSUNG KLUDG4UHGC-B0E1 version 3.1
+[   0.815932] [I] Enabled LUNs found 4
+[   0.815993] [I] UFS device total size 127984992256
+[   0.816096] [I] Temp too high enabled
+[   0.816189] [I] Temp too low enabled
+[   0.818940] [I] Write Booster: available buffer=0x6 lifetime=0x2 current buffer=0x1dcb
+[   0.819033] [I] boot slot: a
+[   0.821242] [I] slot data a: 0x00001e02
+[   0.821273] [I] slot data b: 0x00001000
+[   0.822086] [I] platform info: 060906010000
+[   0.822328] [I] initializing device cs40l2x:cs40l26
+[   0.832815] [I] CS40L26 found
+[   0.834480] [I] initializing device nfc:st21nfc
+[   0.836360] [I] tcpc vendor id 56
+[   0.837268] found 77779 on usi6
+[   0.837296] bms_init init usi10 as sec_i2c
+[   0.837330] [I] initializing device i2c:usi10
+[   0.837370] [I] usi10: version 2.2
+[   0.837564] [I] FG device name 0x5100
+[   0.838071] [I] [max77779fg] SOC(100), VCELL(4396), INOW(-353), IAVG(-182)
+[   0.838698] [I] fship 0x0
+[   0.838815] [I] master disconnect reason 0x0
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   0.841646] [I] LCS state:PRODUCTION
+[   0.841785] [I] no valid file
+[TMU:0] 36
+[TMU:1] 35
+[   0.845171] [I] dsim_probe dsim0+
+[   0.845209] [I] using data lane count(4)
+[   0.845925] [E] 
+Reboot Info:
+  RST_STAT: 0x180000 - PIN_RESET | PO_RESET
+  GSA_RESET_STATUS: 0x1 - GSA_PINRESET
+  Reboot reason: 0xcafe - User Reboot(S/W Reboot)
+  Reboot mode: 0xfc - Bootloader
+[   0.865506] [E] failed to get eUSB revision -62
+[   0.865541] [I] Set EUSB Ref clock auto
+[   0.865862] [I] LK build date: Apr 14 2026, time: 06:16:15
+[   0.865905] [I] BL version: ripcurrentpro-17.0-15199480
+[   0.865945] [I] BL type: official build
+starting app pixel_loader
+[   0.866414] [I] sota: empty signature.
+[   0.866446] [I] ABL start time (METRICS_BL3): 788ms
+[   0.866487] [I] AB Decision: active slot boot ok
+[   0.866524] [I] AB Decisions: 00000000
+[   0.866746] [I] TCPC BC1.2, type: 2 val:2
+[   0.866949] [I] boot voltage threshold=3400mV
+[   0.867066] [I] bootloader message:bootonce-bootloader
+[   0.867542] [I] fastboot enter reason: reboot bootloader
+[   0.867591] [W] power on source: 20
+starting app pixel_charger
+[   0.875742] [E] dsim0 wait phy pll stable
+[   0.896927] [I] Succeeded to read panel product id : 0x22a8a00a
+[   0.897001] [E] is_compatible is not defined!
+[   0.897040] [I] panel_rev: 0x1000
+[   0.902229] [I] use panel google-cm4 for dsim0
+[   0.902266] [I] dsim_probe -: dsim0 driver(cmd mode) has been probed.
+[   0.902317] [I] dsim_probe dsim1+
+[   0.902350] [I] using data lane count(4)
+[   0.902416] [E] dsim1 wait phy pll stable
+[   0.953519] [E] timeout!! wait for DSIM interrupt (0x40300000)
+[   0.953607] [E] MIPI DSIM (id=6) read Timeout! 0x4
+[   0.953647] [E] dsim fail to get panel operation
+[   0.953720] [E] dsim has error.
+[   0.953747] [E] dsim_probe -: dsim1 probe failed.
+[   0.953783] [I] dsim1 probe was failed
+[   0.953819] [I] dsim_init -: set dsim0 driver as primary.
+[   0.965060] [E] dsim0 wait phy pll stable
+[   0.984230] [I] dpp_probe +
+[   0.984254] [I] dpp-0's attr is (0x004d0047)
+[   0.984290] [I] dpp(0) init resources.
+[   0.984352] [I] dpp_probe -: dpp0 is probed successfully
+[   0.984400] [I] decon-int: max win6, command mode, hw trigger
+[   0.984449] [I] single dsi mode
+[   0.984485] [I] [decon0] d_path(0xB1) DSCC DSC_ENC1 DSC_ENC0 OFIFO.0
+[   0.984595] [I] [decon0] sel(0x0) OFIFO.0 - dsim0 - google-cm4
+[   0.984643] [I] Display 1st window(5) xres(1280) yres(2856) win_start_pos(0) win_end_pos(b2704ff)
+[   1.036990] [I] port connected
+[   1.051624] [I] TCPC BC1.2, type: 2 val:2
+[   1.119934] [I] decon0 registered successfully
+[   1.155179] [I] version: g5400c-260317-260429-B-15308590
+USB Pipe3 Initialization...
+[dwc3_dptx] CR write failed to 0x31c5
+[dwc3_dptx] CR write failed to 0x32c5
+[dwc3_dptx] CR write failed to 0x402d
+[dwc3_dptx] CR write failed to 0x412d
+[dwc3_dptx] CR write failed to 0x422d
+[dwc3_dptx] CR write failed to 0x432d
+[dwc3_dptx] CR write failed to 0x2021
+[dwc3_dptx] CR write failed to 0x2024
+[dwc3_dptx] CR write failed to 0x2027
+[dwc3_dptx] CR write failed to 0x202a
+[dwc3_dptx] CR write failed to 0x202d
+[dwc3_dptx] CR write failed to 0x2030
+[dwc3_dptx] CR write failed to 0x2033
+[dwc3_dptx] CR write failed to 0x2036
+[dwc3_dptx] CR write failed to 0x2022
+[dwc3_dptx] CR write failed to 0x2025
+[dwc3_dptx] CR write failed to 0x2028
+[dwc3_dptx] CR write failed to 0x202b
+[dwc3_dptx] CR write failed to 0x202e
+[dwc3_dptx] CR write failed to 0x2031
+[dwc3_dptx] CR write failed to 0x2034
+[dwc3_dptx] CR write failed to 0x2037
+[dwc3_dptx] PMA version:0x4604
+[dwc3_dptx] PCS ID:0x6790
+[dwc3_dptx] Firmware ID:0x6044, 0x04b3
+[   1.230227] [I] TCPC BC1.2, type: 2 val:2
+[   1.504774] [I] TCPC BC1.2, type: 2 val:2
+[   1.518301] [I] new high-speed device found
+[   1.518461] [I] TCPC BC1.2, type: 2 val:2
+[   1.526596] [I] TCPC BC1.2, type: 2 val:2
+[   2.559315] [I] Accept cmd:download:0000f000
+[   2.559421] [I] Downloading. Download size is 61440 bytes
+[   2.559517] [I] DATA0000f000
+[   2.561062] [I] OKAY
+[   2.561314] [I] Accept cmd:boot
+[   2.568426] [I] OKAY
+[   2.584038] [I] TCPC BC1.2, type: 2 val:2
+[   2.584859] [I] TCPC BC1.2, type: 2 val:2
+[   2.686142] [E] avb_property(com.android.build.boot.security_patch): not found
+[   2.686256] [E] boot_spl: can't find property
+[   2.686331] [I] boot_state: 160000:20261100:20000000
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   2.689359] [I] using init_boot ramdisk
+[   2.689429] [I] using vendor_kernel_boot ramdisk
+[   2.689636] [I] kernel: addr:0xffff000090701000, size:c284
+[   2.689777] [I] kernel: total_time:0
+[   2.689845] [I] vendor kernel ramdisk copy
+[   2.689912] [I] ramdisk dst addr: 0xffff000086000000 src addr: 0xffff0000a5901000 size: 0x67591e(6773022)
+[   2.690059] [I] padding prepended: 0
+[   2.693760] [I] vendor ramdisk copy
+[   2.693818] [I] ramdisk dst addr: 0xffff00008667591e src addr: 0xffff0000a0001000 size: 0x1663ae2(23476962)
+[   2.693961] [I] padding prepended: 18
+[   2.706386] [I] ramdisk copy
+[   2.706448] [I] ramdisk dst addr: 0xffff000087cd9412 src addr: 0xffff0000a5101000 size: 0x250d04(2428164)
+[   2.706598] [I] padding prepended: 14
+[   2.707947] [I] Ramdisk load size with padding: 32678180
+[   2.708090] [I] rev: 09865.00.00
+[   2.708169] [I] rev: 09865.00.00
+[   2.708237] [I] rev: 09865.01.00
+[   2.708290] [I] rev: 09865.01.01
+[   2.708357] [I] rev: 09865.01.00
+[   2.708411] [I] rev: 09865.01.01
+[   2.708477] [I] rev: 09875.00.00
+[   2.708540] [I] rev: 09875.00.00
+[   2.708607] [I] rev: 09875.00.00
+[   2.708661] [I] rev: 09875.00.01
+[   2.708726] [I] rev: 09875.00.00
+[   2.708779] [I] rev: 09875.00.01
+[   2.708830] [I] SOC DTB: index:6
+[   2.708906] [I] DTBO match: id 0x60906, rev 0x10000
+[   2.731603] [I] dpm not merged
+[   2.733812] [I] MTE S: 0, NS: 0, tag base: 0x0
+[   2.770830] [W] power on source: 20
+[   2.770902] [I] bootmode:
+[   2.771039] [I] DDR size: 16GiB
+[   2.771088] [I] DDR Manufacturer: Samsung
+[   2.773329] [I] ro.misctrl.16kb_before=0
+[   2.773414] [I] console is disabled
+[   2.773610] [I] secure dram base 0xb6200000, size 0x9e00000
+[   2.773751] [I] secure PGTBL base 0xe0000000, size 58720256
+[   2.777947] [I] MTE S: 0, NS: 0, tag base: 0x0
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   2.794905] [I] device: /reserved-memory/debug_snapshot/log_s2d path not found (-1)
+[   2.795177] [I] device: /reserved-memory/debug_snapshot/log_array_reset path not found (-1)
+[   2.795426] [I] device: /reserved-memory/debug_snapshot/log_kevents path not found (-1)
+[   2.795674] [I] device: /reserved-memory/debug_snapshot/log_itmon path not found (-1)
+[   2.795902] [I] device: /reserved-memory/debug_snapshot/log_s2d_extract path not found (-1)
+[   2.797450] [I] device: /google,mitigation enabled ret=0
+[   2.817641] [I] ro.boot.hardware.cpu.pagesize=4096
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   2.818507] [I] panel settings after overriding: google-cm4.22a8a00a@dsim0 null@dsim1
+[   2.834201] [I] linux,initrd-start: 0x86000000, linux,initrd-end: 0x87f32125
+[   2.835812] [E] Query failure: ocs=0xf query_response=0x0
+[   2.835903] [E] query command failed (-1): func=0x1 op=0x3 idn=0x18 index=0x0 sel=0X0
+[   2.836036] [E] Failed to read bDeviceCaseRoughTemp attribute ret=-1
+[   2.845002] [E] avb_property(com.android.build.microdroid-vendor.root_digest): not found
+[   2.845129] [W] failed to get microdroid vendor hashtree digest from avb property, skip appending value
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   2.847417] [W] no avf debug policy, because dpm is NULL
+[  12.908107] [I] slot data a: 0x00001e02
+[  12.908171] [I] slot data b: 0x00001000
+[  12.911697] [E] avb_property(com.android.build.boot.fingerprint): not found
+[  12.911802] [E] fingerprint property not found 
+[  13.421701] [I] shutdown complete
+[  13.421785] [I] thread stats (cpu 0): total idle time: 12181061, total busy time: 1240722
+Heap dump (using miniheap):
+	base 0xffff0000f8b93000, len 0x527000
+	free list:
+		base 0xffff0000f8d1b220, end 0xffff0000f8d3b660, len 0x20440
+		base 0xffff0000f8d3b6f0, end 0xffff0000f8d3b710, len 0x20
+		base 0xffff0000f8d783b0, end 0xffff0000f8d783d0, len 0x20
+		base 0xffff0000f8d7b510, end 0xffff0000f8d7b680, len 0x170
+		base 0xffff0000f8d7be00, end 0xffff0000f8d7be40, len 0x40
+		base 0xffff0000f8d7e7d0, end 0xffff0000f8d7e9a0, len 0x1d0
+		base 0xffff0000f8d7f820, end 0xffff0000f8d85980, len 0x6160
+		base 0xffff0000f8e07da0, end 0xffff0000f8e07dd0, len 0x30
+		base 0xffff0000f8e081a0, end 0xffff0000f8e09000, len 0xe60
+		base 0xffff0000f8e31020, end 0xffff0000f8e32000, len 0xfe0
+		base 0xffff0000f8ee03e0, end 0xffff0000f8f20240, len 0x3fe60
+		base 0xffff0000f8f30320, end 0xffff0000f90ba000, len 0x189ce0
+[  13.423008] [I] Starting Linux kernel ...
+  10.461545] [HZ
+TCPC BC1&
+4 4ype: 2 va$
+Y  11
+2338] ZI] @ccept cmd2d
+w,xoa$:P400000p
+ 01,023046] ZA]
+Dkwnloading/ Download bizd is 67100864
+bxtec
+[
+.0225!4L [I
+@040 0100
+[  12.536422] [I] OKAY
+[  12.536697] KQ] 
+ccEpt cmd
+b/ot
+;  1
+.543121] KI
+JKAY
+S  
+2.55(!06\ 
+I] TCPC @C
+.2, t9pe: 2 Val:
+
+[  12,
+5(	"7] [	] TCPC BA1,0,$type
+ 2 val:R
+[  12.660293] [E] avb_property(coI.Android.`u)ld.systee,o{_verra
+n): not fouNd
+[  12.660403] 
+E] systAm.os_versio.: can't fajd@propErtx
+[  52(660495]
+Y avb_propart9(com.andr
+	d.`uidd.system.sd#ur)ty_patch!: lot foun
+
+[  12.660603] [E] cystam_spl: can/t FIld ppopertx
+[
+ 12,668
+77] YE]!avB_prop%rty(com.an
+roid.Build.boot.security_pa4ch)6 not@found
+[  !2.6
+83] [E] bood_spl" can't find prgpardy
+	  1:.640851] [A] boot_Stat%: 0
+0000:20000000
+20000000
+trasty_ddv_common.c: I
+FM sele#ted tRusty api versign2 3 (requ%sTd@ 3)
+[ 
+2641
+ KI] u3inc init_boot ramdipk
+Z  1".464
+96] [	] usinG vendor_KErne(
+"oot ramdisk
+[ 
+12.6"4281] [I] kerneL: addr00xFfff000090
+0100
+, size
+fd"f49
+710521\ 
+I] tehdor kernel ramdhsk aopy
+[  
+*N710
+SI] Ramdiqk $st addr: 0Xffff0000860 0000 src !ddr: 0xffbf0000a5901000 size: 0X67591e(&7/3022)
+[  12.710770] [A] paddiNg`prepended: 0
+[  12.715021Y [I] vendor 
+amdisi aopy
+[  12.71%490] [I] ralDiSk dqt
+addr: 0xfffb0000(6&75
+ yddr8 0xf&ff000 a00 100  siz%: 0812.2ae
+(23476962)
+C` 1R,115
+50U [I] pa``ing prep%
+eD
+ 18
+[  12.727!80] KIT 
+adisi cmpy
+[  12.62W0
+SO] ramdisc Dst )ddr: 0xBf&d0
+ct9412
+sp# ``dr: 0xff`f0000a
+1@1000 r
+z%: 0h
+50d04(242x164(
+[
+ !".
+20004] [IL pa$dhl' `0ependEd: 14
+[   2.7"9349U [I] Raidirk load siZe
+with pAddilg: 32660180
+Y  12.729
+0] [I] rev
+65.00.0 
+[  
+629568\ KIE 2ef*
+0(86
+.00.00
+[  12.629235] [I] re6280
+06%.01.0 
+Y  12.6216
+9] SI] bev: 09865.01.01
+[  1
+.729755] [I] 2ev: 09845
+
+[  1".6"98
+9] [I] rev: 09
+65*01.P1
+[ 
+12.72987
+] YI] 2ef8 08875.00.00
+[  1".509940] [A]
+rer: 09815200.00
+[  
+0007] [I]
+rev: 09875.00,00
+[  12.s30061] [I] 2ev: 0
+1.00.01
+Z  16*630126M KA] rev: 09075. 
+00
+[  12:7301
+IU re6: 09875.00.01
+  12.'30230
+ YI] SOC DTB: i
+dex:6
+[  1".7303
+1] SIO DT@O match: ad 0x60906  ref 0x00000
+[  12.55213&] [I] Dpi .op lDR
+d
+[  12N75474
+Y [	]
+ S: 0, NQ* 0, 4ag8b`se: 0x 
+[ 
+12.767 69
+ [A] kerlel: toTal_pie%:104
+tpus4i_$av_common.c
+ H
+FO sel%ct
+d trtctq aPi vdrsion: # (reqaested 3)
+[ 012.814609] [I] bootmode:
+Q  12.81476
+I] DDR size: 16GiB
+  12.
+14817] [I] DDR Lalufact5rer: Samsung
+[  12.(170&1] ZIU po.misctrl.06kbObe
+ore90
+12&817108] [I] co.sola()c dIsablEd
+[  12.013394] [I] sec4rE dr!m b!se 0xb
+260 00, size&0x9d00000
+[  1
+40] [I] 
+EcurE @GTBL "aae 0pd0000000, size 58720256
+[  12.822439] [I\ MTE S: 0, N
+0Pae base: 0p0
+  12.825730] CIU device: /reserv
+$meOry/debug^snaprhmt'log_c2d&patH l,t fould 
+-1)
+[  12.8
+5761M [I] davice
+ /rE3ervad-memory.debug_snap3h
+t/l.g_Arrax_resed padh fo` fkuNd (-1(
+[  1".824015] [I] device: /reserved-memory/ddb
+gOsnap3hOt'mogMkevajts @`th not fo5nd 
+,1)
+[  02.82.263] KIT 
+evice: /pesebved)memGr
+/debue_snaps`ot/ngg
+ipmon p
+th nop f/und @-1)
+S 
+12.8
+6509] [IY daviceZ /rDSebve$-iemo2y/debug_sfaps(ot/logWs:d_e8tpabt paph n
+t Fkund 
+)1)
+Y  12.82813
+] [I] device: /gmogle,miTiga
+ion e.a"led rat=0
+[  12
+841021] [I] Ro&boot,hardw`re.`pU,paG
+size54094
+trusty_dav
+c-mmon,c: HNFN s%le
+ded trus4Y aph versioj0 
+ (reques
+e` #)
+trerty_dev_commml.c: INFO SElecte@ 6ruStY api verS)
+j8 3 (req5ected 3(
+[  12
+849)29] [A] paBe
+ 3eTtiNgs afteb overriding
+okgl%-cm4
+22A8a00a@d
+im0 full@dr`m1
+K  12.865627] KI] ,inex,initrd-st`rt8 0x(60000
+0, lInu8
+initrd-
+nd: 0x
+7F22
+25
+]  12.87012
+] [E] ArbWpro0eRti(Ao-. n
+`ohd
+builD,micrnd2oId)vEjDgB
+rgo0]dhg%st
+: not fnUn`
+S  12
+8782%3]0
+bailed to0cet MibRNdr/i` dendor (
+sh@pee 
+iGest froh
+!vB `
+opeRty
+ rkhp appe^dijc tAlQe
+tbustq]ddvKcOmmon
+s`ldcpdt DrEsty api vArSign: 
+ (2eq
+ert`D
+3!
+Y  12&880
+23] SW] (m 
+pf d$buc  oliBq, becaure $pm iq NQDL
+9100M [II sLO
+ Data a:00x00001e02
+[
+ 2p.94
+2#0] [I] slot data B: 0x00001 00
+  20.9
+0924[ [E\ `$b_p
+pCptY(bom.and2oiD
+behl|.`oOD$biNgerprijt!: ngt
+fguld
+  22.9530
+] [E\ finGcrpRi*t prmperty not f/ufD 
+[
+21
+40794$
+ [I]8sH
+tdowf complede
+23.4 
+ XI] ph2eAd
+(c0u 0): Total  dl% tIle: 13!5
+4(2, 
+otal bUsy time2 !
+Eap $tmp (Using -ini`eap(:
+	bac$ 0p
+&0000d8b93000
+ lFn 0
+0
+	&raa list*
+		bare 0xfffd0000d8`1B
+20$ en` 0xd$ff000 f8d3b660$ leN 0x20440
+		baSe 0xffff00
+0&8d1b6f0, eld
+0xffff0000&8d
+b710, lan 0p20
+		ba3e
+0xffff0000f8D7<;b
+, and 0xf`ff0000f8d783d0, lej 002
+
+		base 0xff^f0000d0d7`5!0, end 0Xffff0000f8d?b680$ ,en 0x134
+		`ase 0xdf
+f0000f8e7bd70$ ef$  xffff00
+0F8d7beb 
+ len 0x40
+		base 0xffff0000f8d7bfd0, %jd 0xffFf0000f8d6`ff0, l!n 
+		basa 0xffff0002&8d7d3e , enD
+0xffff00 0b8`7e9a0, len 0x1c0
+		base 0Xfffn0000f8d5f850,
+end 0xffff0000f8d85980, 
+ef 0x6130
+ase 0xffff00 0f8e07d`
+( end  xffff"000&8e07d`0, hen 0x30
+		base  8ffff0
+f8e)8
+a0, eld 0xbfbf0000f8ed8100, len 0x3Ff60
+		basE 0xdfff 000f8dd85e0, e
+d 0XfFff0000f9189000, len 0x2a0a20
+[  23.410103I Y!] PPaBting(Linux kernel ...
+--- end of bootloader log (18423 bytes copied) ---
+
+--- watchdog ---
+wdt: reading cluster-0 watchdog @ 0x10060000
+wdt: WTCON=0x0001af39 WTDAT=0x0000ffaf WTCNT=0x0000daa4: RUNNING, reset on expiry ON, irq off
+wdt: counts at 1090 Hz (if the input clock is 24576000 Hz): period 60050 ms, 51350 ms left
+wifi: PCIe RC1 (BCM4390) as the bootloader left it, read only
+wifi: pinctrl-hsi2 +0x000: 00000000 00000002 00111111 00000000
+wifi: pinctrl-hsi2 +0x010: 00000aaa 00111111 00000000 00000000
+wifi: pinctrl-hsi2 +0x020: 00000000 00000000 01111111 00000000
+wifi: pinctrl-hsi2 +0x030: 00002aaa 01111111 00000000 00000000
+wifi: pinctrl-hsi2 +0x040: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x050: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x060: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x070: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x080: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x090: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x0a0: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x0b0: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x0c0: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x0d0: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x0e0: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x0f0: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x100: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x110: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x120: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x130: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x140: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x150: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x160: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x170: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x180: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x190: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x1a0: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x1b0: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x1c0: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x1d0: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x1e0: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x1f0: 00000000 00000000 00000000 00000000
+wifi: PMU +0x3ec8 (PCIe 1 PHY isolation): 0x000000c0
+wifi: sysreg-hsi2 +0x000: 00000000 ffffffff 00000000 00000000
+wifi: sysreg-hsi2 +0x010: 00000000 deadbeef deadbeef deadbeef
+wifi: sysreg-hsi2 +0x020: deadbeef deadbeef deadbeef deadbeef
+wifi: sysreg-hsi2 +0x030: deadbeef deadbeef deadbeef deadbeef
+wifi: elbi +0x000: 00000000 00000100 00008000 00000000
+wifi: elbi +0x010: 00000000 00000000 00000000 00000000
+wifi: elbi +0x020: 00000001 00000001 00000000 00000000
+wifi: elbi +0x030: 00000000 00000000 00000000 00000000
+wifi: soc +0x000: 00000000 00000000 00000000 00000000
+wifi: soc +0x010: 00000000 00000000 00000000 00000000
+wifi: phy 0x13160000: does not answer (clock or power off)
+wifi: dbi +0x000: a5a5144d 00100000 00000001 00010000
+wifi: dbi +0x010: 00000004 00000000 00000000 00000000
+wifi: dbi +0x020: 00000000 00010001 00000000 00000000
+wifi: dbi +0x030: 00000000 00000040 00000000 000001ff
+wifi: PCIe 1 PHY isolation bypass via SMC: 0, PMU +0x3ec8 now 0x00000001
+wifi: phy +0x000: 00000008 00000000 00000000 00000000
+wifi: phy +0x010: 00000000 00000003 00000000 00000055
+wifi: udbg+c700 +0x000: 00010140 00040032 00020002 001a000a
+wifi: pcs +0x000: 00100000 00000000 0000001d 00000000
+wifi: pcs +0x010: 00000000 00000000 00000000 00000000
+wifi: WL_REG_ON high, PERST# low: gph3 CON 0x00010021 DAT 0x00000012
+wifi: PHY: external PLL lock 4, PLL lock 1, CDR lock 10, offset calibration 80
+wifi: before LTSSM: state 0x0, DBI link status 0x10110000
+wifi: LTSSM L0 (link up) after 40 us; states seen: 0x2 0x11
+wifi: DBI link control/status 0x30110000 (speed 1, width x1)
+
+--- display ---
+display: DT drmdecon@19470000 (decon 0)
+display: DT decon node has no memory-region (no handover buffer declared)
+display: DECON0 main=0x19470000 win=0x19480000 wincon=0x194a0000 (14 windows)
+display: reading DECON0 main registers (a hang right after this line means
+         the DECON block is powered down)
+display: VERSION=0x07060000 FRAME_COUNT=5 GLOBAL_CON=0x00000133 (shadow 0x00000101) TRIG_CON=0x00003070
+display: mode=COMMAND enabled=yes run=1 idle=1
+display: reading WINCON 0..13
+display: window 5 ON: WINCON=0x00000001 chmap=0 -> dpp 0  pos (0,0)-(1279,2855)
+display:   reading RDMA @ 0x19900000
+display:   live   ENABLE=0x40000000 IN_CTRL_0=0xff400000 (fmt 0 BGRA8888)
+display:   live   SRC 1280x2856  OFFSET=0x00000000  IMG 1280x2856
+display:   live   BASEADDR_P0=0xfac00000 P1=0x00000000 STRIDE_0=0x00000000
+display:   shadow ENABLE=0x40000000 IN_CTRL_0=0xff400000 (fmt 0 BGRA8888)
+display:   shadow SRC 1280x2856  OFFSET=0x00000000  IMG 1280x2856
+display:   shadow BASEADDR_P0=0xfac00000 P1=0x00000000 STRIDE_0=0x00000000
+display: FRAME_COUNT 5 -> 5 over 100 ms (no new frames: idle/command mode)
+display: FRAME BUFFER: 0xfac00000  1280x2856  BGRA8888  stride 5120 bytes  (dpp 0)
+
+=== SUMMARY ===
+platform     : caiman (Pixel 9 Pro, Tensor G4 / zumapro), probe d3c693c-dirty
+entry        : EL2, MPIDR 0x81000000, image 0x80000000+0x38000, DTB 0x8a000000
+dram         : 8 range(s) from DT
+ramoops log  : console zone 0xfd3ff000 size 0x200000
+uart         : not usable
+psci         : version 0x10001, SYSTEM_RESET2 yes
+fb (regs)    : 0xfac00000 1280x2856 fmt 0 bpp 4 stride 5120 (dpp 0)
+fb (DT)      : no handover memory-region
+decon mode   : command, 0 frames in 100 ms
+watchdog     : RUNNING (bootloader left it armed), period 60050 ms, 51350 ms left at probe time
+aborted reads: 12
+
+finish: done; rebooting in 3000 ms (PSCI SYSTEM_RESET2 warm)
+=== caiman-probe end ===
+[   0.000000] [I] secure payload loading took 0ms
+[   0.000000] [I] platform info binded: true
+[   0.000000] [I] platform info: 060906010000
+[   9.735081] [I] 
+welcome to lk/MP
+
+[   9.735109] [I] boot args 0x1 0x0 0x0 0x0
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   9.735789] [I] acpm locks regulators
+[   9.735843] [I] Soc Product ID: 0x09875
+[   9.735877] [I] Soc rev: A1
+[   9.735905] [I] Soc ID: 0x12b44c577850
+[   9.735940] [I] DVFS version: 2
+[   9.736003] [I] S2MPG_M CHIPID read: 0x10
+[   9.736064] [I] S2MPG_S CHIPID read: 0x10
+[   9.736133] [I] S2MPG_M PWRONSRC read: 0x4
+[   9.736199] [I] S2MPG_M OFFSRC1 read: 0x10
+[   9.736271] [I] S2MPG_M OFFSRC2 read: 0x0
+[   9.736337] [I] S2MPG_M RTC_WTSR read: 0x7e
+[   9.736379] [I] S2MPG_M INT1: 0x30
+[   9.736408] [I] S2MPG_M INT2: 0x0
+[   9.736434] [I] S2MPG_M INT3: 0x0
+[   9.736460] [I] S2MPG_M INT4: 0x0
+[   9.736490] [I] S2MPG_M INT5: 0x0
+[   9.736549] [I] S2MPG_S OFFSRC1 read: 0x11
+[   9.736587] [I] S2MPG_S INT1: 0x83
+[   9.736619] [I] S2MPG_S INT2: 0x80
+[   9.736645] [I] S2MPG_S INT3: 0x0
+[   9.736676] [I] S2MPG_S INT4: 0x0
+[   9.736702] [I] S2MPG_S INT5: 0x0
+APC Bootmetrics:
+  BL1: MT:1 / DT:ENTRY / 96584 us
+  BL1: MT:2 / DT:LOAD  / 7360 us
+  BL1: MT:F / DT:EXIT  / 147744 us
+  PBL: MT:1 / DT:ENTRY / 147872 us
+  PBL: MT:2 / DT:LOAD  / 19592 us
+  PBL: MT:F / DT:EXIT  / 212968 us
+  BL2: MT:1 / DT:ENTRY / 214536 us
+  BL2: MT:2 / DT:LOAD  / 160 us
+  BL2: MT:3 / DT:LOAD  / 152 us
+  BL2: MT:4 / DT:CHECK / 342536 us
+  BL2: MT:5 / DT:CHECK / 2096 us
+  BL2: MT:6 / DT:LOAD  / 8982752 us
+  BL2: MT:7 / DT:CHECK / 9078080 us
+  BL2: MT:8 / DT:CHECK / 9078224 us
+  BL2: MT:9 / DT:LOAD  / 44208 us
+  BL2: MT:A / DT:LOAD  / 31608 us
+  BL2: MT:B / DT:LOAD  / 324256 us
+  BL2: MT:C / DT:LOAD  / 8 us
+  BL2: MT:F / DT:EXIT  / 9527920 us
+  PBL: MT:3 / DT:LOAD  / 81248 us
+  PBL: MT:4 / DT:LOAD  / 28160 us
+  PBL: MT:5 / DT:LOAD  / 6184 us
+  PBL: MT:6 / DT:CHECK / 9658656 us
+  PBL: MT:7 / DT:CHECK / 9658792 us
+  EL3: MT:1 / DT:ENTRY / 9661568 us
+  EL3: MT:D / DT:CHECK / 9677120 us
+  EL3: MT:E / DT:CHECK / 9723960 us
+  EL3: MT:F / DT:EXIT  / 9724000 us
+APC Breadcrumbs(v2.4):
+ stages(S): 0000404F / 0000404F
+  flags(S): 000022C0 / 000022C0
+stages(NS): 00005FFE / 00005004
+ flags(NS): 0000D400 / 0000D400
+    status: 00000000 / 00000000
+    device: 00000001 / 00000001
+   tmutrip: 00000000 / 00000000
+     reset: 00180000 / 00180000
+[   9.737700] [E] GSA Breadcrumb:
+00000000 0000000d 00000000 00000000  |................|
+00000000 00000000 00000001           |............    |
+[   9.737833] [I] SBDP initialized: chipid allowed=0, dpm_state=0x0000
+[   9.737884] [E] check header failed
+[   9.738011] [I] initializing device i2c:usi00
+[   9.738054] [I] usi00: version 2.2
+[   9.738103] [I] initializing device i2c:usi04
+[   9.738144] [I] usi04: version 2.2
+[   9.738189] [I] initializing device i2c:usi06
+[   9.738230] [I] usi06: version 2.2
+[   9.738275] [I] initializing device i2c:usi09
+[   9.738316] [I] usi09: version 2.2
+[   9.738365] [I] initializing device i2cm:i2cm0
+[   9.738407] [I] DVFS init
+[   9.740668] [I] DVFS init done
+[   9.740698] [I] UFS EVT version 0
+[   9.740738] [I] controller version 3.0 found
+[   9.740773] [I] capabilities 0x1383ff1f
+[   9.740942] [I] UFS device found
+zuma_ufs_device_init_done
+[   9.740985] [E] ufshc_notify done
+[   9.741061] [I] ufshc_power_mode_change HS gear 4
+[   9.751258] [I] ufshc: bBootLunEn 0x1
+[   9.751401] [I] UFS device SAMSUNG KLUDG4UHGC-B0E1 version 3.1
+[   9.751451] [I] Enabled LUNs found 4
+[   9.751510] [I] UFS device total size 127984992256
+[   9.751618] [I] Temp too high enabled
+[   9.751713] [I] Temp too low enabled
+[   9.754463] [I] Write Booster: available buffer=0x6 lifetime=0x2 current buffer=0x1dcb
+[   9.754554] [I] boot slot: a
+[   9.756760] [I] slot data a: 0x00001e02
+[   9.756791] [I] slot data b: 0x00001000
+[   9.757600] [I] platform info: 060906010000
+[   9.757844] [I] initializing device cs40l2x:cs40l26
+[   9.768330] [I] CS40L26 found
+[   9.769994] [I] initializing device nfc:st21nfc
+[   9.771901] [I] tcpc vendor id 56
+[   9.772815] found 77779 on usi6
+[   9.772840] bms_init init usi10 as sec_i2c
+[   9.772874] [I] initializing device i2c:usi10
+[   9.772910] [I] usi10: version 2.2
+[   9.773101] [I] FG device name 0x5100
+[   9.773609] [I] [max77779fg] SOC(100), VCELL(4385), INOW(-302), IAVG(-322)
+[   9.774233] [I] fship 0x0
+[   9.774350] [I] master disconnect reason 0x0
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   9.777174] [I] LCS state:PRODUCTION
+[   9.777559] [I] saving ddr training data
+[   9.779590] [I] no valid file
+[TMU:0] 39
+[TMU:1] 39
+[   9.783087] [I] dsim_probe dsim0+
+[   9.783124] [I] using data lane count(4)
+[   9.795041] [E] dsim0 wait phy pll stable
+[   9.796071] [E] [   1.923562] [I] -------------------- DSS LOGS START --------------------
+[PRE] reset message: APC Watchdog Early
+[PRE] RST_STAT: 0x80 - SYSTEM_SWRESET_SYSTEM
+[PRE] GSA_RESET_STATUS: 0x10 - GSA_INTERMEDIATE_RESET
+[PRE] Reboot reason: 0xcbea - APC Watchdog Early
+[PRE] Reboot mode: 0xfc - Bootloader
+[   1.926017] APC Breadcrumbs(v2.4):
+ stages(S): 0000404F / 00004030
+  flags(S): 000022C0 / 000022C0
+stages(NS): 00005FFE / 00005004
+ flags(NS): 0000D400 / 0000D400
+    status: 00000000 / 000000FC
+    device: 00000001 / 00000001
+   tmutrip: 00000000 / 00000000
+     reset: 00180000 / 00000080
+[   1.927342] [E] GSA Breadcrumb:
+00000000 fffd000d 00000000 00000000  |................|
+00000000 00000000 00000010           |............    |
+[   1.928874] [I] ACPM GPR DUMP - NOT AVAILABLE
+STATES_MIF|TOP - 0x33d7c540 | 0x429dd019
+
+          pd-apm - 0xb1fd7124	          pd-cmu - 0x522d3d	       pd-cpucl0 - 0xdb830019	       pd-cpucl1 - 0x6a4bdfc	
+       pd-cpucl2 - 0x7f3fab10	          pd-g3d - 0x1a6cfb5f	pd-embedded_cpucl0 - 0xffebc465	pd-embedded_cpucl1 - 0x217abefa	
+pd-embedded_cpucl2 - 0x1fb77194	 pd-embedded_g3d - 0xe0cff2f	         pd-dpub - 0x891d1c75	        pd-dpuf0 - 0x83b976	
+        pd-dpuf1 - 0xfc3b92ec	          pd-g2d - 0x1617d77	          pd-gdc - 0xf7e314a9	          pd-gse - 0xa1152fb3	
+         pd-mcsc - 0x815e486c	          pd-mfc - 0xac85cb62	         pd-rgbp - 0xcb9cb1d4	          pd-tnr - 0x4105fdf7	
+         pd-yuvp - 0xff1e0180	          pd-aoc - 0x88254d4f	          pd-aur - 0xd737c78e	           pd-bw - 0xa30d376f	
+           pd-eh - 0xd9510044	        pd-ispfe - 0x1a134d63	          pd-tpu - 0x55850d10	         pd-mif0 - 0xfd18a1f9	
+         pd-mif1 - 0x67eb2311	         pd-mif2 - 0xe042cd7c	         pd-mif3 - 0xd3eb0300	         pd-misc - 0x1622ab77	
+        pd-nocl0 - 0xf7130025	       pd-nocl1a - 0x2d92d5e5	       pd-nocl1b - 0xfee0090	      pd-nocl2aa - 0x849c6a3b	
+      pd-nocl2ab - 0x7c6b47c4	         pd-hsi0 - 0x13aa6f3b	         pd-hsi1 - 0x7beb0a10	         pd-hsi2 - 0x818c36d5	
+       pd-peric0 - 0xbf3e48c1	       pd-peric1 - 0x104384eb	          pd-s2d - 0x4bfa60a2	
+
+[UP] CUR_SEQ0 - 162408038
+[DOWN] CUR_SEQ0 - DONE
+APSOC_CNT - 86837
+APSOC|MIF_CNT_SLEEP- 96861 | 29081
+APSOC|MIF_CNT_SICD - 0 | 808989753
+CURR_POWERMODE - 875574834
+CPU_STAT - cpu0:on, cpu1:off, cpu2:off, cpu3:off, cpu4:on, cpu5:off, cpu6:off, cpu7:off
+SEQ_STAT - APSOC_SEQ_down, MIF_SEQ_down, CL0_off, CL1_off, CL2_off
+[UP] CUR_SEQ0 - 162408038
+[DOWN] CUR_SEQ0 - DONE
+access_type: CUR_SEQ1 - 665793041, index: 0
+hotplug_flag - cpu0:out, cpu1:in, cpu2:out, cpu3:in, cpu4:out, cpu5:in, cpu6:out, cpu7:in, 
+MIF REF_COUNT:0
+MIF REQ_MASTER - 
+CURR_POWERMODE - 875574834
+EHLD core status
+Core0:  (No Lockup)
+Core1:  (No Lockup)
+Core2:  (No Lockup)
+Core3:  (No Lockup)
+Core4:  (No Lockup)
+Core5:  (No Lockup)
+Core6:  (No Lockup)
+Core7:  (No Lockup)
+[   1.946228] [I] ***** S2D Info Block ********************************************************
+[   1.946923] [I] S2D Magic didn't detect - s2d validity check failed!
+[   1.947328] [I] Additional information:
+[   1.947709] [I]    S2D status: Not triggered
+[   1.948035] [I] *****************************************************************************
+[   1.948541] [I] Core reg status and PC:
+[   1.948830] [I]        /- Power state  - +:On -:Off
+[   1.949168] [I]        |/- Recorded by - P:panic A:arraydump S:s2d _:none
+[   1.949596] [I]        ||/- IRQ        - O:enabled X:disabled _:n/a
+[   1.949999] [I]        |||/- FIQ       - O:enabled X:disabled _:n/a
+[   1.950400] [I] core#  ||||
+[   1.950646] [I]   0    -___ N/A
+[   1.950982] [I]   1    -___ N/A
+[   1.951320] [I]   2    -___ N/A
+[   1.951657] [I]   3    -___ N/A
+[   1.951994] [I]   4    -___ N/A
+[   1.952330] [I]   5    -___ N/A
+[   1.952667] [I]   6    -___ N/A
+[   1.953003] [I]   7    -___ N/A
+[   1.953344] PCSR iteration magic is invalid: 000000
+APC cpu contexts:
+Core0 is off
+[   1.956028] [E] Discarding ramdump file gsa_sram_key.lst flag 0
+[   1.956493] [E] fail to add gsa_sram_key.lst to ramdump sub-file, -8
+[   1.957470] [E] Invalid bl31 log reserved region: bypass
+
+[   1.957886] [E] Invalid pbl log reserved region: bypass
+
+[   1.958254] PSCI Breadcrumbs(v2.0):
+[   1.958553] Core0: 00000000 / 00000000
+[   1.958952] Core1: 00000000 / 00000000
+[   1.959351] Core2: 00000000 / 00000000
+[   1.959749] Core3: 00000000 / 00000000
+[   1.960147] Core4: 00000000 / 00000000
+[   1.960545] Core5: 00000000 / 00000000
+[   1.960946] Core6: 00000000 / 00000000
+[   1.961346] Core7: 00000000 / 00000000
+[   1.961749] WDT FIQ info:
+[   1.962011] core# type    raw-magic   elr
+[   1.962367]     0-7   N/A
+[   1.962692] [I] linux debug info is not valid
+[   1.963011] [E] cdd_param is out of boundary
+[   1.963404] [I] Last AVB: avb_ret=OK
+[   1.963719] [I] Last AVB: avb_veritymode=<unknown>
+[   1.964090] [I] Last AVB: avb_error_parts=
+RAMDUMP_MSG.txt:
+  reset message: APC Watchdog Early
+  UUID: 0344ffb4-9b04-5947-b1b5-2abf95274feb
+  last kernel version: N/A
+  aosp kernel version: N/A
+  build: caiman
+  RST_STAT: 0x80 - SYSTEM_SWRESET_SYSTEM
+  GSA_RESET_STATUS: 0x10 - GSA_INTERMEDIATE_RESET
+  Reboot reason: 0xcbea - APC Watchdog Early
+  Reboot mode: 0xfc - Bootloader
+[   1.967165] [I] -------------------- DSS LOGS END --------------------
+
+Reboot Info:
+  RST_STAT: 0x180000 - PIN_RESET | PO_RESET
+  GSA_RESET_STATUS: 0x1 - GSA_PINRESET
+  Reboot reason: 0xcbea - APC Watchdog Early
+  Reboot mode: 0xfc - Bootloader
+[   9.818534] [E] failed to get eUSB revision -62
+[   9.818569] [I] Set EUSB Ref clock auto
+[   9.818880] [I] LK build date: Apr 14 2026, time: 06:16:15
+[   9.818923] [I] BL version: ripcurrentpro-17.0-15199480
+[   9.818963] [I] BL type: official build
+starting app pixel_loader
+[   9.819396] [I] sota: empty signature.
+[   9.819428] [I] ABL start time (METRICS_BL3): 9724ms
+[   9.819470] [I] AB Decision: active slot boot ok
+[   9.819510] [I] AB Decisions: 00000000
+[   9.819738] [I] TCPC BC1.2, type: 2 val:2
+[   9.819944] [I] boot voltage threshold=3400mV
+[   9.820059] [I] bootloader message:
+[   9.820202] [I] fastboot enter reason: reboot bootloader
+starting app pixel_charger
+[   9.835534] [I] Succeeded to read panel product id : 0x22a8a00a
+[   9.835611] [E] is_compatible is not defined!
+[   9.835650] [I] panel_rev: 0x1000
+[   9.840840] [I] use panel google-cm4 for dsim0
+[   9.840880] [I] dsim_probe -: dsim0 driver(cmd mode) has been probed.
+[   9.840934] [I] dsim_probe dsim1+
+[   9.840968] [I] using data lane count(4)
+[   9.841038] [E] dsim1 wait phy pll stable
+[   9.892141] [E] timeout!! wait for DSIM interrupt (0x40300000)
+[   9.892233] [E] MIPI DSIM (id=6) read Timeout! 0x4
+[   9.892273] [E] dsim fail to get panel operation
+[   9.892350] [E] dsim has error.
+[   9.892384] [E] dsim_probe -: dsim1 probe failed.
+[   9.892421] [I] dsim1 probe was failed
+[   9.892456] [I] dsim_init -: set dsim0 driver as primary.
+[   9.903732] [E] dsim0 wait phy pll stable
+[   9.922900] [I] dpp_probe +
+[   9.922924] [I] dpp-0's attr is (0x004d0047)
+[   9.922963] [I] dpp(0) init resources.
+[   9.923023] [I] dpp_probe -: dpp0 is probed successfully
+[   9.923070] [I] decon-int: max win6, command mode, hw trigger
+[   9.923119] [I] single dsi mode
+[   9.923157] [I] [decon0] d_path(0xB1) DSCC DSC_ENC1 DSC_ENC0 OFIFO.0
+[   9.923277] [I] [decon0] sel(0x0) OFIFO.0 - dsim0 - google-cm4
+[   9.923324] [I] Display 1st window(5) xres(1280) yres(2856) win_start_pos(0) win_end_pos(b2704ff)
+[   9.972706] [I] port connected
+[   9.991360] [I] TCPC BC1.2, type: 2 val:2
+[  10.058653] [I] decon0 registered successfully
+[  10.093911] [I] version: g5400c-260317-260429-B-15308590
+USB Pipe3 Initialization...
+[dwc3_dptx] CR write failed to 0x31c5
+[dwc3_dptx] CR write failed to 0x32c5
+[dwc3_dptx] CR write failed to 0x402d
+[dwc3_dptx] CR write failed to 0x412d
+[dwc3_dptx] CR write failed to 0x422d
+[dwc3_dptx] CR write failed to 0x432d
+[dwc3_dptx] CR write failed to 0x2021
+[dwc3_dptx] CR write failed to 0x2024
+[dwc3_dptx] CR write failed to 0x2027
+[dwc3_dptx] CR write failed to 0x202a
+[dwc3_dptx] CR write failed to 0x202d
+[dwc3_dptx] CR write failed to 0x2030
+[dwc3_dptx] CR write failed to 0x2033
+[dwc3_dptx] CR write failed to 0x2036
+[dwc3_dptx] CR write failed to 0x2022
+[dwc3_dptx] CR write failed to 0x2025
+[dwc3_dptx] CR write failed to 0x2028
+[dwc3_dptx] CR write failed to 0x202b
+[dwc3_dptx] CR write failed to 0x202e
+[dwc3_dptx] CR write failed to 0x2031
+[dwc3_dptx] CR write failed to 0x2034
+[dwc3_dptx] CR write failed to 0x2037
+[dwc3_dptx] PMA version:0x4604
+[dwc3_dptx] PCS ID:0x6790
+[dwc3_dptx] Firmware ID:0x6044, 0x04b3
+[  10.168851] [I] TCPC BC1.2, type: 2 val:2
+[  10.443254] [I] TCPC BC1.2, type: 2 val:2
+[  10.456039] [I] new high-speed device found
+[  10.456209] [I] TCPC BC1.2, type: 2 val:2
+[  10.925461] [I] Accept cmd:download:04000000
+[  10.925562] [I] Downloading. Download size is 67108864 bytes
+[  10.925666] [I] DATA04000000
+[  12.439883] [I] OKAY
+[  12.440378] [I] Accept cmd:boot
+[  12.447519] [I] OKAY
+[  12.454619] [I] TCPC BC1.2, type: 2 val:2
+[  12.455439] [I] TCPC BC1.2, type: 2 val:2
+[  12.557248] [E] avb_property(com.android.build.system.os_version): not found
+[  12.557362] [E] system.os_version: can't find property
+[  12.557453] [E] avb_property(com.android.build.system.security_patch): not found
+[  12.557561] [E] system_spl: can't find property
+[  12.557635] [E] avb_property(com.android.build.boot.security_patch): not found
+[  12.557741] [E] boot_spl: can't find property
+[  12.557809] [I] boot_state: 000000:20000000:20000000
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[  12.560870] [I] using init_boot ramdisk
+[  12.560933] [I] using vendor_kernel_boot ramdisk
+[  12.561113] [I] kernel: addr:0xffff000090701000, size:fdbf49
+[  12.607499] [I] vendor kernel ramdisk copy
+[  12.607588] [I] ramdisk dst addr: 0xffff000086000000 src addr: 0xffff0000a5901000 size: 0x67591e(6773022)
+[  12.607751] [I] padding prepended: 0
+[  12.611860] [I] vendor ramdisk copy
+[  12.611930] [I] ramdisk dst addr: 0xffff00008667591e src addr: 0xffff0000a0001000 size: 0x1663ae2(23476962)
+[  12.612101] [I] padding prepended: 18
+[  12.624609] [I] ramdisk copy
+[  12.624679] [I] ramdisk dst addr: 0xffff000087cd9412 src addr: 0xffff0000a5101000 size: 0x250d04(2428164)
+[  12.624830] [I] padding prepended: 14
+[  12.626197] [I] Ramdisk load size with padding: 32678180
+[  12.626354] [I] rev: 09865.00.00
+[  12.626434] [I] rev: 09865.00.00
+[  12.626505] [I] rev: 09865.01.00
+[  12.626559] [I] rev: 09865.01.01
+[  12.626629] [I] rev: 09865.01.00
+[  12.626683] [I] rev: 09865.01.01
+[  12.626750] [I] rev: 09875.00.00
+[  12.626818] [I] rev: 09875.00.00
+[  12.626886] [I] rev: 09875.00.00
+[  12.626940] [I] rev: 09875.00.01
+[  12.627007] [I] rev: 09875.00.00
+[  12.627061] [I] rev: 09875.00.01
+[  12.627111] [I] SOC DTB: index:6
+[  12.627188] [I] DTBO match: id 0x60906, rev 0x10000
+[  12.649753] [I] dpm not merged
+[  12.652049] [I] MTE S: 0, NS: 0, tag base: 0x0
+[  12.664383] [I] kernel: total_time:103
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[  12.710581] [I] bootmode:
+[  12.710723] [I] DDR size: 16GiB
+[  12.710772] [I] DDR Manufacturer: Samsung
+[  12.713047] [I] ro.misctrl.16kb_before=0
+[  12.713134] [I] console is disabled
+[  12.713332] [I] secure dram base 0xb6200000, size 0x9e00000
+[  12.713470] [I] secure PGTBL base 0xe0000000, size 58720256
+[  12.718352] [I] MTE S: 0, NS: 0, tag base: 0x0
+[  12.721416] [I] device: /reserved-memory/debug_snapshot/log_s2d path not found (-1)
+[  12.721651] [I] device: /reserved-memory/debug_snapshot/log_array_reset path not found (-1)
+[  12.721899] [I] device: /reserved-memory/debug_snapshot/log_kevents path not found (-1)
+[  12.722147] [I] device: /reserved-memory/debug_snapshot/log_itmon path not found (-1)
+[  12.722393] [I] device: /reserved-memory/debug_snapshot/log_s2d_extract path not found (-1)
+[  12.724003] [I] device: /google,mitigation enabled ret=0
+[  12.744807] [I] ro.boot.hardware.cpu.pagesize=4096
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[  12.745797] [I] panel settings after overriding: google-cm4.22a8a00a@dsim0 null@dsim1
+[  12.761683] [I] linux,initrd-start: 0x86000000, linux,initrd-end: 0x87f32125
+[  12.774264] [E] avb_property(com.android.build.microdroid-vendor.root_digest): not found
+[  12.774390] [W] failed to get microdroid vendor hashtree digest from avb property, skip appending value
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[  12.776857] [W] no avf debug policy, because dpm is NULL
+[  22.843114] [I] slot data a: 0x00001e02
+[  22.843178] [I] slot data b: 0x00001000
+[  22.846768] [E] avb_property(com.android.build.boot.fingerprint): not found
+[  22.846875] [E] fingerprint property not found 
+[  22.901741] [I] shutdown complete
