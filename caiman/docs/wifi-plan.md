@@ -180,3 +180,31 @@ So the host side must wait for the last word to settle (not take the first non-t
 does by checking the shared version. Log: docs/probe-log-wifi9.txt.
 Next: host DMA buffers + the five common rings (H2D control/rxpost, D2H control/txcpl/rxcpl), bus master on behind
 the PCIe S2MPU, MSI or polling of the D2H indices; then the first ioctl (GET_VERSION / "ver" iovar).
+
+## Step 10: the first ioctl answered (PROBE_WIFI=10)
+
+From bare metal, polled, no MSI: `WLC_GET_VERSION` (cmd 1) sent on the H2D control ring, the firmware ACKs
+(MSG_TYPE_IOCTLPTR_REQ_ACK 0xa) and completes (MSG_TYPE_IOCTL_CMPLT 0xc, status 0) within 1 ms; 4 bytes DMA'd into
+the posted response buffer: **2** (WLC_IOCTL_VERSION). Log: docs/probe-log-wifi10-ioctl.txt.
+
+What it took (Google bcmdhd dhd_prot_init / dhd_fillup_ioct_reqst, and Android's own dmesg for this phone):
+- host block of 0x1c000 bytes in the probe's .bss (MMU/D-cache off, so no cache maintenance); below 4 GiB
+- shared +0x54 host_cap = 9 | H2D_ENABLE_HOSTRDY 0x400 | DS_NO_OOB_DW 0x1000 | EXTENDED_TRAP_DATA 0x20000 |
+  UR_FW_NO_TRAP 0x800000; +0x58 host_trap_addr; +0x34/+0x38 an 8-byte D2H scratch buffer
+- ring_mem_t (16 bytes per common ring at ringmem_ptr): +4 max_item | len_items << 16, +8 base address;
+  item sizes 40/32/24/24/40, max items 64/512/64/1024/512
+- **DMA indices** (shared flags PCIE_SHARED_DMA_INDEX, as Android uses): ring_info +0x14/+0x1c/+0x24/+0x2c get the
+  host addresses of the H2D WR, H2D RD, D2H WR, D2H RD arrays (4-byte entries); the host writes H2D WR there, the
+  firmware DMAs D2H WR there
+- bus master on; host ready: 0x12345678 to hosttodev0doorbell1 (BAR0 + 0x2000 + 0x144)
+- items: IOCTLRESP_BUF_POST (0xb, 8 KiB buffer, request id 0x100), then IOCTLPTR_REQ (0x9, request id 0xfffe,
+  trans id 1); epochs start at 1; doorbell 0xff000000 | wr on hosttodev0doorbell0 (BAR0 + 0x2000 + 0x140)
+- completions: epoch byte checked (D2H sync XORCSUM mode, the XOR word is not checked yet)
+
+**Do not read the PCIe core at BAR0 + 0x2000 except the doorbells and the DAR block (+0xa00..):** +0x004 maps to
+backplane 0x18001004, a secure ChipCommon slave; a host read there makes the running firmware trap
+("AXI Slave Err ... Secure slave", TRAP 7; docs/probe-log-wifi10-trap.txt). That trap, not the protocol, was
+why the first three msgbuf runs got no answer.
+
+Next: the CLM blob download (bcmdhd_clm.blob_4390_b1, "clmload" iovar) and the country, the event buffers, then
+"up" and a scan (escan) with results over the event path.

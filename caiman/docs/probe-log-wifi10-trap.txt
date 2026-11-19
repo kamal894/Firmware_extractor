@@ -1,0 +1,63 @@
+wifi: msgbuf: after 2000 ms: TCM H2D ctrl w 2 r 0, D2H ctrl w 0; host H2D r 0, D2H w 0; S2MPU fault 0x0
+wifi: msgbuf: shared flags 0x70250509 trap 0x424be0 assert line 0; console index 0x1147 (was 0x1147); D2H MB data 0x0
+wifi: trap +0x00: 00000007 002bcbf8 600001d3 20000013 20000013 00000000
+wifi: trap +0x18: 00000001 00423308 409e3818 00427618 20000013 00427980
+wifi: trap +0x30: 00000001 00000000 00424470 00000000 00427c6c 00424c38
+wifi: trap +0x48: 00344e01 002bcbf8 002bcbf8 20000013 00426c98 00000000
+wifi: console now: buffer 0x50ab8c size 0x2000 index 0x1147
+wifi: fw| 24)
+wifi: fw| 000.858326024 Notify host through MSI - FW boot complete
+wifi: fw| 001.089137785 AXI Slave Err  on wrapper 0x1851e000(m_apb_chipcommon_if): Secure slave (xMNI)
+wifi: fw| 001.089153407 errorstatus 0xe4000012 addr MSB 0x0 LSB 0x18001004
+wifi: fw| 001.089163719 errmisc0 0x9 errmisc1 0x1200 
+wifi: fw| 001.089171739 access_control 0x2 access_status 0x0 interrupt_status 0x4 
+wifi: fw| 001.089182571 access_readid 0x0 access_writeid 0x0 reset_control 0x2 reset_status 0x0
+wifi: fw| 001.089229546 AXI Slave Err  on wrapper 0x1851b000(asni_s_pcie_if): Secure master (ASNI)
+wifi: fw| 001.089241861 errorstatus 0xe4000012 addr MSB 0x0 LSB 0x18001004
+wifi: fw| 001.089251860 errmisc0 0x9 errmisc1 0x1200 
+wifi: fw| 001.089259777 access_control 0x2 access_status 0x0 interrupt_status 0x4 
+wifi: fw| 001.089270504 access_readid 0x0 access_writeid 0x0 reset_control 0x2 reset_status 0x0
+wifi: fw| 001.089337372 srpwr: 0x00030200 clk:0xb0040 pmu:0x1003e 0x1e0a0187 0x0
+wifi: fw| 001.089349767 nci_err_int_status 0x00000000
+wifi: fw| 001.090448686 THREADX TRAP INFO:
+wifi: fw| 001.090458372 Thread: idle_thread(ID:0x54485244) run cnt:46
+wifi: fw| 001.090468684 Thread: Stack:0x00424bf4 Start Addr:0x00424470 End Addr:0x00424c6f Size:2048
+wifi: fw| 001.090481704 Thread: Entry func:0x003431c5
+wifi: fw| 001.090488577 Thread: Timer:0x00426ce4
+wifi: fw| 001.090495556 
+wifi: fw| TRAP 7(424be0): pc 2bcbf8, lr 344e01, sp 424c38, cpsr 600001d3, spsr 20000013
+wifi: fw| 001.090540656   dvfs[0]: state:0->0, reason:0x0 at:0, status:2371
+wifi: fw| 001.090553075   r0 20000013, r1 0, r2 1, r3 423308, r4 409e3818, r5 427618, r6 20000013
+wifi: fw| 001.090567345   r7 427980, r8 1, r9 0, r10 424470, r11 0, r12 427c6c
+wifi: fw| 001.090579739 
+wifi: fw| FWID 01-1836fc50
+wifi: fw| flags 70250109
+wifi: fw| 001.090588280 
+wifi: fw|    sp+0 00426c98 00000000 00000000 00000000
+wifi: fw| 001.090598280   sp+10 00000000 000dc059 00000000 00000000
+wifi: fw| 001.090637337 sp+14 000dc059
+wifi: fw| 001.090644107 sp+14c4 000afff5
+wifi: fw| 001.090650669 sp+14cc 00022e99
+wifi: fw| 001.090657023 sp+14d4 00018fd1
+wifi: fw| 001.090663377 sp+14ec 00018bb7
+wifi: fw| 001.090669755 sp+1514 0032c14f
+wifi: fw| 001.090676109 sp+1528 001e0023
+wifi: fw| 001.090682567 sp+15ac 0032c24d
+wifi: fw| 001.090688921 sp+15dc 0001d577
+wifi: fw| 001.090695275 sp+15fc 00018fd1
+wifi: fw| 001.090701627 sp+1614 00018b73
+wifi: fw| 001.090707981 sp+1628 00070027
+wifi: fw| 001.090714439 sp+165c 0032bf61
+wifi: fw| 001.090720793 sp+173c 002b21b9
+wifi: fw| 001.090727146 sp+1744 00050e93
+wifi: fw| 001.090733499 sp+174c 002b21b9
+wifi: fw| 001.094348478 initing the fatal buf block: 0x002c3000(1405939)
+wifi: core look 0x18006248: 00000021 00002000 00000000 ffffffff
+wifi: core look 0x180064c8: 00000001 00008000 00000000 ffffffff
+wifi: core look 0x18080000: 02000210 0000000c 000041e1 00000a41
+wifi: core look 0x18088000: 0b191000 ffffffff 00000f00 ffffffff
+wifi: core look 0x18504140: 00000002 00000000 00000000 00000000
+wifi: core look 0x18516140: 00000002 00000000 00000000 00000000
+wifi: core look 0x18505140: 00000002 00000000 00000000 00000000
+wifi: dongle RAM 0x5b0000 before: ffffffff ffffffff ffffffff ffffffff; last word 0x5bfffc: ffffffff
+wifi: dongle RAM 0x5b0000 after writing: ffffffff ffffffff ffffffff ffffffff (NOT as written)

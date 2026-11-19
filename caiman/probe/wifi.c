@@ -72,6 +72,214 @@ static void dram_w(u64 cfg, u64 bar2, u32 a, u32 v) { wr32(bar2_at(cfg, bar2, a)
 static u32 dram_r(u64 cfg, u64 bar2, u32 a) { return rd32(bar2_at(cfg, bar2, a)); }
 
 #if PROBE_WIFI >= 9
+/* the firmware's console (hnd_cons_t: +0x08 log.buf, +0x0c log.buf_size, +0x10 log.idx) from index 'from' on,
+ * line by line as dhdpcie_bus_readconsole does; returns the index it read up to */
+static u32 cons_print(u64 cfg, u64 bar2, u32 cons, u32 from)
+{
+	u32 buf = dram_r(cfg, bar2, cons + 8), bsize = dram_r(cfg, bar2, cons + 12), idx = dram_r(cfg, bar2, cons + 16);
+	u32 i, j, n = 0;
+	char line[161];
+
+	if (buf < 0x2a0000 || buf >= 0x5c0000 || idx > bsize || bsize > 0x10000 || from > idx)
+		return idx;
+	for (i = from & ~3u; i < idx && i - from < 8192; i += 4) {
+		u32 v = dram_r(cfg, bar2, buf + i);
+
+		for (j = 0; j < 4 && i + j < idx; j++) {
+			char c = (char)(v >> (8 * j));
+
+			if (i + j < from)
+				continue;
+			if (c == '\n' || n == sizeof(line) - 1) {
+				line[n] = 0;
+				if (n)
+					pr("wifi: fw| %s\n", line);
+				n = 0;
+			} else if (c >= 0x20 && c < 0x7f)
+				line[n++] = c;
+		}
+	}
+	line[n] = 0;
+	if (n)
+		pr("wifi: fw| %s\n", line);
+	return idx;
+}
+#endif
+
+#if PROBE_WIFI >= 10
+/*
+ * PROBE_WIFI=10: the first conversation with the firmware over msgbuf (Google's bcmdhd dhd_prot_init and
+ * dhd_fillup_ioct_reqst; docs/bcm4390-msgbuf.md), polled, no MSI. Host memory is one static block in this image
+ * (MMU and D-cache are off, so nothing to clean); the chip is handed only these addresses. Bus master goes on
+ * just for this and off again before the CA7 is halted.
+ */
+#define WIFI_BAR0	0x60000000ULL
+#define WIFI_PCIEREGS	(WIFI_BAR0 + 0x2000)	/* the PCIe core's registers at BAR0 + 8K (nci_corereg_addr, SI_FAST) */
+#define WIFI_DB0	(WIFI_PCIEREGS + 0x140)	/* hosttodev0doorbell0: ring updates */
+#define WIFI_DB1	(WIFI_PCIEREGS + 0x144)	/* hosttodev0doorbell1: host ready (dhd_bus_hostready) */
+
+static u8 wifi_mem[0x1c000] __attribute__((aligned(4096)));
+
+enum { R_CTRL_SUB, R_RXPOST, R_CTRL_CPL, R_TXCPL, R_RXCPL };
+static const u16 ring_items[5] = { 64, 512, 64, 1024, 512 };
+static const u16 ring_len[5] = { 40, 32, 24, 24, 40 };
+static const u32 ring_off[5] = { 0x00000, 0x02000, 0x06000, 0x07000, 0x0d000 };
+#define M_SCRATCH	0x12000
+#define M_IOCTBUF	0x13000
+#define M_TRAP		0x14000
+#define M_RESP		0x16000	/* 8 KiB ioctl response buffer */
+#define M_IDX		0x1a000	/* DMA index arrays (PCIE_SHARED_DMA_INDEX, as Android's DHD uses): H2D WR, H2D RD,
+				 * D2H WR, D2H RD, 0x100 apart, 4-byte entries */
+
+/* only the doorbells and the DAR block: other PCIe core offsets (+0x004, +0x020..) are secure on this chip, and
+ * reading them from the host makes the firmware trap ("AXI Slave Err ... Secure slave", wifi10r) */
+static void pcieregs_dump(const char *when)
+{
+	pr("wifi: PCIe core %s: DB0 %08x DB1 %08x, DAR clk %08x pwr %08x intstatus %08x errlog %08x addr %08x mbint %08x\n",
+	   when, rd32(WIFI_DB0), rd32(WIFI_DB1), rd32(WIFI_PCIEREGS + 0xa08), rd32(WIFI_PCIEREGS + 0xa0c),
+	   rd32(WIFI_PCIEREGS + 0xa10), rd32(WIFI_PCIEREGS + 0xa60), rd32(WIFI_PCIEREGS + 0xa64), rd32(WIFI_PCIEREGS + 0xa68));
+}
+
+static u64 mem_pa(u32 off) { return (u64)wifi_mem + off; }
+static void wr_le(u8 *p, u32 off, u32 v) { *(volatile u32 *)(p + off) = v; }
+
+static void wifi_msgbuf(u64 cfg, u64 bar2, u32 sh, u32 ri, u32 cons, u32 cidx)
+{
+	u32 ringmem = dram_r(cfg, bar2, ri), h2dw = dram_r(cfg, bar2, ri + 4), h2dr = dram_r(cfg, bar2, ri + 8);
+	u32 d2hw = dram_r(cfg, bar2, ri + 12), d2hr = dram_r(cfg, bar2, ri + 16);
+	u32 i, wr = 0, rd = 0, seen, cap, cmd;
+	u8 h2d_epoch = 1, d2h_epoch = 1, *it;
+	u64 t0;
+
+	pr("wifi: msgbuf: host block at 0x%llx (0x%x bytes); ringmem 0x%x, H2D w/r 0x%x/0x%x, D2H w/r 0x%x/0x%x\n",
+	   mem_pa(0), (u32)sizeof(wifi_mem), ringmem, h2dw, h2dr, d2hw, d2hr);
+	if (mem_pa(sizeof(wifi_mem)) > 0x100000000ULL) {
+		pr("wifi: msgbuf: host block above 4 GiB, stopping\n");
+		return;
+	}
+	/* host_cap (shared +0x54): IPC rev 9, host ready (the firmware advertises HOSTRDY_SUPPORT), no deep sleep,
+	 * extended trap data, no trap on UR */
+	cap = 9 | 0x400 | 0x1000 | 0x20000 | 0x800000;
+	dram_w(cfg, bar2, sh + 0x54, cap);
+	dram_w(cfg, bar2, sh + 0x58, (u32)mem_pa(M_TRAP));	/* host_trap_addr */
+	dram_w(cfg, bar2, sh + 0x5c, 0);
+	for (i = 0; i < 5; i++) {
+		u32 rm = ringmem + 16 * i;
+
+		dram_w(cfg, bar2, rm + 4, ring_items[i] | (u32)ring_len[i] << 16);	/* max_item, len_items */
+		dram_w(cfg, bar2, rm + 8, (u32)mem_pa(ring_off[i]));
+		dram_w(cfg, bar2, rm + 12, 0);
+		if (i < 2) {
+			dram_w(cfg, bar2, h2dw + 4 * i, 0);
+			dram_w(cfg, bar2, h2dr + 4 * i, 0);
+		} else {
+			dram_w(cfg, bar2, d2hw + 4 * (i - 2), 0);
+			dram_w(cfg, bar2, d2hr + 4 * (i - 2), 0);
+		}
+	}
+	/* ring_info +0x14/+0x1c/+0x24/+0x2c: the host-side index arrays the firmware syncs by DMA */
+	for (i = 0; i < 4; i++) {
+		dram_w(cfg, bar2, ri + 0x14 + 8 * i, (u32)mem_pa(M_IDX + 0x100 * i));
+		dram_w(cfg, bar2, ri + 0x18 + 8 * i, 0);
+	}
+	dram_w(cfg, bar2, sh + 0x34, 8);	/* host_dma_scratch_buffer_len, then its address */
+	dram_w(cfg, bar2, sh + 0x38, (u32)mem_pa(M_SCRATCH));
+	dram_w(cfg, bar2, sh + 0x3c, 0);
+	pr("wifi: msgbuf: host_cap 0x%x written (reads 0x%x); ring 0 mem %08x %08x %08x %08x\n", cap,
+	   dram_r(cfg, bar2, sh + 0x54), dram_r(cfg, bar2, ringmem), dram_r(cfg, bar2, ringmem + 4),
+	   dram_r(cfg, bar2, ringmem + 8), dram_r(cfg, bar2, ringmem + 12));
+
+	pcieregs_dump("before");
+	wr32(cfg + 4, rd32(cfg + 4) | 4);	/* bus master on */
+	/* host ready, as dhd_prot_init does when hostrdy_after_init (shared flags HOSTRDY_SUPPORT) */
+	__asm__ volatile("dsb sy" ::: "memory");
+	wr32(WIFI_DB1, 0x12345678);
+	delay_us(10000);
+	cidx = cons_print(cfg, bar2, cons, cidx);
+
+	/* item 0: an ioctl response buffer (MSG_TYPE_IOCTLRESP_BUF_POST 0xb), request id 0x100 */
+	it = wifi_mem + ring_off[R_CTRL_SUB] + 40 * wr;
+	wr_le(it, 0, 0x0b | (u32)h2d_epoch++ << 24);
+	wr_le(it, 4, 0x100);
+	wr_le(it, 8, 8192);
+	wr_le(it, 16, (u32)mem_pa(M_RESP));
+	wr++;
+	/* item 1: WLC_GET_VERSION (cmd 1) as MSG_TYPE_IOCTLPTR_REQ 0x9, request id DHD_IOCTL_REQ_PKTID */
+	cmd = 1;
+	it = wifi_mem + ring_off[R_CTRL_SUB] + 40 * wr;
+	wr_le(it, 0, 0x09 | (u32)h2d_epoch++ << 24);
+	wr_le(it, 4, 0xfffe);
+	wr_le(it, 8, cmd);
+	wr_le(it, 12, 1 | 4u << 16);	/* trans_id 1, input_buf_len 4 */
+	wr_le(it, 16, 4);		/* output_buf_len 4 */
+	wr_le(it, 24, (u32)mem_pa(M_IOCTBUF));
+	wr++;
+	__asm__ volatile("dsb sy" ::: "memory");
+	*(volatile u32 *)(wifi_mem + M_IDX) = wr;	/* H2D WR index of ring 0, host copy (DMA indices) */
+	__asm__ volatile("dsb sy" ::: "memory");
+	dram_w(cfg, bar2, h2dw, wr);
+	wr32(WIFI_DB0, 0xff000000u | wr);	/* DHD_WRPTR_UPDATE_H2D_DB_MAGIC, ring 0 */
+	pr("wifi: msgbuf: bus master on, 2 items posted on the control ring, doorbell rung\n");
+	delay_us(20000);
+	pcieregs_dump("after the doorbell");
+
+	t0 = timer_us();
+	seen = 0;
+	while (timer_us() - t0 < 2000000 && seen < 2) {
+		u32 dw = *(volatile u32 *)(wifi_mem + M_IDX + 0x200);	/* D2H WR of ring 2, DMA'd by the firmware */
+
+		if (dw == 0)
+			dw = dram_r(cfg, bar2, d2hw);
+
+		while (rd != dw && rd < ring_items[R_CTRL_CPL]) {
+			volatile u32 *m = (volatile u32 *)(wifi_mem + ring_off[R_CTRL_CPL] + 24 * rd);
+			u32 k;
+
+			for (k = 0; k < 1000 && ((m[0] >> 24) & 0xff) != d2h_epoch; k++)
+				delay_us(50);
+			pr("wifi: +%llu ms D2H item %u: %08x %08x %08x %08x %08x %08x (type 0x%x, epoch %u%s)\n",
+			   (timer_us() - t0) / 1000, rd, m[0], m[1], m[2], m[3], m[4], m[5], m[0] & 0xff, (m[0] >> 24) & 0xff,
+			   ((m[0] >> 24) & 0xff) == d2h_epoch ? "" : " NOT the expected one");
+			if ((m[0] & 0xff) == 0x0c) {
+				volatile u32 *r = (volatile u32 *)(wifi_mem + M_RESP);
+
+				pr("wifi: ioctl %u done: status %d, %u bytes back: %08x %08x\n", m[4], (int)(short)m[2],
+				   m[3] & 0xffff, r[0], r[1]);
+				seen = 2;
+			} else if ((m[0] & 0xff) == 0x0a)
+				seen = seen < 1 ? 1 : seen;
+			d2h_epoch = d2h_epoch == 252 ? 0 : d2h_epoch + 1;
+			rd++;
+			*(volatile u32 *)(wifi_mem + M_IDX + 0x300) = rd;
+			dram_w(cfg, bar2, d2hr, rd);
+		}
+		delay_us(1000);
+	}
+	pr("wifi: msgbuf: after %llu ms: TCM H2D ctrl w %u r %u, D2H ctrl w %u; host H2D r %u, D2H w %u; S2MPU fault 0x%x\n",
+	   (timer_us() - t0) / 1000, dram_r(cfg, bar2, h2dw), dram_r(cfg, bar2, h2dr), dram_r(cfg, bar2, d2hw),
+	   *(volatile u32 *)(wifi_mem + M_IDX + 0x100), *(volatile u32 *)(wifi_mem + M_IDX + 0x200),
+	   rd32(0x131f0000ULL + 0x2000));
+	pr("wifi: msgbuf: shared flags 0x%08x trap 0x%x assert line %u; console index 0x%x (was 0x%x); D2H MB data 0x%x\n",
+	   dram_r(cfg, bar2, sh), dram_r(cfg, bar2, sh + 4), dram_r(cfg, bar2, sh + 0x10), dram_r(cfg, bar2, cons + 16), cidx,
+	   dram_r(cfg, bar2, dram_r(cfg, bar2, sh + 0x2c)));
+	i = dram_r(cfg, bar2, sh + 4);
+	if (i >= 0x2a0000 && i < 0x5c0000) {
+		u32 k;
+
+		win = 0xffffffff;
+		for (k = 0; k < 24; k += 6)
+			pr("wifi: trap +0x%02x: %08x %08x %08x %08x %08x %08x\n", 4 * k, dram_r(cfg, bar2, i + 4 * k),
+			   dram_r(cfg, bar2, i + 4 * k + 4), dram_r(cfg, bar2, i + 4 * k + 8), dram_r(cfg, bar2, i + 4 * k + 12),
+			   dram_r(cfg, bar2, i + 4 * k + 16), dram_r(cfg, bar2, i + 4 * k + 20));
+	}
+	pr("wifi: console now: buffer 0x%x size 0x%x index 0x%x\n", dram_r(cfg, bar2, cons + 8),
+	   dram_r(cfg, bar2, cons + 12), dram_r(cfg, bar2, cons + 16));
+	cons_print(cfg, bar2, cons, cidx);
+	wr32(cfg + 4, rd32(cfg + 4) & ~4u);	/* bus master off */
+}
+#endif
+
+#if PROBE_WIFI >= 9
 /*
  * PROBE_WIFI=9, read only: one second after the firmware came up, the whole shared area (pciedev_shared_t, bcmpcie.h:
  * 0x00 flags, 0x14 console_addr, 0x30 rings_info_ptr), the ring_info it points to, and the firmware's own console
@@ -79,8 +287,7 @@ static u32 dram_r(u64 cfg, u64 bar2, u32 a) { return rd32(bar2_at(cfg, bar2, a))
  */
 static void wifi_look(u64 cfg, u64 bar2, u32 sh)
 {
-	u32 i, j, w[36], cons, buf, bsize, idx, n = 0;
-	char line[161];
+	u32 i, w[36], cons, idx;
 
 	u32 f0 = 1, l0 = 1, c0 = 1;
 	u64 t0 = timer_us();
@@ -125,30 +332,13 @@ static void wifi_look(u64 cfg, u64 bar2, u32 sh)
 		pr("wifi: no console address (0x%x)\n", cons);
 		return;
 	}
-	buf = dram_r(cfg, bar2, cons + 8);
-	bsize = dram_r(cfg, bar2, cons + 12);
-	idx = dram_r(cfg, bar2, cons + 16);
-	pr("wifi: console at 0x%x: buffer 0x%x size 0x%x index 0x%x\n", cons, buf, bsize, idx);
-	if (buf < 0x2a0000 || buf >= 0x5c0000 || idx > bsize || bsize > 0x10000)
-		return;
-	for (i = 0; i < idx && i < 8192; i += 4) {
-		u32 v = dram_r(cfg, bar2, buf + i);
-
-		for (j = 0; j < 4 && i + j < idx; j++) {
-			char c = (char)(v >> (8 * j));
-
-			if (c == '\n' || n == sizeof(line) - 1) {
-				line[n] = 0;
-				if (n)
-					pr("wifi: fw| %s\n", line);
-				n = 0;
-			} else if (c >= 0x20 && c < 0x7f)
-				line[n++] = c;
-		}
-	}
-	line[n] = 0;
-	if (n)
-		pr("wifi: fw| %s\n", line);
+	pr("wifi: console at 0x%x: buffer 0x%x size 0x%x index 0x%x\n", cons, dram_r(cfg, bar2, cons + 8),
+	   dram_r(cfg, bar2, cons + 12), dram_r(cfg, bar2, cons + 16));
+	idx = cons_print(cfg, bar2, cons, 0);
+#if PROBE_WIFI >= 10
+	if (w[12] >= 0x2a0000 && w[12] < 0x5c0000)
+		wifi_msgbuf(cfg, bar2, sh, w[12], cons, idx);
+#endif
 }
 #endif
 

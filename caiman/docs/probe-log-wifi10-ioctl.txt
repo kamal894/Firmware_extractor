@@ -1,0 +1,171 @@
+wifi: PCIe RC1 (BCM4390) as the bootloader left it, read only
+wifi: PMU +0x3ec8 (PCIe 1 PHY isolation): 0x000000c0
+wifi: sysreg-hsi2 +0x000: 00000000 ffffffff 00000000 00000000
+wifi: sysreg-hsi2 +0x010: 00000000 deadbeef deadbeef deadbeef
+wifi: sysreg-hsi2 +0x020: deadbeef deadbeef deadbeef deadbeef
+wifi: sysreg-hsi2 +0x030: deadbeef deadbeef deadbeef deadbeef
+wifi: elbi +0x000: 00000000 00000100 00008000 00000000
+wifi: elbi +0x010: 00000000 00000000 00000000 00000000
+wifi: elbi +0x020: 00000001 00000001 00000000 00000000
+wifi: elbi +0x030: 00000000 00000000 00000000 00000000
+wifi: soc +0x000: 00000000 00000000 00000000 00000000
+wifi: soc +0x010: 00000000 00000000 00000000 00000000
+wifi: phy 0x13160000: does not answer (clock or power off)
+wifi: dbi +0x000: a5a5144d 00100000 00000001 00010000
+wifi: dbi +0x010: 00000004 00000000 00000000 00000000
+wifi: dbi +0x020: 00000000 00010001 00000000 00000000
+wifi: dbi +0x030: 00000000 00000040 00000000 000001ff
+wifi: s2mpu-hsi2 +0x000: 00000000 deadbeef deadbeef deadbeef
+wifi: s2mpu-hsi2 +0x010: 00000000 00000000 00000000 deadbeef
+wifi: s2mpu-hsi2 +0x020: 00000000 00000000 000000ff 00000000
+wifi: s2mpu-hsi2 +0x030: 00000000 00000000 00000000 00000000
+wifi: s2mpu-hsi2 +0x040: deadbeef 00f200f1 00f400f3 00000088
+wifi: s2mpu-hsi2 +0x050: 00000000 00000000 00000000 deadbeef
+wifi: s2mpu-hsi2 +0x060: 90000000 00000008 00000000 deadbeef
+wifi: s2mpu-hsi2 +0x070: 00000000 00000000 000000ff deadbeef
+wifi: s2mpu-hsi2 +0x080: deadbeef deadbeef deadbeef deadbeef
+wifi: s2mpu-hsi2 +0x090: deadbeef deadbeef deadbeef deadbeef
+wifi: s2mpu-hsi2 +0x0a0: deadbeef deadbeef deadbeef deadbeef
+wifi: s2mpu-hsi2 +0x0b0: deadbeef deadbeef deadbeef deadbeef
+wifi: s2mpu-hsi2 +0x0c0: deadbeef deadbeef deadbeef deadbeef
+wifi: s2mpu-hsi2 +0x0d0: deadbeef deadbeef deadbeef deadbeef
+wifi: s2mpu-hsi2 +0x0e0: deadbeef deadbeef deadbeef deadbeef
+wifi: s2mpu-hsi2 +0x0f0: deadbeef deadbeef deadbeef deadbeef
+wifi: s2mpu-hsi2 +0x100: 00000008 fedcba98 deadbeef deadbeef
+wifi: s2mpu-hsi2 +0x110: 00000000 00000000 deadbeef deadbeef
+wifi: s2mpu-hsi2 +0x120: 00000000 00000000 00000000 00000000
+wifi: s2mpu-hsi2 +0x130: 00000000 00000000 00000000 00000000
+wifi: s2mpu-hsi2 +0x140: deadbeef deadbeef deadbeef deadbeef
+wifi: s2mpu-hsi2 +0x150: deadbeef deadbeef deadbeef deadbeef
+wifi: s2mpu-hsi2 +0x160: deadbeef deadbeef deadbeef deadbeef
+wifi: s2mpu-hsi2 +0x170: deadbeef deadbeef deadbeef deadbeef
+wifi: s2mpu-hsi2 +0x180: deadbeef deadbeef deadbeef deadbeef
+wifi: s2mpu-hsi2 +0x190: deadbeef deadbeef deadbeef deadbeef
+wifi: s2mpu-hsi2 +0x1a0: deadbeef deadbeef deadbeef deadbeef
+wifi: s2mpu-hsi2 +0x1b0: deadbeef deadbeef deadbeef deadbeef
+wifi: s2mpu-hsi2 +0x1c0: deadbeef deadbeef deadbeef deadbeef
+wifi: s2mpu-hsi2 +0x1d0: deadbeef deadbeef deadbeef deadbeef
+wifi: s2mpu-hsi2 +0x1e0: deadbeef deadbeef deadbeef deadbeef
+wifi: s2mpu-hsi2 +0x1f0: deadbeef deadbeef deadbeef deadbeef
+wifi: s2mpu-hsi2+1000 +0x000: 00000000 deadbeef deadbeef deadbeef
+wifi: s2mpu-hsi2+1000 +0x010: 00000000 deadbeef deadbeef deadbeef
+wifi: s2mpu-hsi2+1000 +0x020: 00000000 00000000 00000000 00000000
+wifi: s2mpu-hsi2+1000 +0x030: 00000001 deadbeef deadbeef deadbeef
+wifi: s2mpu-hsi2+2000 +0x000: 00000000 00000000 00000000 deadbeef
+wifi: s2mpu-hsi2+2000 +0x010: 00000000 00000000 00000000 deadbeef
+wifi: s2mpu-hsi2+2000 +0x020: deadbeef 00000000 00000000 deadbeef
+wifi: s2mpu-hsi2+2000 +0x030: 00000000 00000000 00000000 deadbeef
+wifi: s2mpu-hsi2+4000 +0x000: 288dabb8 00000000 702d250c 00000000
+wifi: s2mpu-hsi2+4000 +0x010: 405f6f6e 00000000 1d8c991e 00000000
+wifi: s2mpu-hsi2+4000 +0x020: 00000000 00000000 00000000 00000000
+wifi: s2mpu-hsi2+4000 +0x030: 00000000 00000000 00000000 00000000
+wifi: s2mpu-hsi2+4000 +0x040: 00000000 00000000 00000000 00000000
+wifi: s2mpu-hsi2+4000 +0x050: 00000000 00000000 00000000 00000000
+wifi: s2mpu-hsi2+4000 +0x060: 00000000 00000000 00000000 00000000
+wifi: s2mpu-hsi2+4000 +0x070: 00000000 00000000 00000000 00000000
+wifi: s2mpu-hsi2+8000 0x131f8000: does not answer (clock or power off)
+wifi: PCIe 1 PHY isolation bypass via SMC: 0, PMU +0x3ec8 now 0x00000001
+wifi: phy +0x000: 00000008 00000000 00000000 00000000
+wifi: phy +0x010: 00000000 00000003 00000000 00000055
+wifi: udbg+c700 +0x000: 00010140 00040032 00020002 001a000a
+wifi: pcs +0x000: 00100000 00000000 0000001d 00000000
+wifi: pcs +0x010: 00000000 00000000 00000000 00000000
+wifi: WL_REG_ON high, PERST# low: gph3 CON 0x00010021 DAT 0x00000012
+wifi: PHY: external PLL lock 4, PLL lock 1, CDR lock 10, offset calibration 80
+wifi: before LTSSM: state 0x0, DBI link status 0x10110000
+wifi: LTSSM L0 (link up) after 40 us; states seen: 0x2 0x11
+wifi: DBI link control/status 0x30110000 (speed 1, width x1)
+wifi: endpoint 01:00.0: vendor 0x14e4 device 0x4438, class 0x028000 rev 5, header 0
+wifi: endpoint +0x00: 443814e4 00100000 02800005 00000000
+wifi: endpoint +0x10: 00000004 00000000 00000004 00000000
+wifi: endpoint +0x20: 0000000c 00000000 00000000 439014e4
+wifi: endpoint +0x30: 00000000 00000048 00000000 00000100
+wifi: BAR0: 0x10000 bytes at 0x60000000
+wifi: BAR2: 0x400000 bytes at 0x60400000
+wifi: BAR4: 0x100000 bytes at 0x60800000
+wifi: endpoint command 0x00100002, BAR0 window (config 0x80) 0x18001000
+wifi: BAR0 at the chip's window 0x18001000: 00018216 ffffffff 00110103 00000000 00000000 00000000 00000374 ffffffff
+wifi: BAR0 +0x00: 60054390 18400809 00000068 00000000 ffffffff ffffffff ffffffff ffffffff
+wifi: ChipCommon chip ID 0x4390, rev 5, package 0, 0 cores
+wifi: EROM pointer (ChipCommon +0xfc) 0x180070b0; BAR1 window (config 0x84) 0x00000000
+wifi: firmware 2516975 bytes, vars 18004 bytes
+wifi: firmware written in 4563 ms; first words ba62f2db bd0ef2b1, read back ba62f2db bd0ef2b1
+wifi: vars at 0x5bb9a8, token 0xee6a1195 at 0x5bfffc, RNG rTLV at 0x5bb920
+wifi: address 0 reads 0xb83ef001
+wifi: CA7 DMP control 0x21 -> 0x1: the firmware runs
+wifi: after 40 ms the last word is 0x0048a14c
+wifi: shared area at 0x48a14c: flags 0x00000109 (version 9), trap 0x0, assert 0x0 0x0 line 0, console 0x0, msgtrace 0x0
+wifi: +0 ms: flags 0x00000109, last word 0x0048a14c, CA7 +0 0x03000410, status 0x0810
+wifi: +854 ms: flags 0x00000000, last word 0x00518800, CA7 +0 0x03000410, status 0x0810
+wifi: 1 s later: link state 0x11, config +0x00 0x443814e4 +0x04 0x08100002, BAR0 window 0x18000000, BAR2 window 0x00400000
+wifi: the shared area moved to 0x518800
+wifi: shared +0x00: 70250109 00000000 00000000 00000000 00000000 00549c7c
+wifi: shared +0x18: 00000000 1836fc50 1a7f0096 00000000 00518e00 00518e04
+wifi: shared +0x30: 0051888c 00000000 00000000 00000000 00000000 00000000
+wifi: shared +0x48: 00000000 00000000 4de43001 00000000 00000000 00000000
+wifi: shared +0x60: 004a5e30 00000000 00000000 00000001 00000000 00000000
+wifi: shared +0x78: 00000000 00000008 00535e88 00000000 00000000 005188d8
+wifi: rings_info +0x00: 005188d8 00518c00 00518cc0 00518d80 00518dc0 00000000
+wifi: rings_info +0x18: 00000000 00000000 00000000 00000000 00000000 00000000
+wifi: rings_info +0x30: 00000000 002b0028 00000004 00000000 00000000 00000000
+wifi: rings_info +0x48: 00000000 00000000 00000000 00000000 00000000 00000000
+wifi: console at 0x549c7c: buffer 0x52207c size 0x2000 index 0x8bf
+wifi: fw| 000.000388970 pcie_hwhdr_rev 1
+wifi: fw| 000.025603364 gic_dist_init max_irq 64
+wifi: fw| 000.027647989 
+wifi: fw| RTE (PCIE-MSGBUF) 27.10.1121.57.18 (g205e49b b1 release24) on BCM4390 r5 @ 38.400/160.501/800.0MHz
+wifi: fw| 000.027837161 PCIEBUS_D2HTXCPL_ITEMCNT = 1024 PCIEBUS_MAXTXCPLQ = 512 
+wifi: fw| 000.029969485 EL: e6 d830
+wifi: fw| 000.032817880 pciemsgbuf0: Broadcom PCIE MSGBUF driver
+wifi: fw| 000.039490839 Coex cpu reset
+wifi: fw| 000.039512192 Coex cpu f/w download
+wifi: fw| 000.099869556 Reclaim section 3: returned 318844 bytes bootmem_inuse 137824 (free mem pre-reclaim: 526972) 
+wifi: fw| 000.099937674 EL: e6 d830
+wifi: fw| 000.103513387 Slice0: phy_radio_attach: RF Band Cap: 2G:0 5G:1
+wifi: fw| 000.287623982 macunit = 0, nrxd = 385, nrxbufpost = 384
+wifi: fw| 000.287637626 macunit = 0, ntxd_lfrag = 2500, ntxd_trig_max = 2500, ntxd_aqm_be = 384 
+wifi: fw|   *** macunit 0 wme 1 ntxd 2500 
+wifi: fw| 000.319951887 Coex cpu start
+wifi: fw| 000.320260344 coex debug info addr    : 0x1a018a00
+wifi: fw| 000.320269406 coex debug info magic   : 0x47424443
+wifi: fw| 000.320277531 coex debug info version : 0x00000001
+wifi: fw| 000.320814113 [DSA]: set profile idx 0:0
+wifi: fw| 000.320924023 DSA is disabled based on the defined algorithm revision 255,0
+wifi: fw| 000.321023205 SR Coex version: 2.0
+wifi: fw| 000.347510068 wl0: Broadcom BCM4390 802.11 Wireless Controller 27.10.1121.57.18 (g205e49b b1 release24)
+wifi: fw| 000.347596751 EL: e6 d830
+wifi: fw| 000.350057192 Slice1: phy_radio_attach: RF Band Cap: 2G:1 5G:0
+wifi: fw| 000.571777241 macunit = 1, nrxd = 155, nrxbufpost = 154
+wifi: fw| 000.571791405 macunit = 1, ntxd_lfrag = 640, ntxd_trig_max = 640, ntxd_aqm_be = 134 
+wifi: fw|   *** macunit 1 wme 1 ntxd 640 
+wifi: fw| 000.632696601 DSA is disabled based on the defined algorithm revision 255,0
+wifi: fw| 000.657601705 wl1: Broadcom BCM4390 802.11 Wireless Controller 27.10.1121.57.18 (g205e49b b1 release24)
+wifi: fw| 000.657679119 EL: e6 d830
+wifi: fw| 000.659687655 Slice2: phy_radio_attach: RF Band Cap: 2G:0 5G:1
+wifi: fw| 000.849416167 wl2: Broadcom BCM4390 802.11 Wireless Controller 27.10.1121.57.18 (g205e49b b1 release24)
+wifi: fw| 000.854547703 TCAM: 1920 used: 1359 exceed:0
+wifi: fw| 000.856431252 Reclaim section 2: returned 363608 bytes bootmem_inuse 186492 (free mem pre-reclaim: 122536) 
+wifi: fw| 000.857400054 Firmware boot took 891094 us
+wifi: fw| 000.857422760 ThreadX v5.6 initialized
+wifi: fw| 000.857440571 initing the fatal buf block: 0x004a5e30(65524)
+wifi: fw| 000.858448016 Notify host through MSI - FW boot complete
+wifi: msgbuf: host block at 0x80294000 (0x1c000 bytes); ringmem 0x5188d8, H2D w/r 0x518c00/0x518cc0, D2H w/r 0x518d80/0x518dc0
+wifi: msgbuf: host_cap 0x821409 written (reads 0x821409); ring 0 mem 00000000 00280040 80294000 00000000
+wifi: PCIe core before: DB0 00000000 DB1 00000000, DAR clk 00050040 pwr 00030000 intstatus 00000000 errlog 00000003 addr 18001004 mbint 00000001
+wifi: msgbuf: bus master on, 2 items posted on the control ring, doorbell rung
+wifi: PCIe core after the doorbell: DB0 ff000002 DB1 12345678, DAR clk 00050040 pwr 00010000 intstatus 00000000 errlog 00000003 addr 18001004 mbint 00000001
+wifi: +0 ms D2H item 0: 0180000a 0000fffe 00000000 00000001 00000000 0180fff5 (type 0xa, epoch 1)
+wifi: +1 ms D2H item 1: 0280000c 00000100 00010000 00010004 00000001 02800109 (type 0xc, epoch 2)
+wifi: ioctl 1 done: status 0, 4 bytes back: 00000002 00000000
+wifi: msgbuf: after 6 ms: TCM H2D ctrl w 2 r 2, D2H ctrl w 2; host H2D r 2, D2H w 2; S2MPU fault 0x0
+wifi: msgbuf: shared flags 0x70250109 trap 0x0 assert line 0; console index 0x8da (was 0x8da); D2H MB data 0x0
+wifi: console now: buffer 0x52207c size 0x2000 index 0x8da
+wifi: core look 0x18006248: 00000021 00002000 00000000 ffffffff
+wifi: core look 0x180064c8: 00000001 00008000 00000000 ffffffff
+wifi: core look 0x18080000: 03000410 0000000c 000041e2 00000a41
+wifi: core look 0x18088000: 0b191000 ffffffff 00000f00 ffffffff
+wifi: core look 0x18504140: 00000002 00000000 00000000 00000000
+wifi: core look 0x18516140: 00000002 00000000 00000000 00000000
+wifi: core look 0x18505140: 00000002 00000000 00000000 00000000
+wifi: dongle RAM 0x5b0000 before: ffffffff ffffffff ffffffff ffffffff; last word 0x5bfffc: ffffffff
+wifi: dongle RAM 0x5b0000 after writing: ffffffff ffffffff ffffffff ffffffff (NOT as written)
