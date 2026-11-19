@@ -162,3 +162,21 @@ node +0x140 read 2. That is the state DHD downloads into without resetting anyth
   - MSI or polling;
   - then the ioctls, the CLM blob, a scan.
   - The download itself can be made faster with memcpy-sized writes.
+
+## Step 9: the firmware's own console (PROBE_WIFI=9, read only)
+
+The first shared pointer (0x48a14c, flags 0x109) is a boot-time one. At ~852 ms the firmware clears its flags and
+the last word moves to the real shared area (0x521000 in wifi9d; 0x55b800 in another run, so it is not fixed):
+
+- flags 0x70250109 (version 9), console_addr 0x586134, rings_info_ptr 0x52108c, h2d/d2h mailbox 0x521600/0x521604,
+  device_fatal_logbuf 0x4a5e30
+- ring_info: ringmem 0x5210d8, index arrays 0x521400/0x5214c0/0x521580/0x5215c0; max_tx_flowrings 0x28,
+  max submission queues 0x2b, max completion rings 4
+- console (hnd_cons_t: buffer 0x5861f4, 8 KiB): "RTE (PCIE-MSGBUF) 27.10.1121.57.18 (g205e49b b1 release24) on BCM4390
+  r5"; three radio slices attach (wl0 5G, wl1 2G, wl2 5G), coex CPU started, "Firmware boot took 889765 us",
+  "Notify host through MSI - FW boot complete". No trap.
+
+So the host side must wait for the last word to settle (not take the first non-token value), as dhdpcie_readshared
+does by checking the shared version. Log: docs/probe-logs/wifi9.txt.
+Next: host DMA buffers + the five common rings (H2D control/rxpost, D2H control/txcpl/rxcpl), bus master on behind
+the PCIe S2MPU, MSI or polling of the D2H indices; then the first ioctl (GET_VERSION / "ver" iovar).

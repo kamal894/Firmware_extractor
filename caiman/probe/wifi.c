@@ -56,10 +56,10 @@ static void pin(u32 n, u32 func, int out)
 extern const u8 wifi_blob_start[] __attribute__((visibility("hidden")));	/* (hidden: no GOT entry to relocate) */
 
 /* dongle RAM through BAR2 (DHD's BAR1): its window at config 0x84 picks the 4 MiB the address is in */
+static u32 win = 0xffffffff;	/* the window last written; forgotten when the chip may have changed it */
+
 static u64 bar2_at(u64 cfg, u64 bar2, u32 a)
 {
-	static u32 win = 0xffffffff;
-
 	if ((a & ~0x3fffffu) != win) {
 		win = a & ~0x3fffffu;
 		wr32(cfg + 0x84, win);
@@ -70,6 +70,87 @@ static u64 bar2_at(u64 cfg, u64 bar2, u32 a)
 
 static void dram_w(u64 cfg, u64 bar2, u32 a, u32 v) { wr32(bar2_at(cfg, bar2, a), v); }
 static u32 dram_r(u64 cfg, u64 bar2, u32 a) { return rd32(bar2_at(cfg, bar2, a)); }
+
+#if PROBE_WIFI >= 9
+/*
+ * PROBE_WIFI=9, read only: one second after the firmware came up, the whole shared area (pciedev_shared_t, bcmpcie.h:
+ * 0x00 flags, 0x14 console_addr, 0x30 rings_info_ptr), the ring_info it points to, and the firmware's own console
+ * (hnd_cons_t: +0x08 log.buf, +0x0c log.buf_size, +0x10 log.idx), printed line by line as dhdpcie_bus_readconsole does.
+ */
+static void wifi_look(u64 cfg, u64 bar2, u32 sh)
+{
+	u32 i, j, w[36], cons, buf, bsize, idx, n = 0;
+	char line[161];
+
+	u32 f0 = 1, l0 = 1, c0 = 1;
+	u64 t0 = timer_us();
+
+	/* the first second: when the shared area's flags, the last word or the CA7 change */
+	while (timer_us() - t0 < 1000000) {
+		u32 f = dram_r(cfg, bar2, sh), l = dram_r(cfg, bar2, 0x5bfffc), c;
+
+		wr32(cfg + 0x80, 0x18080000);
+		c = rd32(0x60000000ULL);
+		wr32(cfg + 0x80, 0x18000000);
+		if (f != f0 || l != l0 || c != c0)
+			pr("wifi: +%llu ms: flags 0x%08x, last word 0x%08x, CA7 +0 0x%08x, status 0x%04x\n",
+			   (timer_us() - t0) / 1000, f, l, c, rd32(cfg + 4) >> 16);
+		f0 = f;
+		l0 = l;
+		c0 = c;
+		delay_us(2000);
+	}
+	pr("wifi: 1 s later: link state 0x%x, config +0x00 0x%08x +0x04 0x%08x, BAR0 window 0x%08x, BAR2 window 0x%08x\n",
+	   rd32(0x13120000ULL + 0x2c8) & 0x3f, rd32(cfg), rd32(cfg + 4), rd32(cfg + 0x80), rd32(cfg + 0x84));
+	win = 0xffffffff;
+	/* wifi9: the first pointer (0x48a14c) is let go at ~850 ms and the last word moves to the real shared area */
+	i = dram_r(cfg, bar2, 0x5bfffc);
+	if (i != sh && i >= 0x2a0000 && i < 0x5bfffc) {
+		pr("wifi: the shared area moved to 0x%x\n", i);
+		sh = i;
+	}
+	for (i = 0; i < 36; i++)
+		w[i] = dram_r(cfg, bar2, sh + 4 * i);
+	for (i = 0; i < 36; i += 6)
+		pr("wifi: shared +0x%02x: %08x %08x %08x %08x %08x %08x\n", 4 * i, w[i], w[i + 1], w[i + 2], w[i + 3],
+		   w[i + 4], w[i + 5]);
+	if (w[12] >= 0x2a0000 && w[12] < 0x5c0000)
+		for (i = 0; i < 24; i += 6)
+			pr("wifi: rings_info +0x%02x: %08x %08x %08x %08x %08x %08x\n", 4 * i,
+			   dram_r(cfg, bar2, w[12] + 4 * i), dram_r(cfg, bar2, w[12] + 4 * i + 4),
+			   dram_r(cfg, bar2, w[12] + 4 * i + 8), dram_r(cfg, bar2, w[12] + 4 * i + 12),
+			   dram_r(cfg, bar2, w[12] + 4 * i + 16), dram_r(cfg, bar2, w[12] + 4 * i + 20));
+	cons = w[5];
+	if (cons < 0x2a0000 || cons >= 0x5c0000) {
+		pr("wifi: no console address (0x%x)\n", cons);
+		return;
+	}
+	buf = dram_r(cfg, bar2, cons + 8);
+	bsize = dram_r(cfg, bar2, cons + 12);
+	idx = dram_r(cfg, bar2, cons + 16);
+	pr("wifi: console at 0x%x: buffer 0x%x size 0x%x index 0x%x\n", cons, buf, bsize, idx);
+	if (buf < 0x2a0000 || buf >= 0x5c0000 || idx > bsize || bsize > 0x10000)
+		return;
+	for (i = 0; i < idx && i < 8192; i += 4) {
+		u32 v = dram_r(cfg, bar2, buf + i);
+
+		for (j = 0; j < 4 && i + j < idx; j++) {
+			char c = (char)(v >> (8 * j));
+
+			if (c == '\n' || n == sizeof(line) - 1) {
+				line[n] = 0;
+				if (n)
+					pr("wifi: fw| %s\n", line);
+				n = 0;
+			} else if (c >= 0x20 && c < 0x7f)
+				line[n++] = c;
+		}
+	}
+	line[n] = 0;
+	if (n)
+		pr("wifi: fw| %s\n", line);
+}
+#endif
 
 /*
  * PROBE_WIFI=8: the firmware in and the CA7 let go, as Google's bcmdhd does for this chip (CA7 already up and
@@ -153,6 +234,9 @@ static void wifi_boot(u64 cfg, u64 bar0, u64 bar2)
 			w[i] = dram_r(cfg, bar2, p + 4 * i);
 		pr("wifi: shared area at 0x%x: flags 0x%08x (version %u), trap 0x%x, assert 0x%x 0x%x line %u, console 0x%x, "
 		   "msgtrace 0x%x\n", p, w[0], w[0] & 0xff, w[1], w[2], w[3], w[4], w[5], w[6]);
+#if PROBE_WIFI >= 9
+		wifi_look(cfg, bar2, p);
+#endif
 	}
 	/* the ARM halted again before the chip goes off */
 	wr32(cfg + 0x80, 0x18006000);
@@ -161,6 +245,7 @@ static void wifi_boot(u64 cfg, u64 bar0, u64 bar2)
 	wr32(cfg + 0x80, 0x18000000);
 	(void)rd32(cfg + 0x80);
 	wr32(cfg + 0x84, 0);
+	win = 0;
 }
 #endif
 
