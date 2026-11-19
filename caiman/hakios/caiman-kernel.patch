@@ -1224,7 +1224,7 @@ index 3f1f97a..56879cd 100644
  		display_probe();
  	}
 diff --git a/drivers/gpu/hakios.gpu.cpp b/drivers/gpu/hakios.gpu.cpp
-index 633b419..80531ef 100644
+index 633b419..aca67c6 100644
 --- a/drivers/gpu/hakios.gpu.cpp
 +++ b/drivers/gpu/hakios.gpu.cpp
 @@ -56,6 +56,13 @@ void hakios_gpu_mapped(void);
@@ -1340,7 +1340,33 @@ index 633b419..80531ef 100644
  		IOLockLock(gGPULock);
  	}
  	if (milliseconds >= 1000 && !gGPUReported) {
-@@ -256,6 +316,24 @@ slowWait(const char * kind, uint64_t began)
+@@ -235,6 +295,25 @@ MiniIOSurfaceDrawn(MiniIOSurface * surface, uint64_t milliseconds)
+ 	return done;
+ }
+ 
++uint32_t
++MiniIOSurfaceGPULast(void)
++{
++	return gGPULock != NULL && hakios_gpu_ready() ? hakios_gpu_last() : 0;
++}
++
++bool
++MiniIOSurfaceGPUDone(uint32_t fence, uint64_t milliseconds)
++{
++	bool done = true;
++
++	if (fence != 0 && gGPULock != NULL) {
++		IOLockLock(gGPULock);
++		done = !hakios_gpu_ready() || gpuWait(fence, milliseconds);
++		IOLockUnlock(gGPULock);
++	}
++	return done;
++}
++
+ /*
+  * Boot-arg touch_lat=1: a line for every wait of a program's for the GPU that took a millisecond or
+  * more ("tl: f KIND US at US"), for telling apart what holds a frame up (tools/frames.py).
+@@ -256,6 +335,24 @@ slowWait(const char * kind, uint64_t began)
  	}
  }
  
@@ -1365,7 +1391,7 @@ index 633b419..80531ef 100644
  /* How long from now a time of msm's is, in milliseconds; 0: now or past. */
  static uint64_t
  millisecondsUntil(const struct msm_timespec * when)
-@@ -263,7 +341,7 @@ millisecondsUntil(const struct msm_timespec * when)
+@@ -263,7 +360,7 @@ millisecondsUntil(const struct msm_timespec * when)
  	uint64_t now;
  	int64_t left, end;
  
@@ -1374,7 +1400,7 @@ index 633b419..80531ef 100644
  	/* the seconds are the caller's: a number too big to be nanoseconds is a time far ahead (or far behind), not a wrapped one */
  	if (__builtin_mul_overflow(when->seconds, (int64_t) NSEC_PER_SEC, &end) || __builtin_add_overflow(end, when->nanoseconds, &end)) {
  		return when->seconds > 0 && when->nanoseconds >= 0 ? GPU_PATIENCE_MS : 0;
-@@ -292,7 +370,7 @@ waitOver(const struct msm_timespec * when, uint32_t fence)
+@@ -292,7 +389,7 @@ waitOver(const struct msm_timespec * when, uint32_t fence)
  	gGPUStat.over++;
  	if (told < 4) {
  		told++;
@@ -1383,7 +1409,7 @@ index 633b419..80531ef 100644
  		IOLog("HakiosGPU: a wait for submission %u, which is not done, until %lld.%09lld s, asked for at %llu.%09llu s: "
  		    "over before it began\n", fence, when->seconds, when->nanoseconds, now / NSEC_PER_SEC, now % NSEC_PER_SEC);
  	}
-@@ -330,6 +408,18 @@ HakiosGPUStart(void)
+@@ -330,6 +427,18 @@ HakiosGPUStart(void)
  	uint32_t cached = 0;
  
  	gGPUCached = PE_parse_boot_argn("gpu_cached", &cached, sizeof(cached)) && cached != 0;
@@ -1402,7 +1428,7 @@ index 633b419..80531ef 100644
  	gGPULock = IOLockAlloc();
  	gpu = OSTypeAlloc(HakiosGPU);
  	if (gpu == NULL || provider == NULL || !gpu->init() || !gpu->attach(provider)) {
-@@ -418,6 +508,8 @@ class HakiosGPUUserClient : public IOUserClient
+@@ -418,6 +527,8 @@ class HakiosGPUUserClient : public IOUserClient
  	uint32_t                fNextQueue;
  	uint32_t                fNextBuffer;            /* where the search for a free handle starts: one given back is not the next given */
  	uint32_t                fBufferCount;
@@ -1411,7 +1437,7 @@ index 633b419..80531ef 100644
  	uint64_t                fBufferBytes;
  	uint32_t                fSubmits;
  	uint32_t                fStrangers;             /* requests that named a buffer the client does not have */
-@@ -433,6 +525,9 @@ class HakiosGPUUserClient : public IOUserClient
+@@ -433,6 +544,9 @@ class HakiosGPUUserClient : public IOUserClient
  	void dropKept(struct gpu_kept * k);
  	void reap(void);
  	IOReturn gemNew(struct msm_gem_new * request);
@@ -1421,7 +1447,7 @@ index 633b419..80531ef 100644
  	IOReturn surfaceBuffer(struct hakios_surface * request);
  	IOReturn userBuffer(struct hakios_user_memory * request);
  	IOReturn gemInfo(struct msm_gem_info * request);
-@@ -944,6 +1039,119 @@ HakiosGPUUserClient::userBuffer(struct hakios_user_memory * request)
+@@ -944,6 +1058,119 @@ HakiosGPUUserClient::userBuffer(struct hakios_user_memory * request)
  	return kIOReturnSuccess;
  }
  
@@ -1541,7 +1567,7 @@ index 633b419..80531ef 100644
  IOReturn
  HakiosGPUUserClient::gemInfo(struct msm_gem_info * request)
  {
-@@ -1216,6 +1424,11 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
+@@ -1216,6 +1443,11 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
  		struct hakios_surface surface;
  		struct hakios_user_memory user;
  		struct hakios_show show;
@@ -1553,7 +1579,7 @@ index 633b419..80531ef 100644
  	} r;
  	size_t size = args->structureInputSize;
  	struct gpu_buffer * b;
-@@ -1276,6 +1489,11 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
+@@ -1276,6 +1508,11 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
  			if (patience == 0) {
  				waitOver(&r.waitFence.timeout, r.waitFence.fence);
  			}
@@ -1565,7 +1591,7 @@ index 633b419..80531ef 100644
  		}
  		IOLockUnlock(gGPULock);
  		slowWait("fence", waitBegan);
-@@ -1298,6 +1516,7 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
+@@ -1298,6 +1535,7 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
  			ret = kIOReturnBadArgument;
  		} else {
  			freeBuffer(b);
@@ -1573,7 +1599,7 @@ index 633b419..80531ef 100644
  			reap();
  		}
  		IOLockUnlock(gGPULock);
-@@ -1311,6 +1530,32 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
+@@ -1311,6 +1549,32 @@ HakiosGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments
  	case kHakiosShow:
  		ret = show(&r.show);
  		break;
@@ -5881,10 +5907,31 @@ index c390093..de72f4d 100755
  		log "downloading the macOS 13.3 SDK for its DriverKit headers"
  		curl -L --fail --retry 3 -s -o macos-sdk.tar.xz "$MACOS_SDK_URL" || die "download failed: $MACOS_SDK_URL"
 diff --git a/xnu/files/iokit/Kernel/MiniIOMobileFramebuffer.cpp b/xnu/files/iokit/Kernel/MiniIOMobileFramebuffer.cpp
-index 724e156..8e0de79 100644
+index 724e156..f34303d 100644
 --- a/xnu/files/iokit/Kernel/MiniIOMobileFramebuffer.cpp
 +++ b/xnu/files/iokit/Kernel/MiniIOMobileFramebuffer.cpp
-@@ -261,6 +261,7 @@ static TUNABLE(uint32_t, gMeasure, "fb_measure", 0);
+@@ -214,9 +214,20 @@ SYSCTL_UINT(_kern_hakios, OID_AUTO, fb_surface, CTLFLAG_RD | CTLFLAG_LOCKED, &gS
+ 
+ #define SWAP_QUEUE              2                       /* frames that may wait for the panel at most (fb_queue) */
+ static TUNABLE(uint32_t, gQueue, "fb_queue", 2);
++/*
++ * Boot-arg fb_safe=1 (the default): a swap's slot is let go only once its picture is in the panel's memory, and one
++ * swap waits at most. CoreAnimation draws into two surfaces in turn and takes a surface back as soon as the swap
++ * after it is accepted; letting that swap in while the picture before was still being copied gave it the surface
++ * mid-copy, and half-drawn frames (black lower halves, torn rows) reached the panel: the flicker of 2026-11-19
++ * (docs/flicker.md). fb_safe=0: as before.
++ */
++static TUNABLE(uint32_t, gSafe, "fb_safe", 1);
+ static inline unsigned
+ swapQueue(void)
+ {
++	if (gSafe) {
++		return 1;
++	}
+ 	return gQueue >= 1 && gQueue <= SWAP_QUEUE ? gQueue : 1;
+ }
+ /*
+@@ -261,6 +272,7 @@ static TUNABLE(uint32_t, gMeasure, "fb_measure", 0);
   */
  static TUNABLE(uint32_t, gBeam, "fb_beam", 1);
  extern "C" vm_offset_t ml_io_map(vm_offset_t phys_addr, vm_size_t size);
@@ -5892,7 +5939,7 @@ index 724e156..8e0de79 100644
  static inline uint32_t refreshHz(void);
  
  /*
-@@ -269,6 +270,17 @@ static inline uint32_t refreshHz(void);
+@@ -269,6 +281,17 @@ static inline uint32_t refreshHz(void);
   * abort a minute after boot, so on a SoC not known here nothing is read and frames stay on their beat.
   */
  static TUNABLE(uint64_t, gIntfPhysical, "fb_intf", 0);
@@ -5910,7 +5957,7 @@ index 724e156..8e0de79 100644
  
  static vm_offset_t
  panelInterface(void)
-@@ -282,6 +294,110 @@ panelInterface(void)
+@@ -282,6 +305,110 @@ panelInterface(void)
  	return physical != 0 ? ml_io_map((vm_offset_t) (physical & ~0x3fffULL), 0x4000) + (vm_offset_t) (physical & 0x3fffULL) : 0;
  }
  
@@ -6021,7 +6068,7 @@ index 724e156..8e0de79 100644
  static void
  measurePanel(__unused void * arg, __unused wait_result_t wr)
  {
-@@ -346,7 +462,15 @@ class IOMobileFramebuffer : public IOService
+@@ -346,7 +473,15 @@ class IOMobileFramebuffer : public IOService
  
  public:
  	IOLock *        fLock;
@@ -6038,8 +6085,28 @@ index 724e156..8e0de79 100644
  	uint32_t        fPanelWidth, fPanelHeight, fRowBytes;
  	uint32_t        fWidth, fHeight;        /* the display as user space sees it */
  	MiniIOSurface * fDefaultSurface;
-@@ -431,6 +555,9 @@ public:
+@@ -367,6 +502,8 @@ public:
+ 	IOLock *        fSwapLock;              /* around the next five */
+ 	uint8_t         fSwap[SWAP_QUEUE][SWAP_SIZE];   /* the swaps on their way to the panel (fb_queue), from fSwapFirst on */
+ 	MiniIOSurface * fSwapSurfaces[SWAP_QUEUE][SWAP_LAYERS]; /* ... their surfaces, held from SwapEnd on: their maker may let go of them */
++	uint32_t        fSwapGPU[SWAP_QUEUE];   /* ... the GPU's newest submission at their SwapEnd: drawn before they are shown */
++	uint32_t        fShowGPU;               /* (presenter thread) the one of the swap being shown */
+ 	unsigned        fSwapFirst, fSwapsWaiting;
+ 	/*
+ 	 * ... and not whenever the GPU happens to be done, but on a beat of the refresh rate
+@@ -398,6 +535,7 @@ public:
+ 	uint64_t        fStatBeatWait;
+ 	uint32_t        fStatSurfaces[8];       /* the first different surfaces the bottom layer was given */
+ 	uint32_t        fStatHeld, fStatLost;   /* swaps that waited for the one before; that gave up waiting */
++	uint32_t        fStatGPULate;           /* swaps shown before the GPU work given before them was done */
+ 	uint64_t        fSwapTime;              /* when the last swap was handed over */
+ 	uint32_t        fStatSwapsLate;         /* swaps that came more than a refresh and a quarter after the one before (and no pause) */
+ 	uint64_t        fStatWaiting;           /* how long frames waited for the GPU here */
+@@ -429,8 +567,12 @@ public:
+ 	void publishRefresh(void);
+ 	MiniIOSurface * defaultSurface(void);
  	void present(const uint8_t * swap);
++	void swapDone(void);
  	void show(const uint8_t * swap, MiniIOSurface ** surfaces);
  	void settle(const uint8_t * swap, MiniIOSurface ** surfaces);
 +	void flipInit(void);
@@ -6048,7 +6115,7 @@ index 724e156..8e0de79 100644
  	bool fSettling;                 /* drawing the last frame again, filtered (fb_filter=2) */
  	bool fFilterFrame;              /* this frame came slowly: filtered as it is (fb_filter=2) */
  	void presenter(void);
-@@ -603,6 +730,9 @@ IOMobileFramebuffer::start(IOService * provider)
+@@ -603,6 +745,9 @@ IOMobileFramebuffer::start(IOService * provider)
  	fPanelWidth = vinfo.v_width;
  	fPanelHeight = vinfo.v_height;
  	fRowBytes = vinfo.v_rowbytes;
@@ -6058,7 +6125,7 @@ index 724e156..8e0de79 100644
  	fWidth = gFBWidth ? gFBWidth : fPanelWidth;
  	fHeight = gFBHeight ? gFBHeight : fPanelHeight;
  	if (gFBScale != 0 && gFBScale != kFBDefaultScale) {
-@@ -1168,6 +1298,8 @@ IOMobileFramebuffer::drawLayer(MiniIOSurface * s, const int32_t * src, const int
+@@ -1168,6 +1313,8 @@ IOMobileFramebuffer::drawLayer(MiniIOSurface * s, const int32_t * src, const int
  			fColumn[x] = (uint32_t) (sx + (int64_t) (x - px0) * sw / (px1 - px0));
  		}
  	}
@@ -6067,7 +6134,41 @@ index 724e156..8e0de79 100644
  	job.pixels = s->pixels();
  	job.stride = s->info.bytesPerRow;
  	job.sx = sx;
-@@ -1396,6 +1528,89 @@ IOMobileFramebuffer::presenter(void)
+@@ -1253,6 +1400,17 @@ IOMobileFramebuffer::reportFrameTimes(void)
+ 	fFramePauses = fFrameLongest = 0;
+ }
+ 
++/* The swap being shown is done with: the next one may be handed over (SwapEnd held in present() goes on). */
++void
++IOMobileFramebuffer::swapDone(void)
++{
++	IOLockLock(fSwapLock);
++	fSwapFirst = (fSwapFirst + 1) % SWAP_QUEUE;
++	fSwapsWaiting--;
++	IOLockWakeup(fSwapLock, &fSwapsWaiting, true);
++	IOLockUnlock(fSwapLock);
++}
++
+ /* SwapEnd: the swap is handed to the thread that puts frames on the panel, as soon as that has no other waiting. */
+ void
+ IOMobileFramebuffer::present(const uint8_t * swap)
+@@ -1283,6 +1441,7 @@ IOMobileFramebuffer::present(const uint8_t * swap)
+ 	unsigned slot = (fSwapFirst + fSwapsWaiting) % SWAP_QUEUE;
+ 
+ 	memcpy(fSwap[slot], swap, SWAP_SIZE);
++	fSwapGPU[slot] = MiniIOSurfaceGPULast();
+ 	for (unsigned layer = 0; layer < SWAP_LAYERS; layer++) {
+ 		uint32_t sid = swapWord(swap, SWAP_SURFACE(layer));
+ 
+@@ -1367,6 +1526,7 @@ IOMobileFramebuffer::presenter(void)
+ 		IOLockLock(fSwapLock);
+ 		memcpy(swap, fSwap[fSwapFirst], SWAP_SIZE);
+ 		memcpy(surfaces, fSwapSurfaces[fSwapFirst], sizeof(surfaces));
++		fShowGPU = fSwapGPU[fSwapFirst];
+ 		IOLockUnlock(fSwapLock);
+ 		{
+ 			uint64_t now = mach_absolute_time();
+@@ -1396,6 +1556,89 @@ IOMobileFramebuffer::presenter(void)
  	}
  }
  
@@ -6157,7 +6258,7 @@ index 724e156..8e0de79 100644
  /*
   * The frame on the panel once more, filtered (fb_filter=2): the same layers from the same surfaces where show() put
   * them, nothing else (no turn to wait for, no swap to hand on, nothing counted). Its surfaces were held since.
-@@ -1405,10 +1620,11 @@ IOMobileFramebuffer::settle(const uint8_t * swap, MiniIOSurface ** surfaces)
+@@ -1405,10 +1648,11 @@ IOMobileFramebuffer::settle(const uint8_t * swap, MiniIOSurface ** surfaces)
  {
  	int32_t src[4], dst[4];
  
@@ -6170,7 +6271,7 @@ index 724e156..8e0de79 100644
  	for (unsigned layer = 0; layer < SWAP_LAYERS; layer++) {
  		MiniIOSurface * s = surfaces[layer];
  
-@@ -1419,6 +1635,7 @@ IOMobileFramebuffer::settle(const uint8_t * swap, MiniIOSurface ** surfaces)
+@@ -1419,6 +1663,7 @@ IOMobileFramebuffer::settle(const uint8_t * swap, MiniIOSurface ** surfaces)
  		memcpy(dst, swap + SWAP_DEST(layer), sizeof(dst));
  		drawLayer(s, src, dst);
  	}
@@ -6178,7 +6279,43 @@ index 724e156..8e0de79 100644
  	fSettling = false;
  	fStatSettled++;
  }
-@@ -1488,12 +1705,19 @@ IOMobileFramebuffer::show(const uint8_t * swap, MiniIOSurface ** surfaces)
+@@ -1439,6 +1684,18 @@ IOMobileFramebuffer::show(const uint8_t * swap, MiniIOSurface ** surfaces)
+ 			    swapWord(swap, SWAP_ID), swapWord(swap, SWAP_SURFACE(layer)), SWAP_GPU_MS);
+ 		}
+ 	}
++	/*
++	 * The Mali's submissions name no surfaces (surface->drawn stays 0 with mali=1), so the wait above let frames
++	 * through mid-draw: the tiles not yet written came out black (fast shots, 2026-11-19, docs/flicker.md). All the
++	 * GPU work given before this swap's SwapEnd is waited for instead.
++	 */
++	if (fShowGPU != 0 && !MiniIOSurfaceGPUDone(fShowGPU, SWAP_GPU_MS)) {
++		fStatGPULate++;
++		if (fStatGPULate <= 4) {
++			IOLog("MiniIOMobileFramebuffer: swap %u: GPU work up to %u not done after %u ms; shown as it is\n",
++			    swapWord(swap, SWAP_ID), fShowGPU, SWAP_GPU_MS);
++		}
++	}
+ 	fStatWaiting += mach_absolute_time() - began;
+ 	began = ready = mach_absolute_time();
+ 	fBeamScan = fBeamIntf != 0 ? beamNextScan(began) : 0;
+@@ -1470,12 +1727,10 @@ IOMobileFramebuffer::show(const uint8_t * swap, MiniIOSurface ** surfaces)
+ 		}
+ 	}
+ 	shown = began;
+-	/* its turn has come: the swap after it may be handed over */
+-	IOLockLock(fSwapLock);
+-	fSwapFirst = (fSwapFirst + 1) % SWAP_QUEUE;
+-	fSwapsWaiting--;
+-	IOLockWakeup(fSwapLock, &fSwapsWaiting, true);
+-	IOLockUnlock(fSwapLock);
++	/* its turn has come: the swap after it may be handed over (fb_safe: only once this one is drawn, below) */
++	if (!gSafe) {
++		swapDone();
++	}
+ 	IOLockLock(fLock);
+ 	if (fLastFrame != 0) {
+ 		absolutetime_to_nanoseconds(began - fLastFrame, &nanos);
+@@ -1488,12 +1743,22 @@ IOMobileFramebuffer::show(const uint8_t * swap, MiniIOSurface ** surfaces)
  		}
  	}
  	fLastFrame = began;
@@ -6186,6 +6323,9 @@ index 724e156..8e0de79 100644
 +		/* the panel is off: nothing to draw into its memory (the swap is done with all the same) */
 +		IOLockUnlock(fLock);
 +		gPanelSkipped++;
++		if (gSafe) {
++			swapDone();
++		}
 +		return;
 +	}
  	report = fSwapsShown < 8;
@@ -6198,15 +6338,19 @@ index 724e156..8e0de79 100644
  	for (unsigned layer = 0; layer < SWAP_LAYERS; layer++) {
  		uint32_t sid = swapWord(swap, SWAP_SURFACE(layer));
  		int32_t src[4], dst[4];
-@@ -1543,6 +1767,7 @@ IOMobileFramebuffer::show(const uint8_t * swap, MiniIOSurface ** surfaces)
+@@ -1543,7 +1808,11 @@ IOMobileFramebuffer::show(const uint8_t * swap, MiniIOSurface ** surfaces)
  			}
  		}
  	}
 +	flipEnd();
  	drawn = mach_absolute_time();
++	if (gSafe) {
++		swapDone();     /* the picture is in the panel's memory: its surfaces may be drawn into again */
++	}
  	if (recorded != NULL) {
  		record(recorded);
-@@ -1885,9 +2110,16 @@ IOMobileFramebufferUserClient::externalMethod(uint32_t selector, IOExternalMetho
+ 	}
+@@ -1885,9 +2154,16 @@ IOMobileFramebufferUserClient::externalMethod(uint32_t selector, IOExternalMetho
  	case kFBMethodSwapSignal:
  	case kFBMethodSwapCancel:
  	case kFBMethodSwapCancelAll:
@@ -6224,7 +6368,7 @@ index 724e156..8e0de79 100644
  
  	case kFBMethodNotifications:                    /* in: callback (0 = off), its argument, type, 0 */
  		if (args->scalarInputCount < 3 || in[2] >= kFBNotifyTypes) {
-@@ -1938,12 +2170,19 @@ IOMobileFramebufferUserClient::externalMethod(uint32_t selector, IOExternalMetho
+@@ -1938,12 +2214,19 @@ IOMobileFramebufferUserClient::externalMethod(uint32_t selector, IOExternalMetho
  		break;
  	}
  
@@ -6247,7 +6391,7 @@ index 724e156..8e0de79 100644
  	}
  	/* a request that only sets something is accepted; one that wants an answer gets zeros */
  	if (args->scalarOutputCount != 0) {
-@@ -2024,7 +2263,12 @@ publishAccelerator(IOService * provider)
+@@ -2024,7 +2307,12 @@ publishAccelerator(IOService * provider)
  		 * Metal for the screen; until that device can draw, a screen drawn without it is the working one.
  		 */
  		if (PE_parse_boot_argn("metal", &metal, sizeof(metal)) && metal != 0) {
@@ -6329,7 +6473,7 @@ index 5413c2b..ca8abab 100644
  	IOLockUnlock(gSurfaceLock);
  	if (ref == NULL) {
 diff --git a/xnu/files/iokit/Kernel/MiniIOSurface.h b/xnu/files/iokit/Kernel/MiniIOSurface.h
-index 30539e5..2946854 100644
+index 30539e5..6c154ff 100644
 --- a/xnu/files/iokit/Kernel/MiniIOSurface.h
 +++ b/xnu/files/iokit/Kernel/MiniIOSurface.h
 @@ -156,6 +156,13 @@ public:
@@ -6346,6 +6490,20 @@ index 30539e5..2946854 100644
  /*
   * What making and freeing surfaces has cost since this was last asked: how many, microseconds
   * each; how many got memory that was kept from one before.
+@@ -165,6 +172,13 @@ void            MiniIOSurfaceCost(uint32_t * made, uint64_t * making, uint32_t *
+ void            MiniIOSurfaceClearKept(void);
+ /* Wait, for so many milliseconds at most, until the GPU is done with a surface's pixels (hakios.gpu.cpp). */
+ bool            MiniIOSurfaceDrawn(MiniIOSurface * surface, uint64_t milliseconds);
++/*
++ * The newest submission given to the GPU so far (0: no GPU), and a wait for every submission up to `fence` to be
++ * done. For the Mali (mali=1), whose submissions name no surfaces: a swap waits for all the GPU work given before
++ * it (hakios.gpu.cpp).
++ */
++uint32_t        MiniIOSurfaceGPULast(void);
++bool            MiniIOSurfaceGPUDone(uint32_t fence, uint64_t milliseconds);
+ MiniIOSurface * MiniIOSurfaceCreateSimple(uint32_t width, uint32_t height, uint32_t pixelFormat);
+ void            MiniIOSurfaceDrop(MiniIOSurface * surface);
+ /* A Mach send right for the surface in the task (what IOSurfaceCreateMachPort gives); 0 on failure. */
 diff --git a/xnu/files/osfmk/arm64/psci_smp.c b/xnu/files/osfmk/arm64/psci_smp.c
 index 221defa..94452e6 100644
 --- a/xnu/files/osfmk/arm64/psci_smp.c

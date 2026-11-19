@@ -322,7 +322,20 @@ void watcher_main(void)
 
 		if (!(s % 2))
 			snapshot(base, s, 0);
-#ifdef PROBE_SHOTS
+#if defined(PROBE_SHOTS) && defined(PROBE_SHOTS_FAST)
+		/* PROBE_SHOTS_FAST=1: two bursts of 25 pictures 40 ms apart, at second N (the touch_demo swipes) and N + 50
+		 * (the screen at rest): a flicker shorter than a second shows up here. The "second" field holds
+		 * second * 1000 + the burst's milliseconds. */
+		if (s == PROBE_SHOTS || s == PROBE_SHOTS + 50) {
+			u32 i;
+
+			for (i = 0; i < 25; i++) {
+				shot(s * 1000 + i * 40);
+				wdt_kick();
+				delay_us(40000);
+			}
+		}
+#elif defined(PROBE_SHOTS)
 		if (s >= PROBE_SHOTS)
 			shot(s);
 #endif
