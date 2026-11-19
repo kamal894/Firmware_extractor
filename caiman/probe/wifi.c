@@ -52,6 +52,118 @@ static void pin(u32 n, u32 func, int out)
 	wr32(PIN, (con & ~(0xfu << (4 * n))) | func << (4 * n));
 }
 
+#if PROBE_WIFI >= 8
+extern const u8 wifi_blob_start[] __attribute__((visibility("hidden")));	/* (hidden: no GOT entry to relocate) */
+
+/* dongle RAM through BAR2 (DHD's BAR1): its window at config 0x84 picks the 4 MiB the address is in */
+static u64 bar2_at(u64 cfg, u64 bar2, u32 a)
+{
+	static u32 win = 0xffffffff;
+
+	if ((a & ~0x3fffffu) != win) {
+		win = a & ~0x3fffffu;
+		wr32(cfg + 0x84, win);
+		(void)rd32(cfg + 0x84);
+	}
+	return bar2 + (a & 0x3fffff);
+}
+
+static void dram_w(u64 cfg, u64 bar2, u32 a, u32 v) { wr32(bar2_at(cfg, bar2, a), v); }
+static u32 dram_r(u64 cfg, u64 bar2, u32 a) { return rd32(bar2_at(cfg, bar2, a)); }
+
+/*
+ * PROBE_WIFI=8: the firmware in and the CA7 let go, as Google's bcmdhd does for this chip (CA7 already up and
+ * halted, wifi7: DMP 0x21): RAM 0x2a0000 + 0x320000; last word 0 (dhdpcie_init_shared_addr); firmware at the base;
+ * vars just below the last word and the length token in it (dhdpcie_bus_write_vars); 128 random bytes as the RNG
+ * rTLV below the vars (dhdpcie_wrt_rnd, type 0xfeedc0de, no length checksum); the firmware's first word at address 0
+ * (dhdpcie_bus_write_flops); CA7 DMP control bit 5 (CPUHALT) cleared; then the last word is polled for the
+ * shared-area pointer. Bus master stays off: the firmware cannot write to the phone's RAM.
+ */
+static void wifi_boot(u64 cfg, u64 bar0, u64 bar2)
+{
+	const u32 *hdr = (const u32 *)wifi_blob_start;
+	const u32 base = 0x2a0000, size = 0x320000, last = base + size - 4;
+	u32 fwlen, varlen, v, i, token, addr0, dmp, p = 0;
+	const u8 *fw, *vars;
+	u64 t0;
+
+	if (hdr[0] != 0x31424657) {	/* 'WFB1' */
+		pr("wifi: no firmware blob in the image\n");
+		return;
+	}
+	fwlen = hdr[1];
+	varlen = hdr[2];
+	fw = wifi_blob_start + 16;
+	vars = fw + ((fwlen + 3) & ~3u);
+	pr("wifi: firmware %u bytes, vars %u bytes\n", fwlen, varlen);
+
+	dram_w(cfg, bar2, last, 0);
+	t0 = timer_us();
+	for (i = 0; i < fwlen; i += 4) {
+		u32 w = fw[i] | (i + 1 < fwlen ? fw[i + 1] << 8 : 0) | (i + 2 < fwlen ? fw[i + 2] << 16 : 0) |
+			(i + 3 < fwlen ? (u32)fw[i + 3] << 24 : 0);
+		dram_w(cfg, bar2, base + i, w);
+	}
+	pr("wifi: firmware written in %llu ms; first words %08x %08x, read back %08x %08x\n", (timer_us() - t0) / 1000,
+	   *(const u32 *)fw, *(const u32 *)(fw + 4), dram_r(cfg, bar2, base), dram_r(cfg, bar2, base + 4));
+	v = last - varlen;
+	for (i = 0; i < varlen; i += 4)
+		dram_w(cfg, bar2, v + i, *(const u32 *)(vars + i));
+	token = ((~(varlen / 4) & 0xffff) << 16) | ((varlen / 4) & 0xffff);
+	dram_w(cfg, bar2, last, token);
+	/* RNG rTLV: 128 bytes, then length 0x80, then type, ending at the vars */
+	for (i = 0; i < 128; i += 4) {
+		u64 r = timer_ticks();
+
+		r ^= r >> 13;
+		r *= 0x9e3779b97f4a7c15ULL;
+		dram_w(cfg, bar2, v - 8 - 128 + i, (u32)(r >> 17) ^ (i * 0x01010101u));
+	}
+	dram_w(cfg, bar2, v - 8, 128);
+	dram_w(cfg, bar2, v - 4, 0xfeedc0de);
+	pr("wifi: vars at 0x%x, token 0x%08x at 0x%x, RNG rTLV at 0x%x\n", v, token, last, v - 8 - 128);
+
+	addr0 = dram_r(cfg, bar2, 0);
+	pr("wifi: address 0 reads 0x%08x%s\n", addr0, addr0 == 0xffffffff ? " (secured: the firmware cannot be started so)" : "");
+	if (addr0 == 0xffffffff)
+		return;
+	dram_w(cfg, bar2, 0, *(const u32 *)fw);
+
+	wr32(cfg + 0x80, 0x18006000);
+	(void)rd32(cfg + 0x80);
+	dmp = rd32(bar0 + 0x248);
+	wr32(bar0 + 0x248, dmp & ~0x20u);
+	pr("wifi: CA7 DMP control 0x%x -> 0x%x: the firmware runs\n", dmp, rd32(bar0 + 0x248));
+	wr32(cfg + 0x80, 0x18000000);
+	(void)rd32(cfg + 0x80);
+
+	t0 = timer_us();
+	while (timer_us() - t0 < 5000000) {
+		p = dram_r(cfg, bar2, last);
+		if (p != token && p != 0 && p != 0xffffffff)
+			break;
+		delay_us(1000);
+	}
+	pr("wifi: after %llu ms the last word is 0x%08x%s\n", (timer_us() - t0) / 1000, p,
+	   p == token ? " (still the token: the firmware did not come up)" : "");
+	if (p >= base && p < last) {
+		u32 w[8];
+
+		for (i = 0; i < 8; i++)
+			w[i] = dram_r(cfg, bar2, p + 4 * i);
+		pr("wifi: shared area at 0x%x: flags 0x%08x (version %u), trap 0x%x, assert 0x%x 0x%x line %u, console 0x%x, "
+		   "msgtrace 0x%x\n", p, w[0], w[0] & 0xff, w[1], w[2], w[3], w[4], w[5], w[6]);
+	}
+	/* the ARM halted again before the chip goes off */
+	wr32(cfg + 0x80, 0x18006000);
+	(void)rd32(cfg + 0x80);
+	wr32(bar0 + 0x248, rd32(bar0 + 0x248) | 0x20u);
+	wr32(cfg + 0x80, 0x18000000);
+	(void)rd32(cfg + 0x80);
+	wr32(cfg + 0x84, 0);
+}
+#endif
+
 static u32 elbi(u32 off) { return rd32(0x13120000ULL + off); }
 static void elbi_w(u32 off, u32 v) { wr32(0x13120000ULL + off, v); }
 
@@ -231,6 +343,37 @@ static void wifi_link(void)
 						}
 						wr32(cfg + 0x80, 0x18000000);
 					}
+#if PROBE_WIFI >= 8
+					wifi_boot(cfg, bar[0], bar[1]);
+#endif
+#if PROBE_WIFI >= 7
+					/*
+					 * PROBE_WIFI=7, read only: CA7's and SYSMEM's DMP control (OOBR +0x240/+0x4c0, +8:
+					 * nciutils.c DMP_DMPCTRL_REG_OFFSET; bit 5 CPUHALT, bit 0 clock enable, bit 1 force gated
+					 * clock) and the next words, CA7's own registers, and their nodes' IDM reset words at +0x140,
+					 * +0x144 (offsets inferred, docs/bcm4390-fw-download.md).
+					 */
+					{
+						/* (addresses only: a table of string pointers would need relocations in this image) */
+						static const u32 look[] = { 0x18006248, 0x180064c8, 0x18080000, 0x18088000, 0x18504140,
+									    0x18516140, 0x18505140 };
+						u32 l;
+
+						for (l = 0; l < sizeof(look) / sizeof(look[0]); l++) {
+							wr32(cfg + 0x80, look[l] & ~0xfffu);
+							(void)rd32(cfg + 0x80);
+							for (k = 0; k < 4; k++) {
+								ok = 1;
+								w[k] = safe_rd32(bar[0] + (look[l] & 0xfff) + 4 * k, &ok);
+								if (!ok)
+									w[k] = 0xdeadbeef;
+							}
+							/* (no table of names: the compiler makes one of pointers, which this image cannot have) */
+							pr("wifi: core look 0x%08x: %08x %08x %08x %08x\n", look[l], w[0], w[1], w[2], w[3]);
+						}
+						wr32(cfg + 0x80, 0x18000000);
+					}
+#endif
 					if (bar[1]) {
 						u64 a = 0x5b0000, base;
 

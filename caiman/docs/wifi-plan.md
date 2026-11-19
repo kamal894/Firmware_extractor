@@ -135,3 +135,30 @@
   - D11 x3, rev 89.
   - PMU rev 48, at 0x18018000.
   - GCI rev 32.
+
+## Run wifi7: CA7 is up and halted at hand-off
+
+The CA7 DMP control (0x18006248) reads **0x21**: clock enable plus CPUHALT. SYSMEM DMP reads 0x1. The words at
+node +0x140 read 2. That is the state DHD downloads into without resetting anything.
+
+## Run wifi8 (2026-11-18): **the Wi-Fi firmware runs** (PROBE_WIFI=8, WIFI_BLOB=)
+
+- `tools/wifi_blob.py` packs `fw_bcmdhd.bin_4390_b1` (2516975 bytes) and the vars made from
+  `bcmdhd.cal_USI_G6BB_6327_V27` the way DHD makes them (501 vars, 18004 bytes). `probe/wifi_fw.S` puts the blob in
+  the image.
+- **Download:** all of it through BAR2 with the config 0x84 window, as `wifi_boot()` in `wifi.c` does.
+  1. The last word is set to 0.
+  2. The firmware goes to 0x2a0000. That takes 5.1 s with 32-bit writes, and it reads back the same.
+  3. The vars go to 0x5bb9a8, with token 0xee6a1195 at 0x5bfffc.
+  4. The RNG rTLV (128 bytes, then 0x80, then 0xfeedc0de) goes below the vars.
+  5. Address 0 read 0xb83ef001 (not secured), and the firmware's first word was written there.
+  6. CA7 DMP control went from 0x21 to 0x1.
+- **Result:** 40 ms later the last word holds the **shared-area pointer, 0x0048a14c**. The shared area reads flags
+  0x109 (**version 9**), no trap and no assert. The firmware came up.
+- The bus master stayed off throughout. Afterwards the probe halts the CA7 again and powers the chip off.
+- **Next, the kernel side:**
+  - DMA buffers and the message rings (DHD msgbuf, shared version 9);
+  - bus master on, behind the right S2MPU/IOMMU set-up for PCIe;
+  - MSI or polling;
+  - then the ioctls, the CLM blob, a scan.
+  - The download itself can be made faster with memcpy-sized writes.

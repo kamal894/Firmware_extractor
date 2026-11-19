@@ -102,6 +102,11 @@ endif
 ifdef MALI_FW
 SRCS += $(SRCS_FW)
 endif
+# WIFI_BLOB=path: the BCM4390 firmware + NVRAM (tools/wifi_blob.py) in the image, for PROBE_WIFI >= 8 (wifi_fw.S)
+ifdef WIFI_BLOB
+CFLAGS += -DWIFI_BLOB_PATH='"$(WIFI_BLOB)"'
+SRCS += wifi_fw.S
+endif
 OBJS := $(patsubst %,$(OUT)/%.o,$(SRCS))
 
 all: $(OUT)/probe.Image $(if $(filter caiman,$(PLATFORM)),$(if $(filter 0,$(LOADER)),$(OUT)/probe-boot.img))
