@@ -181,6 +181,8 @@ static int hs_ok;			/* the link is in HS gear */
 static int sw_flushed;			/* dc_all_sw() done with the D-cache off: reads need no maintenance of their buffer */
 static u64 busy_ticks;			/* spent waiting for the device (request()), for the load's timing line */
 static u32 super_lun_g = 0xff;		/* where ufs_read_test() found super */
+static u32 bootb_lun = 0xff;		/* where ufs_read_test() found boot_b: the only place ufs_write() may write */
+static u64 bootb_lba, bootb_blocks;
 static u64 super_lba_g, super_blocks_g;
 
 static void put_be32(u8 *p, u32 v)
@@ -695,6 +697,168 @@ static int ufs_read(u32 lun, u32 lba, u32 nblocks, u64 dst)
 	}
 	return -4;
 }
+
+#if PROBE_UFS >= 2 && defined(PROBE_UFSLOG)
+/*
+ * WRITE(10) of nblocks (<= 256) 4 KiB blocks from src. Refused unless the whole range lies inside boot_b as the
+ * GPT names it on LUN 0 (64 MiB, slot b: not bootable on this phone, its Android contents backed up on the SSD):
+ * the log area, and nothing else, is ever written.
+ */
+static int ufs_write(u32 lun, u32 lba, u32 nblocks, u64 src)
+{
+	u32 i, len = nblocks * UFS_BLOCK;
+	int r = -1, tries;
+
+	if (!nblocks || nblocks > UFS_XFER_BLOCKS || bootb_lun != 0 || lun != bootb_lun || lba < bootb_lba ||
+	    (u64)lba + nblocks > bootb_lba + bootb_blocks) {
+		pr("ufs: write lun %u lba %u x%u REFUSED: outside boot_b\n", lun, lba, nblocks);
+		return -7;
+	}
+	dc_civac((const void *)(uptr)src, len);	/* the controller reads memory: our data must be there */
+	for (tries = 0; tries < 3; tries++) {
+		upiu_header(0x01, 0x20, (u8)lun);	/* COMMAND, W */
+		put_be32(q_ucd + 12, len);
+		q_ucd[16] = 0x2a;				/* WRITE(10) */
+		put_be32(q_ucd + 18, lba);
+		q_ucd[23] = (u8)(nblocks >> 8);
+		q_ucd[24] = (u8)nblocks;
+		for (i = 0; i < nblocks; i++) {
+			u8 *e = q_ucd + 96 + 16 * i;
+			u64 a = src + (u64)i * UFS_BLOCK;
+
+			put_le32(e, (u32)a);
+			put_le32(e + 4, (u32)(a >> 32));
+			put_le32(e + 8, 0);
+			put_le32(e + 12, UFS_BLOCK - 1);
+		}
+		r = request(1, nblocks, 2000);
+		if (r)
+			return r;
+		if (q_ucd[32] == 0x21 && !q_ucd[32 + 5] && !q_ucd[32 + 7])
+			return 0;
+		pr("ufs:   write lun %u lba %u x%u: response UPIU 0x%02x response 0x%02x status 0x%02x\n", lun, lba,
+		   nblocks, q_ucd[32], q_ucd[32 + 5], q_ucd[32 + 7]);
+		if (q_ucd[32 + 7] != 0x02)
+			return -4;
+	}
+	return -4;
+}
+
+/*
+ * The previous boot's log (loader + kernel, the ramoops console zone, Linux's persistent_ram_buffer: "DBGC",
+ * start, size, data) copied aside before this boot's log reuses the zone, then saved into boot_b:
+ *   block 0                superblock "HKLOGSB1": version 1, 31 slots, next slot, saves so far
+ *   block 512 * (k + 1)    slot k: header "HKLOGSL1": save number, length, CRC-32, then the text from block +1
+ * docs/self-logging.md, tools/ufslog.py reads it back.
+ */
+#define LOG_SLOTS	31u
+#define LOG_SLOT_BLOCKS	512u
+#define LOG_MAX		((LOG_SLOT_BLOCKS - 1) * UFS_BLOCK)
+
+static u8 prev_log[LOG_MAX] __attribute__((aligned(4096)));
+static u8 log_hdr[UFS_BLOCK] __attribute__((aligned(4096)));
+static u32 prev_len;
+
+void ufslog_snapshot(u64 zone_base, u64 zone_size)
+{
+	const volatile u32 *h = (const volatile u32 *)(uptr)zone_base;
+	const volatile u8 *d = (const volatile u8 *)(uptr)(zone_base + 12);
+	u64 cap = zone_size - 12;
+	u32 start = h[1], size = h[2], n = 0, i;
+
+	prev_len = 0;
+	if (h[0] != 0x43474244u || size > cap || start > cap || !size)
+		return;
+	/* persistent_ram_save_old's order: data[start..size), then data[0..start) */
+	for (i = start; i < size && n < LOG_MAX; i++)
+		prev_log[n++] = d[i];
+	for (i = 0; i < start && n < LOG_MAX; i++)
+		prev_log[n++] = d[i];
+	prev_len = n;
+}
+
+static u32 crc32(const u8 *p, u32 n)
+{
+	u32 c = 0xffffffffu, k;
+
+	while (n--) {
+		c ^= *p++;
+		for (k = 0; k < 8; k++)
+			c = (c >> 1) ^ (0xedb88320u & (0u - (c & 1)));
+	}
+	return ~c;
+}
+
+static void ufslog_save(void)
+{
+	const u64 buf = (u64)(uptr)iobuf;
+	const volatile u8 *b = (const volatile u8 *)(uptr)buf;
+	u32 next = 0, saves = 0, slot, lba, blocks, off, i, crc;
+	int r;
+
+	pr("\n--- self-logging: the previous boot's log into boot_b ---\n");
+	if (bootb_lun != 0 || bootb_blocks != 16384) {
+		pr("ufslog: boot_b not found as 64 MiB on LUN 0 (lun %u, %llu blocks): nothing written\n", bootb_lun,
+		   bootb_blocks);
+		return;
+	}
+	if (!prev_len) {
+		pr("ufslog: no previous log in RAM (cold boot or a reset that lost it): nothing to save\n");
+		return;
+	}
+	if (ufs_read(0, (u32)bootb_lba, 1, buf)) {
+		pr("ufslog: boot_b block 0 not read: nothing written\n");
+		return;
+	}
+	if (!memcmp((const void *)(uptr)buf, "HKLOGSB1", 8)) {
+		next = le32(b + 12);
+		saves = le32(b + 16);
+	} else if (!memcmp((const void *)(uptr)buf, "ANDROID!", 8) && le32(b + 12) == 124) {
+		pr("ufslog: boot_b holds our old slot-b test image (ramdisk 124 bytes): starting the log area\n");
+	} else {
+		pr("ufslog: boot_b holds something that is not ours: NOT writing\n");
+		return;
+	}
+	slot = next % LOG_SLOTS;
+	lba = (u32)bootb_lba + LOG_SLOT_BLOCKS * (slot + 1);
+	crc = crc32(prev_log, prev_len);
+	memset(log_hdr, 0, sizeof(log_hdr));
+	memcpy(log_hdr, "HKLOGSL1", 8);
+	put_le32(log_hdr + 8, saves + 1);
+	put_le32(log_hdr + 12, prev_len);
+	put_le32(log_hdr + 16, crc);
+	memcpy(log_hdr + 32, PROBE_VERSION, strlen(PROBE_VERSION) < 64 ? strlen(PROBE_VERSION) : 63);
+	blocks = (prev_len + UFS_BLOCK - 1) / UFS_BLOCK;
+	for (i = prev_len; i < blocks * UFS_BLOCK; i++)
+		prev_log[i] = 0;
+	r = 0;
+	for (off = 0; off < blocks && !r; off += UFS_XFER_BLOCKS) {
+		u32 n = blocks - off > UFS_XFER_BLOCKS ? UFS_XFER_BLOCKS : blocks - off;
+
+		r = ufs_write(0, lba + 1 + off, n, (u64)(uptr)(prev_log + (u64)off * UFS_BLOCK));
+	}
+	if (!r)
+		r = ufs_write(0, lba, 1, (u64)(uptr)log_hdr);
+	if (r) {
+		pr("ufslog: write failed (%d): superblock left as it was\n", r);
+		return;
+	}
+	/* read the header back before the superblock points at it */
+	if (ufs_read(0, lba, 1, buf) || memcmp((const void *)(uptr)buf, "HKLOGSL1", 8) || le32(b + 16) != crc) {
+		pr("ufslog: read-back of slot %u differs: superblock left as it was\n", slot);
+		return;
+	}
+	memset(log_hdr, 0, sizeof(log_hdr));
+	memcpy(log_hdr, "HKLOGSB1", 8);
+	put_le32(log_hdr + 8, 1);
+	put_le32(log_hdr + 12, next + 1);
+	put_le32(log_hdr + 16, saves + 1);
+	put_le32(log_hdr + 20, LOG_SLOTS);
+	r = ufs_write(0, (u32)bootb_lba, 1, (u64)(uptr)log_hdr);
+	pr("ufslog: save %u: %u bytes (CRC-32 0x%08x) into slot %u at lba %u; superblock %s\n", saves + 1, prev_len,
+	   crc, slot, lba, r ? "NOT updated" : "updated");
+}
+#endif
 
 /* PHY isolation (PMU, Google's exynos_ufs_ctrl_phy_pwr) and the device's VCC (gpp0-1) */
 static void board_power(void)
@@ -1272,6 +1436,11 @@ static void ufs_read_test(void)
 			name[36] = 0;
 			pr("ufs:   %-24s lba %8llu .. %8llu  %6llu MiB\n", name, first, last,
 			   ((last - first + 1) * UFS_BLOCK) >> 20);
+			if (!strcmp(name, "boot_b") && bootb_lun == 0xff) {
+				bootb_lun = lun;
+				bootb_lba = first;
+				bootb_blocks = last - first + 1;
+			}
 			if (!strcmp(name, "super")) {
 				super_lun = lun;
 				super_lba = first;
@@ -1280,6 +1449,10 @@ static void ufs_read_test(void)
 		}
 		log_flush();
 	}
+#ifdef PROBE_UFSLOG
+	ufslog_save();
+	log_flush();
+#endif
 	if (super_lun == 0xff) {
 		pr("ufs: no partition named super found\n");
 		return;

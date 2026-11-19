@@ -154,6 +154,7 @@ void __attribute__((noreturn)) probe_finish(const char *why);
 
 void display_probe(void);
 void ufs_probe(void);
+void ufslog_snapshot(u64 zone_base, u64 zone_size);
 void touch_probe(void);
 void dvfs_probe(void);
 void gpu_probe(void);		/* gpu.c, PROBE_GPU */

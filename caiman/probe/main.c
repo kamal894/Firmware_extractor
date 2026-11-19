@@ -427,6 +427,9 @@ void c_entry(u64 dtb, u64 load_base, u64 cur_el)
 	    !overlaps(def.base, def.size, load_base, g.image_size) &&
 	    !(g.have_fdt && overlaps(def.base, def.size, dtb, g.fdt.totalsize))) {
 		g.console = def;
+#ifdef PROBE_UFSLOG
+		ufslog_snapshot(def.base, def.size);	/* the previous boot's log, before ours overwrites it */
+#endif
 		log_attach_ramoops(def.base, def.size);
 	}
 
