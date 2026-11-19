@@ -102,6 +102,37 @@ static void wifi_link(void)
 	pr("\n");
 	pr("wifi: DBI link control/status 0x%08x (speed %u, width x%u)\n", rd32(DBI + 0x80),
 	   (rd32(DBI + 0x80) >> 16) & 0xf, (rd32(DBI + 0x80) >> 20) & 0x3f);
+#if PROBE_WIFI >= 4
+	/*
+	 * PROBE_WIFI=4: the endpoint's config space through outbound iATU region 0 as CFG0 to bus 1 device 0
+	 * (exynos_pcie_rc_prog_viewport_cfg0; unrolled iATU at DBI+0x300000, pcie-exynos-rc.h), bridge buses 0/1/1.
+	 */
+	if (st == 0x11) {
+		int ok;
+		u32 k, w[16];
+
+		wr32(DBI + 0x18, 0x00010100);			/* primary 0, secondary 1, subordinate 1 */
+		wr32(DBI + 0x4, rd32(DBI + 0x4) | 0x6);		/* memory + bus master on the bridge */
+		wr32(DBI + 0x300008, 0x60ffe000);
+		wr32(DBI + 0x30000c, 0);
+		wr32(DBI + 0x300010, 0x60ffe000 + 0x2000 - 1);
+		wr32(DBI + 0x300014, 1u << 24);			/* bus 1, device 0, function 0 */
+		wr32(DBI + 0x300018, 0);
+		wr32(DBI + 0x300000, 0x4);			/* CFG0 */
+		wr32(DBI + 0x300004, 0x80000000u);		/* enable */
+		(void)rd32(DBI + 0x300004);
+		for (k = 0; k < 16; k++) {
+			ok = 1;
+			w[k] = safe_rd32(0x60ffe000ULL + 4 * k, &ok);
+			if (!ok)
+				w[k] = 0xdeadbeef;
+		}
+		pr("wifi: endpoint 01:00.0: vendor 0x%04x device 0x%04x, class 0x%06x rev %u, header %u\n", w[0] & 0xffff,
+		   w[0] >> 16, w[2] >> 8, w[2] & 0xff, (w[3] >> 16) & 0x7f);
+		for (k = 0; k < 16; k += 4)
+			pr("wifi: endpoint +0x%02x: %08x %08x %08x %08x\n", 4 * k, w[k], w[k + 1], w[k + 2], w[k + 3]);
+	}
+#endif
 	/* leave the chip off again and the link down */
 	elbi_w(0x54, 0);
 	pin(0, 1, 0);

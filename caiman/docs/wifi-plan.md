@@ -61,3 +61,18 @@
 - **LTSSM: 0x2, then 0x11 = L0 after 40 us.** DBI link status 0x30110000: Gen1 x1, data link active.
 - Afterwards the probe drops the link and turns the chip off again.
 - **Next:** iATU CFG0 to bus 1 at 0x60ffe000, then read the endpoint's vendor:device (14e4:4438 expected).
+
+## Run wifi4: the chip answers over PCIe (PROBE_WIFI=4)
+
+- **How it was read:** outbound iATU region 0, CFG0 to bus 1 at 0x60ffe000 (unrolled iATU at DBI+0x300000), with
+  the bridge's buses set to 0/1/1.
+- **Endpoint 01:00.0:** vendor **0x14e4**, device **0x4438**, class 0x028000 (network controller), rev 5, header 0.
+  The subsystem is 14e4:**4390**, which confirms the BCM4390.
+- **BARs:**
+  - BAR0 = 0x4, 64-bit memory;
+  - BAR2 = 0x4, 64-bit memory;
+  - BAR4 = 0xc, 64-bit prefetchable memory.
+  - Capability pointer 0x48, interrupt pin 1.
+- **Next:** size and assign the BARs inside the RC's memory window (DT ranges of pcie@13120000), set up outbound
+  iATU region 1 as MEM, and read the chip's own registers through BAR0 (Broadcom ChipCommon: chip ID). After that
+  comes the DHD port in the kernel: firmware download and the message rings.
