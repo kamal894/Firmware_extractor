@@ -871,6 +871,21 @@ void xnu_boot(void)
 		n = append(ba->commandLine, n, arg);
 	}
 #endif
+#if PROBE_WIFI >= 13
+	if (wifi_handoff_pa()) {
+		/* the Wi-Fi chip, up and handed over (wifi.c, wifi_handoff.h), for the kernel's drivers/wifi/hakios.bcm4390.c */
+		char arg[64] = " bcm4390_shared_pa=0x";
+		u64 pa = wifi_handoff_pa();
+		u32 k = strlen(arg);
+		int d;
+
+		for (d = 60; d >= 0; d -= 4)
+			if ((pa >> d) || d == 0 || k > 21)
+				arg[k++] = "0123456789abcdef"[(pa >> d) & 15];
+		arg[k] = 0;
+		n = append(ba->commandLine, n, arg);
+	}
+#endif
 	/* the panel's DSI (DSIM0, command mode, as the bootloader left it): the kernel turns the panel off and on with it */
 	n = append(ba->commandLine, n, " panel_dsim=0x19440000");
 	pr("xnu: device tree 0x%llx (%u bytes), boot_args 0x%llx, top 0x%llx\n", dt_pa, dt_len, ba_pa,

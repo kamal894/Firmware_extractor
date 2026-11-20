@@ -7,6 +7,7 @@
  * first 0x200 bytes of it are shown. Every first read of a block is one that survives a block whose clock is off.
  */
 #include "probe.h"
+#include "wifi_handoff.h"
 
 #if PROBE_WIFI >= 3
 #define ELBI	((void *)0x13120000ULL)
@@ -118,7 +119,7 @@ static u32 cons_print(u64 cfg, u64 bar2, u32 cons, u32 from)
 #define WIFI_DB0	(WIFI_PCIEREGS + 0x140)	/* hosttodev0doorbell0: ring updates */
 #define WIFI_DB1	(WIFI_PCIEREGS + 0x144)	/* hosttodev0doorbell1: host ready (dhd_bus_hostready) */
 
-static u8 wifi_mem[0x114000] __attribute__((aligned(4096)));	/* wifi27: room for 480 RX buffers */
+static u8 wifi_mem[0x13d000] __attribute__((aligned(4096)));	/* wifi27: room for 480 RX buffers; then TX (PROBE_WIFI=13) */
 
 enum { R_CTRL_SUB, R_RXPOST, R_CTRL_CPL, R_TXCPL, R_RXCPL };
 static const u16 ring_items[5] = { 64, 512, 64, 1024, 512 };
@@ -134,7 +135,11 @@ static const u32 ring_off[5] = { 0x00000, 0x02000, 0x06000, 0x07000, 0x0d000 };
 #define N_EVT		8
 #define M_RX		0x24000	/* receive buffers: 32 x 2 KiB on the RX post ring (PROBE_WIFI >= 12): the chip DMAs
 				 * received data frames, EAPOL too, straight into host buffers */
-#define N_RX		480	/* (ring 1 holds 512) wifi25: wifi25: 32 left the firmware in its reserve mode ("pciedev_use_resv_rxpost"), dropping data */
+#define M_FLOWRING	0x114000	/* PROBE_WIFI=13: a TX flow ring for the kernel, 0x8000 bytes */
+#define M_TX		0x11c000	/* ... and its buffers, 64 x 2 KiB */
+#define N_TX		64
+#define M_HANDOFF	0x13c000	/* the page for the kernel (wifi_handoff.h) */
+#define N_RX		480	/* (ring 1 holds 512) wifi25: 32 left the firmware in its reserve mode ("pciedev_use_resv_rxpost"), dropping data */
 
 /* the PCIe core at BAR0 + 8K: only the doorbells and the DAR block (+0xa00..) may be read; other offsets (+0x004,
  * +0x020..) are secure on this chip, and reading them from the host makes the firmware trap ("AXI Slave Err ...
@@ -451,6 +456,94 @@ static int wifi_iovar(struct mb *m, int set, const char *name, const void *val, 
 	return r;
 }
 
+#if PROBE_WIFI >= 13
+static int wifi_handed;	/* the chip is the kernel's now: leave it running (wifi_link's teardown skipped) */
+
+u64 wifi_handoff_pa(void)
+{
+	return wifi_handed ? mem_pa(M_HANDOFF) : 0;
+}
+
+/*
+ * PROBE_WIFI=13: the chip, up, to the kernel. The events a station needs, the RX pool (480, published 32 at a time:
+ * fewer leave the firmware dropping every frame, docs/wifi-plan.md step 12) and bus:host_access, then the page
+ * that says where everything is (wifi_handoff.h). Returns 0 when handed over.
+ */
+static int wifi_handoff(struct mb *m, u64 cfg, u64 bar2, u32 sh, u32 ri, u8 *mask)
+{
+	static const u8 ev[13] = { 0, 1, 3, 5, 6, 7, 11, 12, 16, 46, 47, 54, 69 };
+	struct wifi_handoff *h = (struct wifi_handoff *)(wifi_mem + M_HANDOFF);
+	u32 i, v;
+	int r;
+
+	for (i = 0; i < 27; i++)
+		mask[4 + i] = 0;
+	for (i = 0; i < 13; i++)
+		mask[4 + ev[i] / 8] |= 1 << (ev[i] % 8);
+	r = wifi_iovar(m, 1, "event_msgs_ext", mask, 4 + 27, 0, 0);
+	pr("wifi: handoff: station events %d\n", r);
+	for (i = 0; i < N_RX; i++)
+		rx_post(m, i, (i & 31) == 31);
+	v = 1;
+	r = wifi_iovar(m, 1, "bus:host_access", &v, 4, 0, 0);
+	pr("wifi: handoff: %u RX buffers posted, bus:host_access %d\n", N_RX, r);
+	for (i = 0; i < sizeof(*h); i++)
+		((u8 *)h)[i] = 0;
+	h->magic = WIFI_HANDOFF_MAGIC;
+	h->version = WIFI_HANDOFF_VERSION;
+	h->size = sizeof(*h);
+	h->mem_pa = mem_pa(0);
+	h->mem_size = sizeof(wifi_mem);
+	h->cfg_pa = cfg;
+	h->bar0_pa = WIFI_BAR0;
+	h->bar2_pa = bar2;
+	h->bar2_win = win;
+	h->sh = sh;
+	h->ri = ri;
+	h->h2dw = m->h2dw;
+	h->h2dr = m->h2dr;
+	h->d2hw = m->d2hw;
+	h->d2hr = m->d2hr;
+	h->cons = m->cons;
+	h->cidx = m->cidx;
+	for (i = 0; i < 5; i++) {
+		h->ring_off[i] = ring_off[i];
+		h->ring_items[i] = ring_items[i];
+		h->ring_len[i] = ring_len[i];
+	}
+	h->m_idx = M_IDX;
+	h->m_ioctbuf = M_IOCTBUF;
+	h->m_resp = M_RESP;
+	h->m_evt = M_EVT;
+	h->n_evt = N_EVT;
+	h->m_rx = M_RX;
+	h->n_rx = N_RX;
+	h->m_tx = M_TX;
+	h->n_tx = N_TX;
+	h->m_flowring = M_FLOWRING;
+	h->flowring_items = 0x8000 / 48;
+	h->wr = m->wr;
+	h->rd = m->rd;
+	h->rxwr = m->rxwr;
+	h->rxrd = m->rxrd;
+	h->txcrd = 0;
+	h->trans = m->trans;
+	h->h2d_epoch = m->h2d_epoch;
+	h->d2h_epoch = m->d2h_epoch;
+	h->rx_epoch = m->rx_epoch;
+	h->rxc_epoch = m->rxc_epoch;
+	h->txc_epoch = 1;
+	r = wifi_iovar(m, 0, "cur_etheraddr", 0, 0, h->mac, 6);
+	h->max_h2d = dram_r(cfg, bar2, ri + 0x34) >> 16;	/* LE16 +0x36, +0x38 */
+	h->max_d2h = dram_r(cfg, bar2, ri + 0x38) & 0xffff;
+	pr("wifi: handoff: page at 0x%llx, MAC %02x:%02x:%02x:xx:xx:xx (%d), rings H2D %u D2H %u; the chip is the kernel's\n",
+	   mem_pa(M_HANDOFF), h->mac[0], h->mac[1], h->mac[2], r, h->max_h2d, h->max_d2h);
+	__asm__ volatile("dsb sy" ::: "memory");
+	wifi_handed = 1;
+	return 0;
+}
+#endif
+
 static void wifi_msgbuf(u64 cfg, u64 bar2, u32 sh, u32 ri, u32 cons, u32 cidx)
 {
 	struct mb mb = { 0 }, *m = &mb;
@@ -610,6 +703,10 @@ static void wifi_msgbuf(u64 cfg, u64 bar2, u32 sh, u32 ri, u32 cons, u32 cidx)
 		pr("wifi: WLC_UP: status %d\n", r);
 		d2h_poll(m, 300000, never);
 		m->cidx = cons_print(cfg, bar2, cons, m->cidx);
+#if PROBE_WIFI >= 13
+		if (wifi_handoff(m, cfg, bar2, sh, ri, mask) == 0)
+			return;
+#endif
 		{
 			u8 sv[8] = { 0 };
 
@@ -1238,6 +1335,10 @@ static void wifi_link(void)
 					}
 #if PROBE_WIFI >= 8
 					wifi_boot(cfg, bar[0], bar[1]);
+#endif
+#if PROBE_WIFI >= 13
+					if (wifi_handed)
+						return;	/* the chip stays up, its link too: the kernel's now */
 #endif
 #if PROBE_WIFI >= 7
 					/*
