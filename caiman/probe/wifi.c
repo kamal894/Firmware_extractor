@@ -622,6 +622,7 @@ static void wifi_msgbuf(u64 cfg, u64 bar2, u32 sh, u32 ri, u32 cons, u32 cidx)
 			pmk[0] = (u8)kl;
 			pmk[2] = kl == 32 ? 0 : 1;
 			r = wifi_ioctl(m, 268, pmk, 263, 263);
+			pr("wifi: join: PMK (%s, %u bytes): %d\n", kl == 32 ? "raw" : "passphrase", kl, r);
 			for (i = 0; i < sizeof(pmk); i++)	/* no copy of the key left behind */
 				pmk[i] = 0;
 			for (i = 0; i < 0x1000; i++)
@@ -651,6 +652,52 @@ static void wifi_msgbuf(u64 cfg, u64 bar2, u32 sh, u32 ri, u32 cons, u32 cidx)
 				   (timer_us() - t0) / 1000, m->link, m->keyed, m->failed);
 			pr("wifi: join: %u frames received; RX post: host wr %u, firmware rd TCM %u host %u\n", m->rx_count, m->rxwr,
 			   dram_r(cfg, bar2, m->h2dr + 4), *(volatile u32 *)(wifi_mem + M_IDX + 0x100 + 4));
+			pr("wifi: join: RX complete ring: firmware wr TCM %u host %u, host rd %u\n", dram_r(cfg, bar2, m->d2hw + 8),
+			   *(volatile u32 *)(wifi_mem + M_IDX + 0x200 + 8), m->rxrd);
+			{
+				/* wifi13: what the firmware itself holds and sent: security read back, the association's IEs */
+				static u8 ib[1024];
+				u32 n, k;
+
+				v = 0;
+				r = wifi_ioctl(m, 133, &v, 4, 4);	/* WLC_GET_WSEC */
+				pr("wifi: join: wsec now 0x%x (%d)", v, r);
+				v = 0;
+				r = wifi_ioctl(m, 164, &v, 4, 4);	/* WLC_GET_WPA_AUTH */
+				pr(", wpa_auth 0x%x (%d)", v, r);
+				for (i = 0; i < 8; i++)
+					ib[i] = 0;
+				r = wifi_iovar(m, 0, "sup_wpa", 0, 0, ib, 4);
+				pr(", sup_wpa %u (%d)\n", ib[0] | ib[1] << 8, r);
+				for (i = 0; i < sizeof(ib); i++)
+					ib[i] = 0;
+				r = wifi_iovar(m, 0, "assoc_info", 0, 0, ib, 64);
+				pr("wifi: join: assoc_info (%d): req %u bytes, resp %u bytes, flags 0x%x\n", r,
+				   ib[0] | ib[1] << 8 | ib[2] << 16, ib[4] | ib[5] << 8 | ib[6] << 16, ib[8] | ib[9] << 8);
+				n = ib[0] | ib[1] << 8;
+				for (i = 0; i < sizeof(ib); i++)
+					ib[i] = 0;
+				r = wifi_iovar(m, 0, "assoc_req_ies", 0, 0, ib, sizeof(ib));
+				if (n > sizeof(ib))
+					n = sizeof(ib);
+				pr("wifi: join: assoc_req_ies (%d):", r);
+				/* each IE's id and length; the SSID (0) left out, the RSN (48) printed whole */
+				for (i = 0; i + 2 <= n && ib[i + 1] + i + 2 <= n; i += 2 + ib[i + 1]) {
+					pr(" %u/%u", ib[i], ib[i + 1]);
+					if (i > 900)
+						break;
+				}
+				pr("\n");
+				for (i = 0; i + 2 <= n && ib[i + 1] + i + 2 <= n; i += 2 + ib[i + 1])
+					if (ib[i] == 48) {
+						pr("wifi: join: our RSN IE:");
+						for (k = 0; k < ib[i + 1] + 2u; k++)
+							pr(" %02x", ib[i + k]);
+						pr("\n");
+					}
+				for (i = 0; i < sizeof(ib); i++)
+					ib[i] = 0;
+			}
 join_out:
 			m->cidx = cons_print(cfg, bar2, cons, m->cidx);
 		}
