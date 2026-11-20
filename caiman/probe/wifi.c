@@ -662,7 +662,8 @@ static void wifi_msgbuf(u64 cfg, u64 bar2, u32 sh, u32 ri, u32 cons, u32 cidx)
 				kl--;
 			while (sl && (wifi_ssid_start[sl - 1] == '\n' || wifi_ssid_start[sl - 1] == '\r'))
 				sl--;
-			if (sl > 32 || kl < 8 || kl > 64) {
+			/* wifi22: an empty key file means an open network (no wsec, no AKM, no supplicant, no key) */
+			if (sl > 32 || (kl && kl < 8) || kl > 64) {
 				pr("wifi: join: SSID length %u or passphrase length %u out of range\n", sl, kl);
 				goto join_out;
 			}
@@ -676,6 +677,10 @@ static void wifi_msgbuf(u64 cfg, u64 bar2, u32 sh, u32 ri, u32 cons, u32 cidx)
 			r = wifi_iovar(m, 1, "event_msgs_ext", mask, 4 + 27, 0, 0);
 			pr("wifi: join: event_msgs_ext %d\n", r);
 			/* the RX pool first, then bus:host_access=1, as bcmdhd does before its preinit (docs/wifi-join-analysis.md) */
+			/* wifi23: the buffers filled with 0xa5 first, to see whether the chip writes any of them at all */
+			for (i = 0; i < N_RX * 2048; i++)
+				wifi_mem[M_RX + i] = 0xa5;
+			__asm__ volatile("dsb sy" ::: "memory");
 			for (i = 0; i < N_RX; i++)
 				rx_post(m, i, i == N_RX - 1);
 			v = 1;
@@ -688,16 +693,16 @@ static void wifi_msgbuf(u64 cfg, u64 bar2, u32 sh, u32 ri, u32 cons, u32 cidx)
 			v = 0;
 			r = wifi_ioctl(m, 22, &v, 4, 4);	/* WLC_SET_AUTH: open */
 			pr("wifi: join: auth open: %d\n", r);
-			v = 4;
-			r = wifi_ioctl(m, 134, &v, 4, 4);	/* WLC_SET_WSEC: AES_ENABLED */
-			pr("wifi: join: wsec AES: %d\n", r);
-			v = 0x80;
-			r = wifi_ioctl(m, 165, &v, 4, 4);	/* WLC_SET_WPA_AUTH: WPA2_AUTH_PSK */
-			pr("wifi: join: wpa_auth PSK: %d\n", r);
+			v = kl ? 4 : 0;
+			r = wifi_ioctl(m, 134, &v, 4, 4);	/* WLC_SET_WSEC: AES_ENABLED (or none) */
+			pr("wifi: join: wsec 0x%x: %d\n", v, r);
+			v = kl ? 0x80 : 0;
+			r = wifi_ioctl(m, 165, &v, 4, 4);	/* WLC_SET_WPA_AUTH: WPA2_AUTH_PSK (or none) */
+			pr("wifi: join: wpa_auth 0x%x: %d\n", v, r);
 			/* wifi19, an observation: the dongle's supplicant off, so M1 (if it comes) reaches the host */
-			v = 1;
+			v = kl ? 1 : 0;
 			r = wifi_iovar(m, 1, "sup_wpa", &v, 4, 0, 0);
-			pr("wifi: join: sup_wpa 1: %d\n", r);
+			pr("wifi: join: sup_wpa %u: %d\n", v, r);
 			{
 				/*
 				 * wifi14: the network is a Wi-Fi 7 multi-link one, and Android joins it with SAE over three links;
@@ -738,7 +743,7 @@ static void wifi_msgbuf(u64 cfg, u64 bar2, u32 sh, u32 ri, u32 cons, u32 cidx)
 				pmk[i] = i >= 4 && i < 4 + kl ? wifi_psk_start[i - 4] : 0;
 			pmk[0] = (u8)kl;
 			pmk[2] = kl == 32 ? 0 : 1;
-			r = wifi_ioctl(m, 268, pmk, 263, 263);
+			r = kl ? wifi_ioctl(m, 268, pmk, 263, 263) : 0;
 			pr("wifi: join: PMK (%s, %u bytes): %d\n", kl == 32 ? "raw" : "passphrase", kl, r);
 			for (i = 0; i < sizeof(pmk); i++)	/* no copy of the key left behind */
 				pmk[i] = 0;
@@ -748,6 +753,7 @@ static void wifi_msgbuf(u64 cfg, u64 bar2, u32 sh, u32 ri, u32 cons, u32 cidx)
 				ssid[i] = i >= 4 && i < 4 + sl ? wifi_ssid_start[i - 4] : 0;
 			ssid[0] = (u8)sl;
 			m->link = m->keyed = m->failed = 0;
+			m->keyed = !kl;		/* open: the link alone */
 			t0 = timer_us();
 			/*
 			 * wifi15: pinned to the network's best 2.4 GHz BSS, as wl_join_params_t (wlc_ssid_t, then
@@ -785,7 +791,7 @@ static void wifi_msgbuf(u64 cfg, u64 bar2, u32 sh, u32 ri, u32 cons, u32 cidx)
 				wifi_ioctl(m, 127, &rssi, 4, 4);	/* WLC_GET_RSSI */
 				pr("wifi: JOINED in %llu ms: BSSID %02x:%02x:%02x:%02x:%02x:%02x, RSSI %d dBm, WPA2 keys in place\n",
 				   (timer_us() - t0) / 1000, bssid[0], bssid[1], bssid[2], bssid[3], bssid[4], bssid[5], rssi);
-				d2h_poll(m, 3000000, never);	/* 3 s on the network */
+				d2h_poll(m, kl ? 3000000 : 15000000, never);	/* 3 s on the network (open: 15 s of whatever comes) */
 				v = 0;
 				r = wifi_ioctl(m, 52, &v, 4, 4);	/* WLC_DISASSOC: leave cleanly */
 				pr("wifi: join: left the network, status %d\n", r);
@@ -795,6 +801,29 @@ static void wifi_msgbuf(u64 cfg, u64 bar2, u32 sh, u32 ri, u32 cons, u32 cidx)
 				   (timer_us() - t0) / 1000, m->link, m->keyed, m->failed);
 			pr("wifi: join: %u frames received; RX post: host wr %u, firmware rd TCM %u host %u\n", m->rx_count, m->rxwr,
 			   dram_r(cfg, bar2, m->h2dr + 4), *(volatile u32 *)(wifi_mem + M_IDX + 0x100 + 4));
+			{
+				u32 b, k, n = 0, first = N_RX;
+
+				for (b = 0; b < N_RX; b++) {
+					for (k = 0; k < 2048 && wifi_mem[M_RX + 2048 * b + k] == 0xa5; k++)
+						;
+					if (k < 2048) {
+						n++;
+						first = first == N_RX ? b : first;
+					}
+				}
+				pr("wifi: join: %u of %u RX buffers written by the chip\n", n, N_RX);
+				for (k = 0; first < N_RX && k < 96; k += 16)
+					pr("wifi:   buffer %u +%02u: %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x\n",
+					   first, k, wifi_mem[M_RX + 2048 * first + k], wifi_mem[M_RX + 2048 * first + k + 1],
+					   wifi_mem[M_RX + 2048 * first + k + 2], wifi_mem[M_RX + 2048 * first + k + 3],
+					   wifi_mem[M_RX + 2048 * first + k + 4], wifi_mem[M_RX + 2048 * first + k + 5],
+					   wifi_mem[M_RX + 2048 * first + k + 6], wifi_mem[M_RX + 2048 * first + k + 7],
+					   wifi_mem[M_RX + 2048 * first + k + 8], wifi_mem[M_RX + 2048 * first + k + 9],
+					   wifi_mem[M_RX + 2048 * first + k + 10], wifi_mem[M_RX + 2048 * first + k + 11],
+					   wifi_mem[M_RX + 2048 * first + k + 12], wifi_mem[M_RX + 2048 * first + k + 13],
+					   wifi_mem[M_RX + 2048 * first + k + 14], wifi_mem[M_RX + 2048 * first + k + 15]);
+			}
 			pr("wifi: join: RX complete ring: firmware wr TCM %u host %u, host rd %u\n", dram_r(cfg, bar2, m->d2hw + 8),
 			   *(volatile u32 *)(wifi_mem + M_IDX + 0x200 + 8), m->rxrd);
 			{
