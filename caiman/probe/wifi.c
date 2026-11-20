@@ -482,11 +482,25 @@ static int wifi_handoff(struct mb *m, u64 cfg, u64 bar2, u32 sh, u32 ri, u8 *mas
 		mask[4 + ev[i] / 8] |= 1 << (ev[i] % 8);
 	r = wifi_iovar(m, 1, "event_msgs_ext", mask, 4 + 27, 0, 0);
 	pr("wifi: handoff: station events %d\n", r);
-	for (i = 0; i < N_RX; i++)
+	/*
+	 * 32 at a time, each burst taken in by the firmware (its RD caught up) before the next: posted all at once with
+	 * the CPUs at full speed (PROBE_DVFS=2) the firmware stopped answering (wifi13-DVFS)
+	 */
+	for (i = 0; i < N_RX; i++) {
 		rx_post(m, i, (i & 31) == 31);
+		if ((i & 31) == 31) {
+			u64 t0 = timer_us();
+
+			while (*(volatile u32 *)(wifi_mem + M_IDX + 0x100 + 4) != m->rxwr && timer_us() - t0 < 50000)
+				delay_us(20);
+			delay_us(1000);
+			d2h_poll(m, 1000, never);
+		}
+	}
 	v = 1;
 	r = wifi_iovar(m, 1, "bus:host_access", &v, 4, 0, 0);
-	pr("wifi: handoff: %u RX buffers posted, bus:host_access %d\n", N_RX, r);
+	pr("wifi: handoff: %u RX buffers posted (firmware RD %u), bus:host_access %d\n", N_RX,
+	   *(volatile u32 *)(wifi_mem + M_IDX + 0x100 + 4), r);
 	for (i = 0; i < sizeof(*h); i++)
 		((u8 *)h)[i] = 0;
 	h->magic = WIFI_HANDOFF_MAGIC;
