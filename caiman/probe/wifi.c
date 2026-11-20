@@ -155,6 +155,11 @@ struct mb {
 	u32 link, keyed, failed;	/* PROBE_WIFI >= 12: the join's outcome from its events */
 	u32 rxwr, rxrd, rx_count;	/* RX post write, RX complete read, frames seen */
 	u8 rx_epoch, rxc_epoch;
+	const u8 *want;			/* wifi15: the network joined, and its best 2.4 GHz BSS from the scan */
+	u32 want_len;
+	u8 pin[6];
+	u16 pin_cs;
+	int pin_rssi;
 };
 
 static u32 rd_le32(const volatile u8 *p) { return p[0] | p[1] << 8 | p[2] << 16 | (u32)p[3] << 24; }
@@ -272,6 +277,31 @@ static void wifi_event(struct mb *m, u32 b, u32 len)
 			pr("wifi: network %2u: \"%s\"  %02x:%02x:%02x:%02x:%02x:%02x  RSSI %d dBm  chanspec 0x%04x\n",
 			   m->scan_bss, sl ? ssid : "(hidden)", bi[8], bi[9], bi[10], bi[11], bi[12], bi[13],
 			   (int)(short)(bi[78] | bi[79] << 8), bi[72] | bi[73] << 8);
+			if (m->want_len && sl == m->want_len) {
+				int rssi = (short)(bi[78] | bi[79] << 8);
+
+				for (j = 0; j < sl && bi[19 + j] == m->want[j]; j++)
+					;
+				if (j == sl && m->scan_bss < 200) {
+					/* wifi17: what this BSS of ours advertises (wl_bss_info_t: ie_offset +116, ie_length +120) */
+					u32 io = bi[116] | bi[117] << 8, il = rd_le32(bi + 120), q, w;
+
+					for (q = 0; io + il <= blen && q + 2 <= il; q += 2 + bi[io + q + 1])
+						if (bi[io + q] == 48) {
+							pr("wifi:   our network %02x:%02x:%02x:xx:xx:xx chanspec 0x%04x RSN:", bi[8], bi[9],
+							   bi[10], bi[72] | bi[73] << 8);
+							for (w = 0; w < bi[io + q + 1] + 2u && w < 40; w++)
+								pr(" %02x", bi[io + q + w]);
+							pr("\n");
+						}
+				}
+				if (j == sl && (bi[73] & 0xc0) == 0 && (!m->pin_cs || rssi > m->pin_rssi)) {
+					for (j = 0; j < 6; j++)
+						m->pin[j] = bi[8 + j];
+					m->pin_cs = (u16)(bi[72] | bi[73] << 8);
+					m->pin_rssi = rssi;
+				}
+			}
 			m->scan_bss++;
 			if (blen < 80 || blen > 4000)
 				break;
@@ -286,7 +316,8 @@ static void wifi_event(struct mb *m, u32 b, u32 len)
 		 * 46 PSK_SUP, 47 COUNTRY_CODE_CHANGED, 54 IF (no string table: the image takes no relocations) */
 		u32 flags = (u32)e[26] << 8 | e[27], reason = rd_be32(e + 36);
 
-		pr("wifi: event %u status %u reason %u flags 0x%x, %u bytes\n", type, status, reason, flags, dlen);
+		pr("wifi: event %u status %u reason %u flags 0x%x, %u bytes, peer %02x:%02x:%02x:%02x:%02x:%02x\n", type, status,
+		   reason, flags, dlen, e[48], e[49], e[50], e[51], e[52], e[53]);
 		if (type == 46 && dlen <= 64) {	/* PSK_SUP's data, whole */
 			u32 j;
 
@@ -418,6 +449,17 @@ static void wifi_msgbuf(u64 cfg, u64 bar2, u32 sh, u32 ri, u32 cons, u32 cidx)
 
 	m->cfg = cfg;
 	m->bar2 = bar2;
+#if PROBE_WIFI >= 12 && defined(WIFI_PSK_PATH)
+	{
+		extern const u8 wifi_ssid_start[] __attribute__((visibility("hidden")));
+		extern const u8 wifi_ssid_end[] __attribute__((visibility("hidden")));
+
+		m->want = wifi_ssid_start;
+		m->want_len = (u32)(wifi_ssid_end - wifi_ssid_start);
+		while (m->want_len && (m->want[m->want_len - 1] == '\n' || m->want[m->want_len - 1] == '\r'))
+			m->want_len--;
+	}
+#endif
 	m->h2dw = dram_r(cfg, bar2, ri + 4);
 	m->h2dr = dram_r(cfg, bar2, ri + 8);
 	m->d2hw = dram_r(cfg, bar2, ri + 12);
@@ -510,6 +552,25 @@ static void wifi_msgbuf(u64 cfg, u64 bar2, u32 sh, u32 ri, u32 cons, u32 cidx)
 		mask[4 + 69 / 8] |= 1 << (69 % 8);	/* WLC_E_ESCAN_RESULT only */
 		r = wifi_iovar(m, 1, "event_msgs_ext", mask, 4 + 27, 0, 0);
 		pr("wifi: event_msgs_ext: status %d\n", r);
+		{
+			/*
+			 * wifi20: the cal file's macaddr is Broadcom's placeholder 00:90:4c:12:d0:01 and Android always sets
+			 * its own; a locally administered unicast one instead, before WLC_UP ("cur_etheraddr")
+			 */
+			u8 mac[8] = { 0 };
+			u64 t = timer_us();
+
+			r = wifi_iovar(m, 0, "cur_etheraddr", 0, 0, mac, 6);
+			pr("wifi: MAC was %02x:%02x:%02x:%02x:%02x:%02x (%d)", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5], r);
+			mac[0] = 0x02;
+			mac[1] = 0x1a;
+			mac[2] = 0x11;
+			mac[3] = (u8)(t >> 16);
+			mac[4] = (u8)(t >> 8);
+			mac[5] = (u8)t;
+			r = wifi_iovar(m, 1, "cur_etheraddr", mac, 6, 0, 0);
+			pr(", now 02:1a:11:%02x:%02x:%02x: %d\n", mac[3], mac[4], mac[5], r);
+		}
 		i = 0;
 		r = wifi_ioctl(m, 2, &i, 4, 4);	/* WLC_UP */
 		pr("wifi: WLC_UP: status %d\n", r);
@@ -569,7 +630,7 @@ static void wifi_msgbuf(u64 cfg, u64 bar2, u32 sh, u32 ri, u32 cons, u32 cidx)
 			extern const u8 wifi_ssid_end[] __attribute__((visibility("hidden")));
 			extern const u8 wifi_psk_start[] __attribute__((visibility("hidden")));
 			extern const u8 wifi_psk_end[] __attribute__((visibility("hidden")));
-			static u8 pmk[264], ssid[36];
+			static u8 pmk[264], ssid[52];
 			u32 sl = (u32)(wifi_ssid_end - wifi_ssid_start), kl = (u32)(wifi_psk_end - wifi_psk_start), v;
 			u8 bssid[8] = { 0 };
 
@@ -609,9 +670,41 @@ static void wifi_msgbuf(u64 cfg, u64 bar2, u32 sh, u32 ri, u32 cons, u32 cidx)
 			v = 0x80;
 			r = wifi_ioctl(m, 165, &v, 4, 4);	/* WLC_SET_WPA_AUTH: WPA2_AUTH_PSK */
 			pr("wifi: join: wpa_auth PSK: %d\n", r);
+			/* wifi19, an observation: the dongle's supplicant off, so M1 (if it comes) reaches the host */
 			v = 1;
 			r = wifi_iovar(m, 1, "sup_wpa", &v, 4, 0, 0);
 			pr("wifi: join: sup_wpa 1: %d\n", r);
+			{
+				/*
+				 * wifi14: the network is a Wi-Fi 7 multi-link one, and Android joins it with SAE over three links;
+				 * Google's driver keeps a PSK join off MLO (wl_mlo_sta_config). "mlo" XTLVs: LE16 id, LE16 length,
+				 * value. WL_MLO_CMD_CAP (5) for max_mlo_links (byte 4), then WL_MLO_CMD_CONFIG (1), all zero but
+				 * mode 0xff at byte 9, sized for those links (docs/wifi-join-analysis.md, trial 1)
+				 */
+				static u8 xb[96];
+				u32 nl, xl;
+
+				for (i = 0; i < sizeof(xb); i++)
+					xb[i] = 0;
+				xb[0] = 5;
+				xb[2] = 8;
+				xb[4] = 1;
+				xb[6] = 8;
+				r = wifi_iovar(m, 0, "mlo", xb, 12, xb, 32);
+				pr("wifi: join: mlo cap (%d):", r);
+				for (i = 0; i < 16; i++)
+					pr(" %02x", xb[i]);
+				pr("\n");
+				nl = xb[4] > 4 ? 4 : xb[4];
+				xl = 16 + 8 * nl;
+				for (i = 0; i < sizeof(xb); i++)
+					xb[i] = 0;
+				xb[0] = 1;
+				xb[2] = (u8)xl;
+				xb[4 + 9] = 0xff;
+				r = wifi_iovar(m, 1, "mlo", xb, 4 + xl, 0, 0);
+				pr("wifi: join: mlo config off (%u links, %u bytes): %d\n", nl, xl, r);
+			}
 			/*
 			 * wsec_pmk_t: a 32-byte file is the PMK itself (PBKDF2 of passphrase and SSID, made on the Mac), sent as
 			 * Google's PSK-offload path does: flags 0, sizeof(wsec_pmk_t) + 1 = 263 bytes; anything else is a
@@ -632,6 +725,32 @@ static void wifi_msgbuf(u64 cfg, u64 bar2, u32 sh, u32 ri, u32 cons, u32 cidx)
 			ssid[0] = (u8)sl;
 			m->link = m->keyed = m->failed = 0;
 			t0 = timer_us();
+			/*
+			 * wifi15: pinned to the network's best 2.4 GHz BSS, as wl_join_params_t (wlc_ssid_t, then
+			 * wl_assoc_params_t: bssid, bssid_cnt, chanspec_num, chanspec_list[1]): the 6 GHz one takes SAE only
+			 */
+			for (i = 36; i < 52; i++)
+				ssid[i] = 0;
+			for (i = 0; i < 6; i++)
+				ssid[36 + i] = m->pin[i];
+			ssid[42] = 1;
+			ssid[44] = 1;
+			ssid[48] = (u8)m->pin_cs;
+			ssid[49] = (u8)(m->pin_cs >> 8);
+			pr("wifi: join: best 2.4 GHz BSS %02x:%02x:%02x:xx:xx:xx, chanspec 0x%04x, RSSI %d dBm\n", m->pin[0], m->pin[1],
+			   m->pin[2], m->pin_cs, m->pin_rssi);
+			/*
+			 * wifi15 trapped the firmware with an unversioned wl_join_params_t (bssid_cnt and chanspec_num both
+			 * set); wifi16 keeps the plain SSID join and holds the radio to 2.4 GHz instead (WLC_SET_BAND 142,
+			 * WLC_BAND_2G 2)
+			 */
+			/* wifi18: the AP's 5 and 2.4 GHz BSSes are plain WPA2-PSK/CCMP (wifi17), as we join; power save off */
+			v = 0xff;
+			r = wifi_ioctl(m, 85, &v, 4, 4);	/* WLC_GET_PM */
+			pr("wifi: join: PM was %u (%d)", v, r);
+			v = 0;
+			r = wifi_ioctl(m, 86, &v, 4, 4);	/* WLC_SET_PM: PM_OFF */
+			pr(", set to 0: %d\n", r);
 			r = wifi_ioctl(m, 26, ssid, 36, 36);	/* WLC_SET_SSID */
 			pr("wifi: join: WLC_SET_SSID (%u-character SSID): status %d\n", sl, r);
 			d2h_poll(m, 15000000, join_over);
@@ -683,7 +802,10 @@ static void wifi_msgbuf(u64 cfg, u64 bar2, u32 sh, u32 ri, u32 cons, u32 cidx)
 				pr("wifi: join: assoc_req_ies (%d):", r);
 				/* each IE's id and length; the SSID (0) left out, the RSN (48) printed whole */
 				for (i = 0; i + 2 <= n && ib[i + 1] + i + 2 <= n; i += 2 + ib[i + 1]) {
-					pr(" %u/%u", ib[i], ib[i + 1]);
+					if (ib[i] == 255 && ib[i + 1])
+						pr(" 255.%u/%u", ib[i + 2], ib[i + 1]);
+					else
+						pr(" %u/%u", ib[i], ib[i + 1]);
 					if (i > 900)
 						break;
 				}
