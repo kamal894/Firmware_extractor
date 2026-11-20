@@ -571,6 +571,30 @@ static void wifi_msgbuf(u64 cfg, u64 bar2, u32 sh, u32 ri, u32 cons, u32 cidx)
 			r = wifi_iovar(m, 1, "cur_etheraddr", mac, 6, 0, 0);
 			pr(", now 02:1a:11:%02x:%02x:%02x: %d\n", mac[3], mac[4], mac[5], r);
 		}
+		{
+			/*
+			 * wifi21: EHT off before WLC_UP (an EHT-capable, non-MLO STA on the MLD's 5 GHz link: docs/wifi-join-
+			 * analysis.md, trials 14-20, 4): "eht" XTLV WL_EHT_CMD_ENAB (0), length 4, LE32; and the firmware's
+			 * own RX buffer size ("rxbufpost_sz", LE16)
+			 */
+			u8 x[16] = { 0 };
+			u32 k;
+
+			x[2] = 4;
+			r = wifi_iovar(m, 0, "eht", x, 8, x, 16);
+			pr("wifi: eht get (%d):", r);
+			for (k = 0; k < 12; k++)
+				pr(" %02x", x[k]);
+			for (k = 0; k < 16; k++)
+				x[k] = 0;
+			x[2] = 4;
+			r = wifi_iovar(m, 1, "eht", x, 8, 0, 0);
+			pr("; set 0: %d\n", r);
+			for (k = 0; k < 16; k++)
+				x[k] = 0;
+			r = wifi_iovar(m, 0, "rxbufpost_sz", 0, 0, x, 4);
+			pr("wifi: rxbufpost_sz %u (%d)\n", x[0] | x[1] << 8, r);
+		}
 		i = 0;
 		r = wifi_ioctl(m, 2, &i, 4, 4);	/* WLC_UP */
 		pr("wifi: WLC_UP: status %d\n", r);
