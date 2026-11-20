@@ -118,7 +118,7 @@ static u32 cons_print(u64 cfg, u64 bar2, u32 cons, u32 from)
 #define WIFI_DB0	(WIFI_PCIEREGS + 0x140)	/* hosttodev0doorbell0: ring updates */
 #define WIFI_DB1	(WIFI_PCIEREGS + 0x144)	/* hosttodev0doorbell1: host ready (dhd_bus_hostready) */
 
-static u8 wifi_mem[0x34000] __attribute__((aligned(4096)));
+static u8 wifi_mem[0x104000] __attribute__((aligned(4096)));	/* wifi26: room for 448 RX buffers */
 
 enum { R_CTRL_SUB, R_RXPOST, R_CTRL_CPL, R_TXCPL, R_RXCPL };
 static const u16 ring_items[5] = { 64, 512, 64, 1024, 512 };
@@ -134,7 +134,7 @@ static const u32 ring_off[5] = { 0x00000, 0x02000, 0x06000, 0x07000, 0x0d000 };
 #define N_EVT		8
 #define M_RX		0x24000	/* receive buffers: 32 x 2 KiB on the RX post ring (PROBE_WIFI >= 12): the chip DMAs
 				 * received data frames, EAPOL too, straight into host buffers */
-#define N_RX		32
+#define N_RX		448	/* wifi25: 32 left the firmware in its reserve mode ("pciedev_use_resv_rxpost"), dropping data */
 
 /* the PCIe core at BAR0 + 8K: only the doorbells and the DAR block (+0xa00..) may be read; other offsets (+0x004,
  * +0x020..) are secure on this chip, and reading them from the host makes the firmware trap ("AXI Slave Err ...
@@ -682,7 +682,7 @@ static void wifi_msgbuf(u64 cfg, u64 bar2, u32 sh, u32 ri, u32 cons, u32 cidx)
 				wifi_mem[M_RX + i] = 0xa5;
 			__asm__ volatile("dsb sy" ::: "memory");
 			for (i = 0; i < N_RX; i++)
-				rx_post(m, i, i == N_RX - 1);
+				rx_post(m, i, (i & 31) == 31);	/* published 32 at a time, as DHD does */
 			v = 1;
 			r = wifi_iovar(m, 1, "bus:host_access", &v, 4, 0, 0);
 			pr("wifi: join: %u receive buffers posted; bus:host_access=1: %d\n", N_RX, r);
