@@ -118,7 +118,7 @@ static u32 cons_print(u64 cfg, u64 bar2, u32 cons, u32 from)
 #define WIFI_DB0	(WIFI_PCIEREGS + 0x140)	/* hosttodev0doorbell0: ring updates */
 #define WIFI_DB1	(WIFI_PCIEREGS + 0x144)	/* hosttodev0doorbell1: host ready (dhd_bus_hostready) */
 
-static u8 wifi_mem[0x104000] __attribute__((aligned(4096)));	/* wifi26: room for 448 RX buffers */
+static u8 wifi_mem[0x114000] __attribute__((aligned(4096)));	/* wifi27: room for 480 RX buffers */
 
 enum { R_CTRL_SUB, R_RXPOST, R_CTRL_CPL, R_TXCPL, R_RXCPL };
 static const u16 ring_items[5] = { 64, 512, 64, 1024, 512 };
@@ -134,7 +134,7 @@ static const u32 ring_off[5] = { 0x00000, 0x02000, 0x06000, 0x07000, 0x0d000 };
 #define N_EVT		8
 #define M_RX		0x24000	/* receive buffers: 32 x 2 KiB on the RX post ring (PROBE_WIFI >= 12): the chip DMAs
 				 * received data frames, EAPOL too, straight into host buffers */
-#define N_RX		448	/* wifi25: 32 left the firmware in its reserve mode ("pciedev_use_resv_rxpost"), dropping data */
+#define N_RX		480	/* (ring 1 holds 512) wifi25: wifi25: 32 left the firmware in its reserve mode ("pciedev_use_resv_rxpost"), dropping data */
 
 /* the PCIe core at BAR0 + 8K: only the doorbells and the DAR block (+0xa00..) may be read; other offsets (+0x004,
  * +0x020..) are secure on this chip, and reading them from the host makes the firmware trap ("AXI Slave Err ...
@@ -154,7 +154,7 @@ struct mb {
 	u32 resp_len, scan_bss, scan_done;
 	u32 link, keyed, failed;	/* PROBE_WIFI >= 12: the join's outcome from its events */
 	u32 rxwr, rxrd, rx_count;	/* RX post write, RX complete read, frames seen */
-	u8 rx_epoch, rxc_epoch;
+	u8 rx_epoch, rxc_epoch, rxrd_pending;
 	const u8 *want;			/* wifi15: the network joined, and its best 2.4 GHz BSS from the scan */
 	u32 want_len;
 	u8 pin[6];
@@ -245,14 +245,24 @@ static void rx_poll(struct mb *m)
 			if (m->rx_count < 40)
 				pr("wifi: RX frame %u: %u bytes, ethertype 0x%04x%s, from %02x:%02x:%02x:%02x:%02x:%02x\n",
 				   m->rx_count, dl, et, et == 0x888e ? " (EAPOL)" : "", f[6], f[7], f[8], f[9], f[10], f[11]);
+			if (m->rx_count < 6)	/* wifi27: the whole 40-byte completion (flags +0x12: 1 802.3, 2 802.11) */
+				pr("wifi:   cmpl if %u id 0x%x status 0x%x meta %u len %u off %u flags 0x%x\n", c[1],
+				   id + 0x300, rd_le32(c + 8), c[12] | c[13] << 8, dl, doff, c[18] | c[19] << 8);
 			m->rx_count++;
-			rx_post(m, id, 1);
+			/* wifi27: RD published (host slot, TCM) and the dongle told (DB0 0xdd | ring 4 | RD) before the repost */
+			m->rxrd_pending = 1;
 		} else
 			pr("wifi: RX complete item type 0x%x id 0x%x\n", c[0], id + 0x300);
 		m->rxc_epoch = m->rxc_epoch == 252 ? 0 : m->rxc_epoch + 1;
 		m->rxrd = (m->rxrd + 1) % ring_items[R_RXCPL];
 		*(volatile u32 *)(wifi_mem + M_IDX + 0x300 + 8) = m->rxrd;
 		dram_w(m->cfg, m->bar2, m->d2hr + 8, m->rxrd);
+		__asm__ volatile("dsb sy" ::: "memory");
+		wr32(WIFI_DB0, 0xdd000000u | 4u << 16 | m->rxrd);
+		if (m->rxrd_pending) {
+			m->rxrd_pending = 0;
+			rx_post(m, id, 1);
+		}
 	}
 }
 

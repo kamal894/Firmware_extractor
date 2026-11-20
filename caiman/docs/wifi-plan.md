@@ -229,3 +229,16 @@ From bare metal over msgbuf, polled (docs/probe-log-wifi11-scan.txt; network nam
 
 Next: join a WPA2/WPA3 network (the supplicant: wsec/wpa_auth/"sup_wpa" in-firmware 4-way handshake, or
 "wsec_key"/PMK), the TX/RX flow rings for data, then hand frames to the iOS network stack.
+
+## Step 12: WPA2 join works (2026-11-19)
+
+The join failed the same way for trials 12-26: association succeeded, then the 4-way handshake timed out (M1 never reached the dongle's supplicant). An open hotspot joined but no RX buffer was ever written, and a WPA2 hotspot failed like the router, which put the fault on the host side, not the AP.
+
+Two changes fixed it (trial 27, `probe-log-wifi27.txt`; the router in trial 28, `probe-log-wifi28.txt`):
+
+- **More RX buffers.** With 32 posted the firmware kept them all in its reserve pool (`pciedev_use_resv_rxpost`) and dropped every received frame. The first buffer it ever fills is number 64. We now post 480 of the ring's 512 slots, 32 per doorbell.
+- **RX completions acknowledged as DHD does.** For each completion the host publishes RD (DMA index slot and TCM), rings DB0 with `0xdd000000 | 4 << 16 | rd`, and only then reposts the buffer. With 448 buffers but without this, trial 26 still failed.
+
+The result: WPA2-PSK keyed (PSK_SUP status 6) to the Samsung hotspot and to the home router's 5 GHz BSS in about 5.8 s, then real LAN traffic arrived (ARP 0x0806, IPv4 0x0800). The firmware also sends association-logger copies of management and EAPOL frames (8-byte `wl_aml_header_v1_t`, completion flags 0x2 = 802.11). The host must skip these.
+
+Next: a TX flow ring (DHCP, ARP replies), then hand frames to the iOS network stack.

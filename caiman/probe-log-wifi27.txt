@@ -1,0 +1,2222 @@
+[   0.000000] [I] secure payload loading took 0ms
+[   0.000000] [I] platform info binded: true
+[   0.000000] [I] platform info: 060906010000
+[   0.802825] [I] 
+welcome to lk/MP
+
+[   0.802853] [I] boot args 0x1 0x0 0x0 0x0
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   0.803497] [I] acpm locks regulators
+[   0.803556] [I] Soc Product ID: 0x09875
+[   0.803590] [I] Soc rev: A1
+[   0.803619] [I] Soc ID: 0x12b44c577850
+[   0.803651] [I] DVFS version: 2
+[   0.803680] [E] vendor magic_number must be 0xcceeddff but 0xcce455c7
+[   0.803732] [E] magic_number must be 0xcceeddff but 0xcce4cdf9
+[   0.803814] [I] S2MPG_M CHIPID read: 0x10
+[   0.803876] [I] S2MPG_S CHIPID read: 0x10
+[   0.803945] [I] S2MPG_M PWRONSRC read: 0x20
+[   0.804008] [I] S2MPG_M OFFSRC1 read: 0x10
+[   0.804077] [I] S2MPG_M OFFSRC2 read: 0x0
+[   0.804142] [I] S2MPG_M RTC_WTSR read: 0x7e
+[   0.804183] [I] S2MPG_M INT1: 0x30
+[   0.804212] [I] S2MPG_M INT2: 0x0
+[   0.804238] [I] S2MPG_M INT3: 0x0
+[   0.804264] [I] S2MPG_M INT4: 0x0
+[   0.804293] [I] S2MPG_M INT5: 0x0
+[   0.804353] [I] S2MPG_S OFFSRC1 read: 0x11
+[   0.804393] [I] S2MPG_S INT1: 0x83
+[   0.804421] [I] S2MPG_S INT2: 0x80
+[   0.804448] [I] S2MPG_S INT3: 0x0
+[   0.804479] [I] S2MPG_S INT4: 0x0
+[   0.804505] [I] S2MPG_S INT5: 0x0
+APC Bootmetrics:
+  BL1: MT:1 / DT:ENTRY / 96568 us
+  BL1: MT:2 / DT:LOAD  / 7360 us
+  BL1: MT:F / DT:EXIT  / 147728 us
+  PBL: MT:1 / DT:ENTRY / 147864 us
+  PBL: MT:2 / DT:LOAD  / 19584 us
+  PBL: MT:F / DT:EXIT  / 212952 us
+  BL2: MT:1 / DT:ENTRY / 214528 us
+  BL2: MT:2 / DT:LOAD  / 160 us
+  BL2: MT:3 / DT:LOAD  / 152 us
+  BL2: MT:4 / DT:CHECK / 342528 us
+  BL2: MT:5 / DT:CHECK / 2096 us
+  BL2: MT:6 / DT:LOAD  / 62368 us
+  BL2: MT:7 / DT:CHECK / 157688 us
+  BL2: MT:8 / DT:CHECK / 157832 us
+  BL2: MT:9 / DT:LOAD  / 44424 us
+  BL2: MT:A / DT:LOAD  / 31616 us
+  BL2: MT:B / DT:LOAD  / 327672 us
+  BL2: MT:C / DT:LOAD  / 8 us
+  BL2: MT:F / DT:EXIT  / 610872 us
+  PBL: MT:3 / DT:LOAD  / 81240 us
+  PBL: MT:4 / DT:LOAD  / 28144 us
+  PBL: MT:5 / DT:LOAD  / 6184 us
+  PBL: MT:6 / DT:CHECK / 726616 us
+  PBL: MT:7 / DT:CHECK / 726752 us
+  EL3: MT:1 / DT:ENTRY / 729528 us
+  EL3: MT:D / DT:CHECK / 745072 us
+  EL3: MT:E / DT:CHECK / 791704 us
+  EL3: MT:F / DT:EXIT  / 791744 us
+APC Breadcrumbs(v2.4):
+ stages(S): 00000000 / 0000404F
+  flags(S): 00000000 / 000022C0
+stages(NS): 00000000 / 00005004
+ flags(NS): 00000000 / 0000D400
+    status: 00000000 / 00000000
+    device: 00000000 / 00000001
+   tmutrip: 00000000 / 00000000
+     reset: 00000000 / 00180000
+[   0.805495] [E] GSA Breadcrumb:
+00000000 0000000d 00000000 00000000  |................|
+00000000 00000000 00000001           |............    |
+[   0.805631] [I] SBDP initialized: chipid allowed=0, dpm_state=0x0000
+[   0.805682] [E] check header failed
+[   0.805807] [I] initializing device i2c:usi00
+[   0.805847] [I] usi00: version 2.2
+[   0.805897] [I] initializing device i2c:usi04
+[   0.805939] [I] usi04: version 2.2
+[   0.805984] [I] initializing device i2c:usi06
+[   0.806024] [I] usi06: version 2.2
+[   0.806069] [I] initializing device i2c:usi09
+[   0.806106] [I] usi09: version 2.2
+[   0.806155] [I] initializing device i2cm:i2cm0
+[   0.806197] [I] DVFS init
+[   0.808457] [I] DVFS init done
+[   0.808488] [I] UFS EVT version 0
+[   0.808529] [I] controller version 3.0 found
+[   0.808564] [I] capabilities 0x1383ff1f
+[   0.808771] [I] UFS device found
+zuma_ufs_device_init_done
+[   0.808814] [E] ufshc_notify done
+[   0.808890] [I] ufshc_power_mode_change HS gear 4
+[   0.819083] [I] ufshc: bBootLunEn 0x1
+[   0.819228] [I] UFS device SAMSUNG KLUDG4UHGC-B0E1 version 3.1
+[   0.819273] [I] Enabled LUNs found 4
+[   0.819338] [I] UFS device total size 127984992256
+[   0.819442] [I] Temp too high enabled
+[   0.819539] [I] Temp too low enabled
+[   0.822276] [I] Write Booster: available buffer=0x5 lifetime=0x2 current buffer=0x1dcb
+[   0.822369] [I] boot slot: a
+[   0.824570] [I] slot data a: 0x00001e02
+[   0.824601] [I] slot data b: 0x00001000
+[   0.825408] [I] platform info: 060906010000
+[   0.825650] [I] initializing device cs40l2x:cs40l26
+[   0.836135] [I] CS40L26 found
+[   0.837799] [I] initializing device nfc:st21nfc
+[   0.839692] [I] tcpc vendor id 56
+[   0.840600] found 77779 on usi6
+[   0.840625] bms_init init usi10 as sec_i2c
+[   0.840659] [I] initializing device i2c:usi10
+[   0.840695] [I] usi10: version 2.2
+[   0.840892] [I] FG device name 0x5100
+[   0.841397] [I] [max77779fg] SOC(100), VCELL(4380), INOW(-385), IAVG(-132)
+[   0.842012] [I] fship 0x0
+[   0.842129] [I] master disconnect reason 0x0
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   0.844987] [I] LCS state:PRODUCTION
+[   0.845126] [I] no valid file
+[TMU:0] 52
+[TMU:1] 51
+[   0.849590] [I] dsim_probe dsim0+
+[   0.849628] [I] using data lane count(4)
+[   0.850340] [E] 
+Reboot Info:
+  RST_STAT: 0x180000 - PIN_RESET | PO_RESET
+  GSA_RESET_STATUS: 0x1 - GSA_PINRESET
+  Reboot reason: 0xcadc - Power/Hard Reset
+  Reboot mode: 0xfc - Bootloader
+[   0.869506] [E] failed to get eUSB revision -62
+[   0.869541] [I] Set EUSB Ref clock auto
+[   0.869848] [I] LK build date: Apr 14 2026, time: 06:16:15
+[   0.869891] [I] BL version: ripcurrentpro-17.0-15199480
+[   0.869931] [I] BL type: official build
+starting app pixel_loader
+[   0.870404] [I] sota: empty signature.
+[   0.870435] [I] ABL start time (METRICS_BL3): 791ms
+[   0.870476] [I] AB Decision: active slot boot ok
+[   0.870512] [I] AB Decisions: 00000000
+[   0.870740] [I] TCPC BC1.2, type: 2 val:2
+[   0.870942] [I] boot voltage threshold=3400mV
+[   0.871051] [I] bootloader message:bootonce-bootloader
+[   0.871517] [I] fastboot enter reason: reboot bootloader
+[   0.871564] [W] power on source: 20
+starting app pixel_charger
+[   0.879742] [E] dsim0 wait phy pll stable
+[   0.900929] [I] Succeeded to read panel product id : 0x22a8a00a
+[   0.901005] [E] is_compatible is not defined!
+[   0.901045] [I] panel_rev: 0x1000
+[   0.906232] [I] use panel google-cm4 for dsim0
+[   0.906270] [I] dsim_probe -: dsim0 driver(cmd mode) has been probed.
+[   0.906322] [I] dsim_probe dsim1+
+[   0.906358] [I] using data lane count(4)
+[   0.906424] [E] dsim1 wait phy pll stable
+[   0.957527] [E] timeout!! wait for DSIM interrupt (0x40300000)
+[   0.957609] [E] MIPI DSIM (id=6) read Timeout! 0x4
+[   0.957645] [E] dsim fail to get panel operation
+[   0.957718] [E] dsim has error.
+[   0.957749] [E] dsim_probe -: dsim1 probe failed.
+[   0.957785] [I] dsim1 probe was failed
+[   0.957815] [I] dsim_init -: set dsim0 driver as primary.
+[   0.969054] [E] dsim0 wait phy pll stable
+[   0.988224] [I] dpp_probe +
+[   0.988249] [I] dpp-0's attr is (0x004d0047)
+[   0.988288] [I] dpp(0) init resources.
+[   0.988346] [I] dpp_probe -: dpp0 is probed successfully
+[   0.988397] [I] decon-int: max win6, command mode, hw trigger
+[   0.988445] [I] single dsi mode
+[   0.988480] [I] [decon0] d_path(0xB1) DSCC DSC_ENC1 DSC_ENC0 OFIFO.0
+[   0.988597] [I] [decon0] sel(0x0) OFIFO.0 - dsim0 - google-cm4
+[   0.988645] [I] Display 1st window(5) xres(1280) yres(2856) win_start_pos(0) win_end_pos(b2704ff)
+[   1.039998] [I] port connected
+[   1.055631] [I] TCPC BC1.2, type: 2 val:2
+[   1.123931] [I] decon0 registered successfully
+[   1.159231] [I] version: g5400c-260317-260429-B-15308590
+USB Pipe3 Initialization...
+[dwc3_dptx] CR write failed to 0x31c5
+[dwc3_dptx] CR write failed to 0x32c5
+[dwc3_dptx] CR write failed to 0x402d
+[dwc3_dptx] CR write failed to 0x412d
+[dwc3_dptx] CR write failed to 0x422d
+[dwc3_dptx] CR write failed to 0x432d
+[dwc3_dptx] CR write failed to 0x2021
+[dwc3_dptx] CR write failed to 0x2024
+[dwc3_dptx] CR write failed to 0x2027
+[dwc3_dptx] CR write failed to 0x202a
+[dwc3_dptx] CR write failed to 0x202d
+[dwc3_dptx] CR write failed to 0x2030
+[dwc3_dptx] CR write failed to 0x2033
+[dwc3_dptx] CR write failed to 0x2036
+[dwc3_dptx] CR write failed to 0x2022
+[dwc3_dptx] CR write failed to 0x2025
+[dwc3_dptx] CR write failed to 0x2028
+[dwc3_dptx] CR write failed to 0x202b
+[dwc3_dptx] CR write failed to 0x202e
+[dwc3_dptx] CR write failed to 0x2031
+[dwc3_dptx] CR write failed to 0x2034
+[dwc3_dptx] CR write failed to 0x2037
+[dwc3_dptx] PMA version:0x4604
+[dwc3_dptx] PCS ID:0x6790
+[dwc3_dptx] Firmware ID:0x6044, 0x04b3
+[   1.234202] [I] TCPC BC1.2, type: 2 val:2
+[   1.508493] [I] TCPC BC1.2, type: 2 val:2
+[   1.524337] [I] new high-speed device found
+[   1.524502] [I] TCPC BC1.2, type: 2 val:2
+[   1.532948] [I] TCPC BC1.2, type: 2 val:2
+[   2.594253] [I] Accept cmd:download:00286000
+[   2.594366] [I] Downloading. Download size is 2646016 bytes
+[   2.594463] [I] DATA00286000
+[   2.654142] [I] OKAY
+[   2.654540] [I] Accept cmd:boot
+[   2.661513] [I] OKAY
+[   2.671099] [I] TCPC BC1.2, type: 2 val:2
+[   2.671924] [I] TCPC BC1.2, type: 2 val:2
+[   2.773649] [E] avb_property(com.android.build.boot.security_patch): not found
+[   2.773763] [E] boot_spl: can't find property
+[   2.773838] [I] boot_state: 160000:20261100:20000000
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   2.776888] [I] using init_boot ramdisk
+[   2.776956] [I] using vendor_kernel_boot ramdisk
+[   2.777163] [I] kernel: addr:0xffff000090701000, size:283324
+[   2.778701] [I] kernel: total_time:2
+[   2.778815] [I] vendor kernel ramdisk copy
+[   2.778884] [I] ramdisk dst addr: 0xffff000086000000 src addr: 0xffff0000a5901000 size: 0x67591e(6773022)
+[   2.779043] [I] padding prepended: 0
+[   2.782749] [I] vendor ramdisk copy
+[   2.782809] [I] ramdisk dst addr: 0xffff00008667591e src addr: 0xffff0000a0001000 size: 0x1663ae2(23476962)
+[   2.782978] [I] padding prepended: 18
+[   2.795411] [I] ramdisk copy
+[   2.795479] [I] ramdisk dst addr: 0xffff000087cd9412 src addr: 0xffff0000a5101000 size: 0x250d04(2428164)
+[   2.795632] [I] padding prepended: 14
+[   2.796976] [I] Ramdisk load size with padding: 32678180
+[   2.797118] [I] rev: 09865.00.00
+[   2.797192] [I] rev: 09865.00.00
+[   2.797259] [I] rev: 09865.01.00
+[   2.797313] [I] rev: 09865.01.01
+[   2.797381] [I] rev: 09865.01.00
+[   2.797440] [I] rev: 09865.01.01
+[   2.797507] [I] rev: 09875.00.00
+[   2.797576] [I] rev: 09875.00.00
+[   2.797642] [I] rev: 09875.00.00
+[   2.797696] [I] rev: 09875.00.01
+[   2.797763] [I] rev: 09875.00.00
+[   2.797817] [I] rev: 09875.00.01
+[   2.797868] [I] SOC DTB: index:6
+[   2.797944] [I] DTBO match: id 0x60906, rev 0x10000
+[   2.820453] [I] dpm not merged
+[   2.822676] [I] MTE S: 0, NS: 0, tag base: 0x0
+[   2.859666] [W] power on source: 20
+[   2.859734] [I] bootmode:
+[   2.859864] [I] DDR size: 16GiB
+[   2.859919] [I] DDR Manufacturer: Samsung
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   2.879672] [I] ro.misctrl.16kb_before=0
+[   2.879769] [I] console is disabled
+[   2.879973] [I] secure dram base 0xb6200000, size 0x9e00000
+[   2.880112] [I] secure PGTBL base 0xe0000000, size 58720256
+[   2.885176] [I] MTE S: 0, NS: 0, tag base: 0x0
+[   2.888233] [I] device: /reserved-memory/debug_snapshot/log_s2d path not found (-1)
+[   2.888465] [I] device: /reserved-memory/debug_snapshot/log_array_reset path not found (-1)
+[   2.888713] [I] device: /reserved-memory/debug_snapshot/log_kevents path not found (-1)
+[   2.888961] [I] device: /reserved-memory/debug_snapshot/log_itmon path not found (-1)
+[   2.889188] [I] device: /reserved-memory/debug_snapshot/log_s2d_extract path not found (-1)
+[   2.890750] [I] device: /google,mitigation enabled ret=0
+[   2.910931] [I] ro.boot.hardware.cpu.pagesize=4096
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   2.911816] [I] panel settings after overriding: google-cm4.22a8a00a@dsim0 null@dsim1
+[   2.927597] [I] linux,initrd-start: 0x86000000, linux,initrd-end: 0x87f32125
+[   2.940249] [E] avb_property(com.android.build.microdroid-vendor.root_digest): not found
+[   2.940376] [W] failed to get microdroid vendor hashtree digest from avb property, skip appending value
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   2.942658] [W] no avf debug policy, because dpm is NULL
+[  13.007923] [I] slot data a: 0x00001e02
+[  13.007987] [I] slot data b: 0x00001000
+[  13.011618] [E] avb_property(com.android.build.boot.fingerprint): not found
+[  13.011722] [E] fingerprint property not found 
+[  13.463593] [I] shutdown complete
+[  13.463677] [I] thread stats (cpu 0): total idle time: 12216963, total busy time: 1246712
+Heap dump (using miniheap):
+	base 0xffff0000f8b93000, len 0x527000
+	free list:
+		base 0xffff0000f8d1b220, end 0xffff0000f8d3b660, len 0x20440
+		base 0xffff0000f8d3b6f0, end 0xffff0000f8d3b710, len 0x20
+		base 0xffff0000f8d783b0, end 0xffff0000f8d783d0, len 0x20
+		base 0xffff0000f8d7b510, end 0xffff0000f8d7b680, len 0x170
+		base 0xffff0000f8d7bd70, end 0xffff0000f8d7bdb0, len 0x40
+		base 0xffff0000f8d7bfd0, end 0xffff0000f8d7bff0, len 0x20
+		base 0xffff0000f8d7e7e0, end 0xffff0000f8d7e9a0, len 0x1c0
+		base 0xffff0000f8d7f850, end 0xffff0000f8d85980, len 0x6130
+		base 0xffff0000f8e07da0, end 0xffff0000f8e07dd0, len 0x30
+		base 0xffff0000f8e081a0, end 0xffff0000f8e09000, len 0xe60
+		base 0xffff0000f8e31020, end 0xffff0000f8e32000, len 0xfe0
+		base 0xffff0000f8ee03e0, end 0xffff0000f8f20240, len 0x3fe60
+		base 0xffff0000f8f30320, end 0xffff0000f90ba000, len 0x189ce0
+[  13.464975] [I] Starting Linux kernel ...
+=== caiman-probe d433a4d-dirty on caiman (Pixel 9 Pro, Tensor G4 / zumapro) ===
+hello from bare metal: loaded at 0x80000000 (file 0x283330 bytes, 0x3c1aa0 with bss+stack), x0/DTB=0x8a000000
+entry: EL2 SCTLR=0x30c50990 MMU=off D-cache=off I-cache=off
+
+--- cpu ---
+cpu: CurrentEL=2  MPIDR=0x81000000 (aff2.1.0 = 0.0.0)
+cpu: MIDR=0x410fd801 (Cortex-A520 r0p1) REVIDR=0x3
+cpu: SCTLR_EL2=0x30c50990 HCR_EL2=0x100000080000000 CPTR_EL2=0x33ff CNTHCTL_EL2=0x3efdb
+cpu: entered at EL2 (hypervisor level): a loader for XNU must drop to EL1
+cpu: DAIF=0x3c0 ISR_EL1=0x0 CNTFRQ=24576000 Hz CNTVCT=332936600
+cpu: ID_AA64PFR0=0x1201111123111111 PFR1=0x0000000000010321
+cpu: ID_AA64ISAR0=0x0221111110212120 ISAR1=0x0111111100211002 ISAR2=0x0000000001005102
+cpu: ID_AA64MMFR0=0x2100022200101122 MMFR1=0x1001111011312122 MMFR2=0x1221011110101011
+cpu: ID_AA64DFR0=0x100f11f010305719 ZFR0=0x0000110100110021 SMFR0=0x0000000000000000
+cpu: CTR_EL0=0x49444c004 DCZID_EL0=0x4 CLIDR_EL1=0x54c3000123
+
+--- device tree ---
+dt: blob at 0x8a000000, 505098 bytes, version 17
+dt: memory 0xb80000000 - 0xc00000000 (2048 MiB)
+dt: memory 0xb00000000 - 0xb80000000 (2048 MiB)
+dt: memory 0xa80000000 - 0xb00000000 (2048 MiB)
+dt: memory 0xa00000000 - 0xa80000000 (2048 MiB)
+dt: memory 0x980000000 - 0xa00000000 (2048 MiB)
+dt: memory 0x900000000 - 0x980000000 (2048 MiB)
+dt: memory 0x880000000 - 0x900000000 (2048 MiB)
+dt: rsv pkvm_guest_firmware                  0x8b000000+0xd0000 no-map [linux,pkvm-guest-firmware-memory]
+dt: rsv abl@f8800000                         0xf8800000+0x1000000 no-map
+dt: rsv sec_pt                               0xe0000000+0x3800000 no-map
+dt: rsv sec_dram                             0xb6200000+0x9e00000 no-map
+dt: rsv ect_binary                           0x90000000+0x60000 [exynos,ect_rmem]
+dt: rsv gsa@90200000                         0x90200000+0x3ff000 no-map
+dt: rsv gsa@905FF000                         0x905ff000+0x1000 no-map
+dt: rsv gxp_scratchpad@91300000              0x91300000+0x60000 no-map
+dt: rsv iif_wait_table@91360000              0x91360000+0x20000 no-map
+dt: rsv iif_signal_table@91380000            0x91380000+0x20000 no-map
+dt: rsv gxp_secure_data@91400000             0x91400000+0x900000 no-map
+dt: rsv gxp_fw@91D00000                      0x91d00000+0x300000 no-map
+dt: rsv gxp_mcu_fw@92000000                  0x92000000+0x400000 no-map
+dt: rsv tpu_fw@92e00000                      0x92e00000+0x1200000 no-map
+dt: rsv aoc@94000000                         0x94000000+0x3000000 no-map
+dt: rsv dss_log_reserved@fd3f0000            0xfd3f0000+0xe000 no-map
+dt: rsv debug_kinfo_reserved@fd3fe000        0xfd3fe000+0x1000 no-map
+dt: rsv ramoops_mem@fd3ff000                 0xfd3ff000+0x400000 [ramoops]
+dt: rsv bldr_log_reserved@fd800000           0xfd800000+0x100000 no-map
+dt: rsv cp_rmem                              0xea400000+0xc00000 [exynos,modem_if]
+dt: rsv cp_msi_rmem                          0xf6200000+0x1000 [exynos,modem_if]
+dt: rsv cp_rmem_1                            0xe8000000+0x2000000 [exynos,modem_if]
+dt: rsv cp_aoc_rmem                          0x197fd000+0x3000 [exynos,modem_if]
+dt: rsv header                               0xd8100000+0x10000 no-map
+dt: rsv log_kevents                          0xd8110000+0x700000 no-map
+dt: rsv log_bcm                              0xdd610000+0x400000 no-map
+dt: rsv log_s2d                              0xd8810000+0x1800000 no-map
+dt: rsv log_array_reset                      0xda010000+0xa00000 no-map
+dt: rsv log_array_panic                      0xdaa10000+0xa00000 no-map
+dt: rsv log_slcdump                          0xdb410000+0x1100000 no-map
+dt: rsv log_preslcdump                       0xdc510000+0x1100000 no-map
+dt: rsv log_itmon                            0xdda10000+0x10000 no-map
+dt: rsv log_s2d_extract                      0xdda20000+0x600000 no-map
+dt: rsv seclog_mem                           0xc3000000+0x80000 [exynos,seclog]
+dt: rsv xhci_dma_buffer@17BB5000             0x17bb5000+0xb000 no-map [xhci-dma-pool]
+dt: rsv xhci_dma@17BC0000                    0x17bc0000+0x40000 no-map [xhci-dma-pool]
+dt: rsv xhci_dma_dram@97000000               0x97000000+0x400000 no-map [xhci-dma-pool]
+dt: rsv vstream                              [shared-dma-pool]
+dt: rsv vframe                               [shared-dma-pool]
+dt: rsv vscaler                              [shared-dma-pool]
+dt: rsv tui                                 
+dt: rsv gcma_camera                         
+dt: rsv faceauth_dsp                        
+dt: rsv faceauth_tpu                        
+dt: rsv famodel                             
+dt: rsv faimg                                [shared-dma-pool]
+dt: rsv farawimg                            
+dt: rsv faeval                              
+dt: rsv faprev                               [shared-dma-pool]
+dt: rsv mfc_fw                              
+dt: rsv dpado-rmem                           [exynos,dp_ado_rmem]
+dt: psci method=smc
+dt: memory 0x80000000 - 0x100000000 (2048 MiB)
+dt: /chosen bootargs: root=/dev/ram0 rw clocksource=arch_sys_counter clk_ignore_unused loop.max_part=7 loop.hw_queue_depth=31 coherent_pool=4M firmware_class.path=/vendor/firmware irqaffinity=0 sysrq_always_enabled no_console_suspend softlockup_panic=1 kasan_multi_shot kvm-arm.protected_modules=exynos-pd,pkvm_s2mpu-v9 fips140.load_sequential=1 exynos_drm.load_sequential=1 g2d.load_sequential=1 samsung_iommu_v9.load_sequential=1 vh_sched.load_sequential=1 pcie_exynos_gs.load_sequential=1 dyndbg="func alloc_contig_dump_pages +p" printk.devkmsg=on cma_sysfs.experimental=Y cgroup.memory=nokmem rcupdate.rcu_expedited=1 rcu_nocbs=all rcutree.enable_rcu_lazy swiotlb=noforce disable_dma32=on sysctl.kernel.sched_pelt_multiplier=4 rodata=on kasan=off at24.write_timeout=100 log_buf_len=1024K android_arch_task_struct_size=512 bootconfig console=null exynos_drm.panel_name=google-cm4.22a8a00a tcpci_max77759.conf_sbu=0 arm64.nomte ufs_pixel_fips140.fips_first_lba=151942 ufs_pixel_fips140.fips_last_lba=152453 ufs_pixel_fips140.fips_lu=0 ufs_pixel_fips140.use_hw_keys=true id_aa64mmfr1.vh=0  bootconfig
+dt: /chosen initrd 0x86000000 - 0x87f32125
+ramoops: DT ramoops_mem@fd3ff000: 0xfd3ff000 size 0x400000 record 0x0 console 0x200000 ftrace 0x0 pmsg 0x200000 ecc 0
+ramoops: console zone 0xfd3ff000 size 0x200000 matches the built-in default
+
+--- uart ---
+uart: samsung @ 0x10870000: reading ULCON/UCON/UFCON
+uart: ULCON=0x00000000 UCON=0x00003000 UFCON=0x00000000
+uart: transmitter disabled (UCON tx mode 0): bootloader did not enable the
+      debug UART. Try `fastboot oem uart enable` before `fastboot boot`.
+
+--- psci ---
+psci: conduit=smc version=1.1 (raw 0x10001)
+psci: SYSTEM_RESET2 supported (PSCI_FEATURES=0)
+
+--- bootloader log @ 0xfd800000 (0x100000 bytes) ---
+bldr: first 64 bytes:
+  fd800000: 33 34 00 00 00 00 00 00 f0 ff 07 00 00 00 00 00  |34..............|
+  fd800010: 5b 20 20 20 30 2e 30 30 30 30 30 30 5d 20 5b 49  |[   0.000000] [I|
+  fd800020: 5d 20 73 65 63 75 72 65 20 70 61 79 6c 6f 61 64  |] secure payload|
+  fd800030: 20 6c 6f 61 64 69 6e 67 20 74 6f 6f 6b 20 30 6d  | loading took 0m|
+bldr: printable text (runs of >= 4 chars), up to 524288 bytes:
+[   0.000000] [I] secure payload loading took 0ms
+[   0.000000] [I] platform info binded: true
+[   0.000000] [I] platform info: 060906010000
+[   0.802825] [I] 
+welcome to lk/MP
+
+[   0.802853] [I] boot args 0x1 0x0 0x0 0x0
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   0.803497] [I] acpm locks regulators
+[   0.803556] [I] Soc Product ID: 0x09875
+[   0.803590] [I] Soc rev: A1
+[   0.803619] [I] Soc ID: 0x12b44c577850
+[   0.803651] [I] DVFS version: 2
+[   0.803680] [E] vendor magic_number must be 0xcceeddff but 0xcce455c7
+[   0.803732] [E] magic_number must be 0xcceeddff but 0xcce4cdf9
+[   0.803814] [I] S2MPG_M CHIPID read: 0x10
+[   0.803876] [I] S2MPG_S CHIPID read: 0x10
+[   0.803945] [I] S2MPG_M PWRONSRC read: 0x20
+[   0.804008] [I] S2MPG_M OFFSRC1 read: 0x10
+[   0.804077] [I] S2MPG_M OFFSRC2 read: 0x0
+[   0.804142] [I] S2MPG_M RTC_WTSR read: 0x7e
+[   0.804183] [I] S2MPG_M INT1: 0x30
+[   0.804212] [I] S2MPG_M INT2: 0x0
+[   0.804238] [I] S2MPG_M INT3: 0x0
+[   0.804264] [I] S2MPG_M INT4: 0x0
+[   0.804293] [I] S2MPG_M INT5: 0x0
+[   0.804353] [I] S2MPG_S OFFSRC1 read: 0x11
+[   0.804393] [I] S2MPG_S INT1: 0x83
+[   0.804421] [I] S2MPG_S INT2: 0x80
+[   0.804448] [I] S2MPG_S INT3: 0x0
+[   0.804479] [I] S2MPG_S INT4: 0x0
+[   0.804505] [I] S2MPG_S INT5: 0x0
+APC Bootmetrics:
+  BL1: MT:1 / DT:ENTRY / 96568 us
+  BL1: MT:2 / DT:LOAD  / 7360 us
+  BL1: MT:F / DT:EXIT  / 147728 us
+  PBL: MT:1 / DT:ENTRY / 147864 us
+  PBL: MT:2 / DT:LOAD  / 19584 us
+  PBL: MT:F / DT:EXIT  / 212952 us
+  BL2: MT:1 / DT:ENTRY / 214528 us
+  BL2: MT:2 / DT:LOAD  / 160 us
+  BL2: MT:3 / DT:LOAD  / 152 us
+  BL2: MT:4 / DT:CHECK / 342528 us
+  BL2: MT:5 / DT:CHECK / 2096 us
+  BL2: MT:6 / DT:LOAD  / 62368 us
+  BL2: MT:7 / DT:CHECK / 157688 us
+  BL2: MT:8 / DT:CHECK / 157832 us
+  BL2: MT:9 / DT:LOAD  / 44424 us
+  BL2: MT:A / DT:LOAD  / 31616 us
+  BL2: MT:B / DT:LOAD  / 327672 us
+  BL2: MT:C / DT:LOAD  / 8 us
+  BL2: MT:F / DT:EXIT  / 610872 us
+  PBL: MT:3 / DT:LOAD  / 81240 us
+  PBL: MT:4 / DT:LOAD  / 28144 us
+  PBL: MT:5 / DT:LOAD  / 6184 us
+  PBL: MT:6 / DT:CHECK / 726616 us
+  PBL: MT:7 / DT:CHECK / 726752 us
+  EL3: MT:1 / DT:ENTRY / 729528 us
+  EL3: MT:D / DT:CHECK / 745072 us
+  EL3: MT:E / DT:CHECK / 791704 us
+  EL3: MT:F / DT:EXIT  / 791744 us
+APC Breadcrumbs(v2.4):
+ stages(S): 00000000 / 0000404F
+  flags(S): 00000000 / 000022C0
+stages(NS): 00000000 / 00005004
+ flags(NS): 00000000 / 0000D400
+    status: 00000000 / 00000000
+    device: 00000000 / 00000001
+   tmutrip: 00000000 / 00000000
+     reset: 00000000 / 00180000
+[   0.805495] [E] GSA Breadcrumb:
+00000000 0000000d 00000000 00000000  |................|
+00000000 00000000 00000001           |............    |
+[   0.805631] [I] SBDP initialized: chipid allowed=0, dpm_state=0x0000
+[   0.805682] [E] check header failed
+[   0.805807] [I] initializing device i2c:usi00
+[   0.805847] [I] usi00: version 2.2
+[   0.805897] [I] initializing device i2c:usi04
+[   0.805939] [I] usi04: version 2.2
+[   0.805984] [I] initializing device i2c:usi06
+[   0.806024] [I] usi06: version 2.2
+[   0.806069] [I] initializing device i2c:usi09
+[   0.806106] [I] usi09: version 2.2
+[   0.806155] [I] initializing device i2cm:i2cm0
+[   0.806197] [I] DVFS init
+[   0.808457] [I] DVFS init done
+[   0.808488] [I] UFS EVT version 0
+[   0.808529] [I] controller version 3.0 found
+[   0.808564] [I] capabilities 0x1383ff1f
+[   0.808771] [I] UFS device found
+zuma_ufs_device_init_done
+[   0.808814] [E] ufshc_notify done
+[   0.808890] [I] ufshc_power_mode_change HS gear 4
+[   0.819083] [I] ufshc: bBootLunEn 0x1
+[   0.819228] [I] UFS device SAMSUNG KLUDG4UHGC-B0E1 version 3.1
+[   0.819273] [I] Enabled LUNs found 4
+[   0.819338] [I] UFS device total size 127984992256
+[   0.819442] [I] Temp too high enabled
+[   0.819539] [I] Temp too low enabled
+[   0.822276] [I] Write Booster: available buffer=0x5 lifetime=0x2 current buffer=0x1dcb
+[   0.822369] [I] boot slot: a
+[   0.824570] [I] slot data a: 0x00001e02
+[   0.824601] [I] slot data b: 0x00001000
+[   0.825408] [I] platform info: 060906010000
+[   0.825650] [I] initializing device cs40l2x:cs40l26
+[   0.836135] [I] CS40L26 found
+[   0.837799] [I] initializing device nfc:st21nfc
+[   0.839692] [I] tcpc vendor id 56
+[   0.840600] found 77779 on usi6
+[   0.840625] bms_init init usi10 as sec_i2c
+[   0.840659] [I] initializing device i2c:usi10
+[   0.840695] [I] usi10: version 2.2
+[   0.840892] [I] FG device name 0x5100
+[   0.841397] [I] [max77779fg] SOC(100), VCELL(4380), INOW(-385), IAVG(-132)
+[   0.842012] [I] fship 0x0
+[   0.842129] [I] master disconnect reason 0x0
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   0.844987] [I] LCS state:PRODUCTION
+[   0.845126] [I] no valid file
+[TMU:0] 52
+[TMU:1] 51
+[   0.849590] [I] dsim_probe dsim0+
+[   0.849628] [I] using data lane count(4)
+[   0.850340] [E] 
+Reboot Info:
+  RST_STAT: 0x180000 - PIN_RESET | PO_RESET
+  GSA_RESET_STATUS: 0x1 - GSA_PINRESET
+  Reboot reason: 0xcadc - Power/Hard Reset
+  Reboot mode: 0xfc - Bootloader
+[   0.869506] [E] failed to get eUSB revision -62
+[   0.869541] [I] Set EUSB Ref clock auto
+[   0.869848] [I] LK build date: Apr 14 2026, time: 06:16:15
+[   0.869891] [I] BL version: ripcurrentpro-17.0-15199480
+[   0.869931] [I] BL type: official build
+starting app pixel_loader
+[   0.870404] [I] sota: empty signature.
+[   0.870435] [I] ABL start time (METRICS_BL3): 791ms
+[   0.870476] [I] AB Decision: active slot boot ok
+[   0.870512] [I] AB Decisions: 00000000
+[   0.870740] [I] TCPC BC1.2, type: 2 val:2
+[   0.870942] [I] boot voltage threshold=3400mV
+[   0.871051] [I] bootloader message:bootonce-bootloader
+[   0.871517] [I] fastboot enter reason: reboot bootloader
+[   0.871564] [W] power on source: 20
+starting app pixel_charger
+[   0.879742] [E] dsim0 wait phy pll stable
+[   0.900929] [I] Succeeded to read panel product id : 0x22a8a00a
+[   0.901005] [E] is_compatible is not defined!
+[   0.901045] [I] panel_rev: 0x1000
+[   0.906232] [I] use panel google-cm4 for dsim0
+[   0.906270] [I] dsim_probe -: dsim0 driver(cmd mode) has been probed.
+[   0.906322] [I] dsim_probe dsim1+
+[   0.906358] [I] using data lane count(4)
+[   0.906424] [E] dsim1 wait phy pll stable
+[   0.957527] [E] timeout!! wait for DSIM interrupt (0x40300000)
+[   0.957609] [E] MIPI DSIM (id=6) read Timeout! 0x4
+[   0.957645] [E] dsim fail to get panel operation
+[   0.957718] [E] dsim has error.
+[   0.957749] [E] dsim_probe -: dsim1 probe failed.
+[   0.957785] [I] dsim1 probe was failed
+[   0.957815] [I] dsim_init -: set dsim0 driver as primary.
+[   0.969054] [E] dsim0 wait phy pll stable
+[   0.988224] [I] dpp_probe +
+[   0.988249] [I] dpp-0's attr is (0x004d0047)
+[   0.988288] [I] dpp(0) init resources.
+[   0.988346] [I] dpp_probe -: dpp0 is probed successfully
+[   0.988397] [I] decon-int: max win6, command mode, hw trigger
+[   0.988445] [I] single dsi mode
+[   0.988480] [I] [decon0] d_path(0xB1) DSCC DSC_ENC1 DSC_ENC0 OFIFO.0
+[   0.988597] [I] [decon0] sel(0x0) OFIFO.0 - dsim0 - google-cm4
+[   0.988645] [I] Display 1st window(5) xres(1280) yres(2856) win_start_pos(0) win_end_pos(b2704ff)
+[   1.039998] [I] port connected
+[   1.055631] [I] TCPC BC1.2, type: 2 val:2
+[   1.123931] [I] decon0 registered successfully
+[   1.159231] [I] version: g5400c-260317-260429-B-15308590
+USB Pipe3 Initialization...
+[dwc3_dptx] CR write failed to 0x31c5
+[dwc3_dptx] CR write failed to 0x32c5
+[dwc3_dptx] CR write failed to 0x402d
+[dwc3_dptx] CR write failed to 0x412d
+[dwc3_dptx] CR write failed to 0x422d
+[dwc3_dptx] CR write failed to 0x432d
+[dwc3_dptx] CR write failed to 0x2021
+[dwc3_dptx] CR write failed to 0x2024
+[dwc3_dptx] CR write failed to 0x2027
+[dwc3_dptx] CR write failed to 0x202a
+[dwc3_dptx] CR write failed to 0x202d
+[dwc3_dptx] CR write failed to 0x2030
+[dwc3_dptx] CR write failed to 0x2033
+[dwc3_dptx] CR write failed to 0x2036
+[dwc3_dptx] CR write failed to 0x2022
+[dwc3_dptx] CR write failed to 0x2025
+[dwc3_dptx] CR write failed to 0x2028
+[dwc3_dptx] CR write failed to 0x202b
+[dwc3_dptx] CR write failed to 0x202e
+[dwc3_dptx] CR write failed to 0x2031
+[dwc3_dptx] CR write failed to 0x2034
+[dwc3_dptx] CR write failed to 0x2037
+[dwc3_dptx] PMA version:0x4604
+[dwc3_dptx] PCS ID:0x6790
+[dwc3_dptx] Firmware ID:0x6044, 0x04b3
+[   1.234202] [I] TCPC BC1.2, type: 2 val:2
+[   1.508493] [I] TCPC BC1.2, type: 2 val:2
+[   1.524337] [I] new high-speed device found
+[   1.524502] [I] TCPC BC1.2, type: 2 val:2
+[   1.532948] [I] TCPC BC1.2, type: 2 val:2
+[   2.594253] [I] Accept cmd:download:00286000
+[   2.594366] [I] Downloading. Download size is 2646016 bytes
+[   2.594463] [I] DATA00286000
+[   2.654142] [I] OKAY
+[   2.654540] [I] Accept cmd:boot
+[   2.661513] [I] OKAY
+[   2.671099] [I] TCPC BC1.2, type: 2 val:2
+[   2.671924] [I] TCPC BC1.2, type: 2 val:2
+[   2.773649] [E] avb_property(com.android.build.boot.security_patch): not found
+[   2.773763] [E] boot_spl: can't find property
+[   2.773838] [I] boot_state: 160000:20261100:20000000
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   2.776888] [I] using init_boot ramdisk
+[   2.776956] [I] using vendor_kernel_boot ramdisk
+[   2.777163] [I] kernel: addr:0xffff000090701000, size:283324
+[   2.778701] [I] kernel: total_time:2
+[   2.778815] [I] vendor kernel ramdisk copy
+[   2.778884] [I] ramdisk dst addr: 0xffff000086000000 src addr: 0xffff0000a5901000 size: 0x67591e(6773022)
+[   2.779043] [I] padding prepended: 0
+[   2.782749] [I] vendor ramdisk copy
+[   2.782809] [I] ramdisk dst addr: 0xffff00008667591e src addr: 0xffff0000a0001000 size: 0x1663ae2(23476962)
+[   2.782978] [I] padding prepended: 18
+[   2.795411] [I] ramdisk copy
+[   2.795479] [I] ramdisk dst addr: 0xffff000087cd9412 src addr: 0xffff0000a5101000 size: 0x250d04(2428164)
+[   2.795632] [I] padding prepended: 14
+[   2.796976] [I] Ramdisk load size with padding: 32678180
+[   2.797118] [I] rev: 09865.00.00
+[   2.797192] [I] rev: 09865.00.00
+[   2.797259] [I] rev: 09865.01.00
+[   2.797313] [I] rev: 09865.01.01
+[   2.797381] [I] rev: 09865.01.00
+[   2.797440] [I] rev: 09865.01.01
+[   2.797507] [I] rev: 09875.00.00
+[   2.797576] [I] rev: 09875.00.00
+[   2.797642] [I] rev: 09875.00.00
+[   2.797696] [I] rev: 09875.00.01
+[   2.797763] [I] rev: 09875.00.00
+[   2.797817] [I] rev: 09875.00.01
+[   2.797868] [I] SOC DTB: index:6
+[   2.797944] [I] DTBO match: id 0x60906, rev 0x10000
+[   2.820453] [I] dpm not merged
+[   2.822676] [I] MTE S: 0, NS: 0, tag base: 0x0
+[   2.859666] [W] power on source: 20
+[   2.859734] [I] bootmode:
+[   2.859864] [I] DDR size: 16GiB
+[   2.859919] [I] DDR Manufacturer: Samsung
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   2.879672] [I] ro.misctrl.16kb_before=0
+[   2.879769] [I] console is disabled
+[   2.879973] [I] secure dram base 0xb6200000, size 0x9e00000
+[   2.880112] [I] secure PGTBL base 0xe0000000, size 58720256
+[   2.885176] [I] MTE S: 0, NS: 0, tag base: 0x0
+[   2.888233] [I] device: /reserved-memory/debug_snapshot/log_s2d path not found (-1)
+[   2.888465] [I] device: /reserved-memory/debug_snapshot/log_array_reset path not found (-1)
+[   2.888713] [I] device: /reserved-memory/debug_snapshot/log_kevents path not found (-1)
+[   2.888961] [I] device: /reserved-memory/debug_snapshot/log_itmon path not found (-1)
+[   2.889188] [I] device: /reserved-memory/debug_snapshot/log_s2d_extract path not found (-1)
+[   2.890750] [I] device: /google,mitigation enabled ret=0
+[   2.910931] [I] ro.boot.hardware.cpu.pagesize=4096
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   2.911816] [I] panel settings after overriding: google-cm4.22a8a00a@dsim0 null@dsim1
+[   2.927597] [I] linux,initrd-start: 0x86000000, linux,initrd-end: 0x87f32125
+[   2.940249] [E] avb_property(com.android.build.microdroid-vendor.root_digest): not found
+[   2.940376] [W] failed to get microdroid vendor hashtree digest from avb property, skip appending value
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   2.942658] [W] no avf debug policy, because dpm is NULL
+[  13.007923] [I] slot data a: 0x00001e02
+[  13.007987] [I] slot data b: 0x00001000
+[  13.011618] [E] avb_property(com.android.build.boot.fingerprint): not found
+[  13.011722] [E] fingerprint property not found 
+[  13.463593] [I] shutdown complete
+[  13.463677] [I] thread stats (cpu 0): total idle time: 12216963, total busy time: 1246712
+Heap dump (using miniheap):
+	base 0xffff0000f8b93000, len 0x527000
+	free list:
+		base 0xffff0000f8d1b220, end 0xffff0000f8d3b660, len 0x20440
+		base 0xffff0000f8d3b6f0, end 0xffff0000f8d3b710, len 0x20
+		base 0xffff0000f8d783b0, end 0xffff0000f8d783d0, len 0x20
+		base 0xffff0000f8d7b510, end 0xffff0000f8d7b680, len 0x170
+		base 0xffff0000f8d7bd70, end 0xffff0000f8d7bdb0, len 0x40
+		base 0xffff0000f8d7bfd0, end 0xffff0000f8d7bff0, len 0x20
+		base 0xffff0000f8d7e7e0, end 0xffff0000f8d7e9a0, len 0x1c0
+		base 0xffff0000f8d7f850, end 0xffff0000f8d85980, len 0x6130
+		base 0xffff0000f8e07da0, end 0xffff0000f8e07dd0, len 0x30
+		base 0xffff0000f8e081a0, end 0xffff0000f8e09000, len 0xe60
+		base 0xffff0000f8e31020, end 0xffff0000f8e32000, len 0xfe0
+		base 0xffff0000f8ee03e0, end 0xffff0000f8f20240, len 0x3fe60
+		base 0xffff0000f8f30320, end 0xffff0000f90ba000, len 0x189ce0
+[  13.464975] [I] Starting Linux kernel ...
+M
+CP vCaTe
+fAiled do
+0x2015
+Jd
+c3OdPth] 
+MA terrIoF
+00
+[@SC3
+dp0hY P
+ID*0p67 4
+Id7c!
+irmwara 
+D0086040, 0x
+0&01(008
+ [AY T
+@C @
+.2, tYpE8
+"
+[ &10.43"3
+Y8DCPC BC
+, 4ype2 2 &AL
+8$60
+ [H\ `eq `iwh%u
+e%` d%Ric%
+b-Ufd
+[  006
+6"5] SI
+ PCP@(@
+$ type
+2 D`l:R
+[
+ 02&909
+ceP4 #ld
+d"7nl!a
+0 00
+[  12(009
+] DnCjl.Adhne
+ DovNl+ad 3)x$ i
+ 6$1 8
+64 b9pas
+  !2"8095
+4000 
+0
+Z 
+4,022644
+XA] C	AI
+31 6] Y	T 
+ept cMD
+bgg$
+4.030
+50P 
+K@Y
+S  14,4
+0414] [A\
+TCPC
+l22
+R  10.$$Q2
+5Y X@U 
+BPC @B1.2
+ $9 e8 2 v
+ 14.543
+Arb_ppmpebt
+ #km.!fdrOid&be!dt.qYsdei.oRW6app	jn1: 
+k4 &n
+n$
+S  
+012r!] SA] cystD-.m3_
+eRsik
+2 baN't fin
+ prop%rti
+K` 14.
+6] [E] 
+vb_Pr'peRTi com
+AlDrnid
+uild.sXrTem$3ecqrItq_p`4c((z .Ot &
+und
+[
+4.54
+4U KE 3qQte-_Qp`: can't fifd p`/pe
+5431 
+] avb_prfpesth ca-&`n
+r#i`.bqilD.bOM4*secubIPqNp
+tbh	: jn4 fmqf
+1,
+443413U SE] B,ot[qpl
+in$ p2
+P%Pty
+[  
+3682Q CI
+ `.ot
+00000
+2 00
+00 00000
+trusty_D%v
+mmoj
+x: HNDO Sele
+4$$ t2usty `@a fg2sioN
+ 3 
+qUds0e@ 1)
+[  
+0.54
+944] 
+ts(ng
+In	t_bkep RAm A3k
+14.042 12
+l' FA,Dnr_Jepde
+`oit
+raidiSk
+  14,54720!] SI] kARneN:
+"0xfFff00001 
+0!0 0( siZe:fdbf4
+[  14.58135 
+ [I[ VeldAr kernel r@Dirk coPy
+C  14.1 1437M [IY paldhsc dpt aDDr: 08fBfb1
+0 0 sBc adDr:
+X`fff
+a5901
+3)xa8 0x6
+7'3022)
+ 00.
+596Y
+I] `1DDing
+prd`eN $$2
+
+[  
+ TeNdgp 2`-disk 
+07918
+I_ Bai ipi `Ct a$d00
+0x`bfb000086674!1E r`
+ A$`r: 0x@fdF0 00a
+shre: 0`1662ae
+'&962)
+[  14
+% ] 
+@Repdnd
+Z  !4&6!
+AM p`ld
+r+ #/Py
+I  1 .6 
+3U Z
+amd	1c $bT a@Dr2 0`fd&d 00084bD9
+10 sp`
+`b r* 0xfF&f0000a1101  0 sirE8
+1<*610896\ [I]
+pAddinf prA`En
+e`2 
+4
+I  14
+ZI B -dIcK l
+`qaz% wip`
+PaddIjc0 1163
+14.60 38%]
+	] `$V2!
+984%.00(00
+[  00(6!2
+6&] KI\
+peD2 
+1
+00,00
+  14 
+\ [I] pd&: 
+9805.01. 0
+1" 14M [H]$b!
+5>01&0!
+  14
+59L [)] rat: 09(65$0
+10&212
+10H ZI\ rlV0
+0986
+*01
+[  1$.6!2
+Y [IE 
+ar: 0
+12X43
+ [AM rdv: 09
+00
+S  !
+YI	 2av:
+*00*00
+C
+ !,.6028&8M [
+BAv:!0 
+Y  1$.
+]!Z	\ R!R8 
+98?%, 0
+0
+[  
+!#082] [	U re
+.01
+[  
+*21#141] [
+C DRB
+ 	D$ep:6
+Z  14
+&1#2
+2U [	
+ @TBM
+madah:")d
+0h&080
+S  !4 6254&2]
+KI] Dpl Jmt lep`
+36671] SI]
+ S2  , NS
+ 0$ tAg BaSe: 0x0
+K  !$.
+501 5] 
+ ker
+ total
+tiid.104
+tRustx^Def_cjmhO.,
+: 	LFO sDlecded
+trqspP api tepsagn*
+Qqert!d 3)
+  14.69688"] [H] bo&teoDe:
+H
+25M 
+H DDB 
+i:e8 46B!B
+Q  14
+617034E [	Y D@R IaN
+fa#tAbDr: QamcujG
+[
+ 14.6983
+6} YI
+ 2o&m`sc4r
+.06k [b
+fmre
+0
+[  !4.639443Y
+conqole8	
+ diS
+blee
+61866$] KA
+ Sectra `r@ baSA 0
+`"00
+ 80,
+3h:% 08)&000
+14
+2
+ [IU #%au"e 
+ baqe
+0000
+r)ra
+6
+[  00.7 
+H] MD
+ pAg
+b`sd: 
+p0
+[
+ 14.
+7601M [IU @E6iA%2
+/repEpfe`-LEm
+2i/debu&
+nap2hm@/Lo&_s#D @`t` Nm` boqj
+)	H  14
+!078$2U [I] `
+f`ce: .rdkerv%$-meenpy)debtg
+sHap1h
+,gg[a`ray_reseD t
+th fOt('oufD  
+)
+[  10.708120M RH] @eV
+"`: /rebervA`iE%fby/de`p'_sfa
+!hfp
+L/e[idvejTc patn
+N+t fneLd  
+1	
+S  
+4$7882&8Y 
+de6ice
+Bec%
+,D,oRY/dabdeK
+pqhot
+.g_a<-ab paph n
+t fn
+(d (-
+)
+Q  1
+[IX DeFice: /res
+dDmeM
+`e"4e
+s.aPs
+,oc[32$O@xppaat p!ph 
+k4 fCtdd
+(
+1(
+0] [
+] `$vice:!/gag
+Miti'`0(kj
+bled rau10
+ 14.7310
+ vf.boot
+`arevabe.bpu. !ge9ije
+Dq`YId
+V_c	L(o,
+c
+ I
+FE QeH$
+pad TR5s40 !p( "erbimn
+rdPuaste` 3!
+#ommoN.c8 HBBL cE
+t!d 
+2USty a
+i 2dbciOn8 3 
+PdqUdr
+` 3)
+  !4.
+I] p
+le` rETt
+nfs !"t8r mv%R2adi
+e
+Gongl%-#m4.
+0a8A0
+sii0 &e(t
+dsi-
+
+X  1
+505(24
+I Li
+@i$p$dR
+aR$" 0x8& 0
+x$)(	$
+d%end:  x
+E AAU abb_pp/peBtq Col
+@f`"ka@(B
+ild.)	crJ$
+-V@n$+r.2hO4^DheEst!
+ dnDnD
+R8
+14
+#20
+ b!ildd dI geD@e
+@rNd@
+)` vEjdir
+ @Shdree diCeCd drb
+`2b `"np BT
+hp@`p`eNd	f` BaH1%
+pdqt8W$at
+ckeL'.(B2 ILFO  eLaC4eD t2
+papsioD: 0
+B%1Uested 3)
+Z
+ 04*!
+b'(!Tf debug p-lic
+ `d!`u
+% `p-
+Dl
+X  24*82 50 X [I
+ SlLP
+0  `02
+29800Y PA\
+O` d!4! 
+  0x
+0
+S  24
+!] [@]
+h4b_pr-`%r
+ceM(anD
+o	@*bui,d,bOc
+.BINCE
+ fbt 
+62Q 
+E\ @H
+Rppi
+t pr+pEtt
+ N$d &,eD`
+ 43M 
+HY chuT
+ogl CoMPh
+t%
+C 
+ 4*880522] ZI
+ $hrEad qDaTs (#04 0
+4%t`l )$de TAMe:
+1065
+ tK4ah Buqy damE8
+000361
+@aap dpmp
+(u#`Nf0Iini
+e p(2
+	baSe 0xffDf
+00f0b9300 ( Ten 0Q5F6 0
+	$2}% lhs
+as% 0X
+"f$00
+d1b"00, elD 0hff"f0000f0d3b26 
+lab 
+x0 440
+		`ase 0xfffF0
+#`6f ,
+eNd 0`f
+0&8d1`700,
+den 
+
+		baq%  xFdf&
+3B0  a
+d 0pffdb000
+F8D283 0, LDn 
+0
+		b`Re 0Hffff0000f
+`7j5!0, end 
+xfd&f00 0f d7b690, he* 08
+60
+	
+b@re 0xffff0000f0d
+ , !ld 0xbfnf00
+0d8d3
+db0, le. 0x
+	`a3a  h"fbb00
+0&8d7b
+d0, ef` 
+xffff
+8d7@fd0, 
+x00
+		baa% 
+f`b0000&8$7e7$
+, eb
+ 0Xfbff 00 f8`7e)a0,"leb 0x!b0
+	
+  Xff
+f 000b d#b84 , an
+08f&f` 0 0f8$
+08&130
+	base 
+xFf$F
+000f8e01
+e*d 
+8&fbF0000f8E 
+ `0( l%f
+083 
+	
+sE 08"dbb0000b
+8!a8, %.d 00ff`f
+ 00f8ed85 0
+ leD
+1H3ff&0
+bgCe 0xffff0
+D8ae84%0,0end 0pfF
+ `9)
+9000
+le* 0x0
+0a"0
+ 04*
+9!656
+rT	l! L
+jup aeRnE,!(&.
+--- end of bootloader log (17753 bytes copied) ---
+
+--- watchdog ---
+wdt: reading cluster-0 watchdog @ 0x10060000
+wdt: WTCON=0x0001af39 WTDAT=0x0000ffaf WTCNT=0x0000da79: RUNNING, reset on expiry ON, irq off
+wdt: counts at 1090 Hz (if the input clock is 24576000 Hz): period 60050 ms, 51311 ms left
+wifi: PCIe RC1 (BCM4390) as the bootloader left it, read only
+wifi: pinctrl-hsi2 +0x000: 00000000 00000002 00111111 00000000
+wifi: pinctrl-hsi2 +0x010: 00000aaa 00111111 00000000 00000000
+wifi: pinctrl-hsi2 +0x020: 00000000 00000000 01111111 00000000
+wifi: pinctrl-hsi2 +0x030: 00002aaa 01111111 00000000 00000000
+wifi: pinctrl-hsi2 +0x040: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x050: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x060: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x070: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x080: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x090: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x0a0: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x0b0: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x0c0: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x0d0: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x0e0: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x0f0: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x100: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x110: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x120: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x130: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x140: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x150: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x160: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x170: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x180: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x190: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x1a0: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x1b0: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x1c0: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x1d0: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x1e0: 00000000 00000000 00000000 00000000
+wifi: pinctrl-hsi2 +0x1f0: 00000000 00000000 00000000 00000000
+wifi: PMU +0x3ec8 (PCIe 1 PHY isolation): 0x000000c0
+wifi: sysreg-hsi2 +0x000: 00000000 ffffffff 00000000 00000000
+wifi: sysreg-hsi2 +0x010: 00000000 deadbeef deadbeef deadbeef
+wifi: sysreg-hsi2 +0x020: deadbeef deadbeef deadbeef deadbeef
+wifi: sysreg-hsi2 +0x030: deadbeef deadbeef deadbeef deadbeef
+wifi: elbi +0x000: 00000000 00000100 00008000 00000000
+wifi: elbi +0x010: 00000000 00000000 00000000 00000000
+wifi: elbi +0x020: 00000001 00000001 00000000 00000000
+wifi: elbi +0x030: 00000000 00000000 00000000 00000000
+wifi: soc +0x000: 00000000 00000000 00000000 00000000
+wifi: soc +0x010: 00000000 00000000 00000000 00000000
+wifi: phy 0x13160000: does not answer (clock or power off)
+wifi: dbi +0x000: a5a5144d 00100000 00000001 00010000
+wifi: dbi +0x010: 00000004 00000000 00000000 00000000
+wifi: dbi +0x020: 00000000 00010001 00000000 00000000
+wifi: dbi +0x030: 00000000 00000040 00000000 000001ff
+wifi: s2mpu-hsi2 +0x000: 00000000 deadbeef deadbeef deadbeef
+wifi: s2mpu-hsi2 +0x010: 00000000 00000000 00000000 deadbeef
+wifi: s2mpu-hsi2 +0x020: 00000000 00000000 000000ff 00000000
+wifi: s2mpu-hsi2 +0x030: 00000000 00000000 00000000 00000000
+wifi: s2mpu-hsi2 +0x040: deadbeef 00f200f1 00f400f3 00000088
+wifi: s2mpu-hsi2 +0x050: 00000000 00000000 00000000 deadbeef
+wifi: s2mpu-hsi2 +0x060: 90000000 00000008 00000000 deadbeef
+wifi: s2mpu-hsi2 +0x070: 00000000 00000000 000000ff deadbeef
+wifi: s2mpu-hsi2 +0x080: deadbeef deadbeef deadbeef deadbeef
+wifi: s2mpu-hsi2 +0x090: deadbeef deadbeef deadbeef deadbeef
+wifi: s2mpu-hsi2 +0x0a0: deadbeef deadbeef deadbeef deadbeef
+wifi: s2mpu-hsi2 +0x0b0: deadbeef deadbeef deadbeef deadbeef
+wifi: s2mpu-hsi2 +0x0c0: deadbeef deadbeef deadbeef deadbeef
+wifi: s2mpu-hsi2 +0x0d0: deadbeef deadbeef deadbeef deadbeef
+wifi: s2mpu-hsi2 +0x0e0: deadbeef deadbeef deadbeef deadbeef
+wifi: s2mpu-hsi2 +0x0f0: deadbeef deadbeef deadbeef deadbeef
+wifi: s2mpu-hsi2 +0x100: 00000008 fedcba98 deadbeef deadbeef
+wifi: s2mpu-hsi2 +0x110: 00000000 00000000 deadbeef deadbeef
+wifi: s2mpu-hsi2 +0x120: 00000000 00000000 00000000 00000000
+wifi: s2mpu-hsi2 +0x130: 00000000 00000000 00000000 00000000
+wifi: s2mpu-hsi2 +0x140: deadbeef deadbeef deadbeef deadbeef
+wifi: s2mpu-hsi2 +0x150: deadbeef deadbeef deadbeef deadbeef
+wifi: s2mpu-hsi2 +0x160: deadbeef deadbeef deadbeef deadbeef
+wifi: s2mpu-hsi2 +0x170: deadbeef deadbeef deadbeef deadbeef
+wifi: s2mpu-hsi2 +0x180: deadbeef deadbeef deadbeef deadbeef
+wifi: s2mpu-hsi2 +0x190: deadbeef deadbeef deadbeef deadbeef
+wifi: s2mpu-hsi2 +0x1a0: deadbeef deadbeef deadbeef deadbeef
+wifi: s2mpu-hsi2 +0x1b0: deadbeef deadbeef deadbeef deadbeef
+wifi: s2mpu-hsi2 +0x1c0: deadbeef deadbeef deadbeef deadbeef
+wifi: s2mpu-hsi2 +0x1d0: deadbeef deadbeef deadbeef deadbeef
+wifi: s2mpu-hsi2 +0x1e0: deadbeef deadbeef deadbeef deadbeef
+wifi: s2mpu-hsi2 +0x1f0: deadbeef deadbeef deadbeef deadbeef
+wifi: s2mpu-hsi2+1000 +0x000: 00000000 deadbeef deadbeef deadbeef
+wifi: s2mpu-hsi2+1000 +0x010: 00000000 deadbeef deadbeef deadbeef
+wifi: s2mpu-hsi2+1000 +0x020: 00000000 00000000 00000000 00000000
+wifi: s2mpu-hsi2+1000 +0x030: 00000001 deadbeef deadbeef deadbeef
+wifi: s2mpu-hsi2+2000 +0x000: 00000000 00000000 00000000 deadbeef
+wifi: s2mpu-hsi2+2000 +0x010: 00000000 00000000 00000000 deadbeef
+wifi: s2mpu-hsi2+2000 +0x020: deadbeef 00000000 00000000 deadbeef
+wifi: s2mpu-hsi2+2000 +0x030: 00000000 00000000 00000000 deadbeef
+wifi: s2mpu-hsi2+4000 +0x000: 288dabb8 00000000 302d250c 00000000
+wifi: s2mpu-hsi2+4000 +0x010: 405f6f6e 00000000 1d8c991e 00000000
+wifi: s2mpu-hsi2+4000 +0x020: 00000000 00000000 00000000 00000000
+wifi: s2mpu-hsi2+4000 +0x030: 00000000 00000000 00000000 00000000
+wifi: s2mpu-hsi2+4000 +0x040: 00000000 00000000 00000000 00000000
+wifi: s2mpu-hsi2+4000 +0x050: 00000000 00000000 00000000 00000000
+wifi: s2mpu-hsi2+4000 +0x060: 00000000 00000000 00000000 00000000
+wifi: s2mpu-hsi2+4000 +0x070: 00000000 00000000 00000000 00000000
+wifi: s2mpu-hsi2+8000 0x131f8000: does not answer (clock or power off)
+wifi: PCIe 1 PHY isolation bypass via SMC: 0, PMU +0x3ec8 now 0x00000001
+wifi: phy +0x000: 00000008 00000000 00000000 00000000
+wifi: phy +0x010: 00000000 00000003 00000000 00000055
+wifi: udbg+c700 +0x000: 00010140 00040032 00020002 001a000a
+wifi: pcs +0x000: 00100000 00000000 0000001d 00000000
+wifi: pcs +0x010: 00000000 00000000 00000000 00000000
+wifi: WL_REG_ON high, PERST# low: gph3 CON 0x00010021 DAT 0x00000012
+wifi: PHY: external PLL lock 4, PLL lock 1, CDR lock 10, offset calibration 80
+wifi: before LTSSM: state 0x0, DBI link status 0x10110000
+wifi: LTSSM L0 (link up) after 40 us; states seen: 0x2 0x11
+wifi: DBI link control/status 0x30110000 (speed 1, width x1)
+wifi: endpoint 01:00.0: vendor 0x14e4 device 0x4438, class 0x028000 rev 5, header 0
+wifi: endpoint +0x00: 443814e4 00100000 02800005 00000000
+wifi: endpoint +0x10: 00000004 00000000 00000004 00000000
+wifi: endpoint +0x20: 0000000c 00000000 00000000 439014e4
+wifi: endpoint +0x30: 00000000 00000048 00000000 00000100
+wifi: BAR0: 0x10000 bytes at 0x60000000
+wifi: BAR2: 0x400000 bytes at 0x60400000
+wifi: BAR4: 0x100000 bytes at 0x60800000
+wifi: endpoint command 0x00100002, BAR0 window (config 0x80) 0x18001000
+wifi: BAR0 at the chip's window 0x18001000: 00018216 ffffffff 00110103 00000000 00000000 00000000 00000374 ffffffff
+wifi: BAR0 +0x00: 60054390 18400809 00000068 00000000 ffffffff ffffffff ffffffff ffffffff
+wifi: ChipCommon chip ID 0x4390, rev 5, package 0, 0 cores
+wifi: EROM pointer (ChipCommon +0xfc) 0x180070b0; BAR1 window (config 0x84) 0x00000000
+wifi: OOBR +0x000: 07b8812b 000002b0 00000110 ffffffff 00000000 00000000 00000000 00000000
+wifi: OOBR +0x020: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0x040: a7a7b1ab abb09190 00908080 ffffffff 00000000 ffffffff ffffffff ffffffff
+wifi: OOBR +0x060: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0x080: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0x0a0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0x0c0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0x0e0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0x100: 0000008b 00000000 00000000 ffffffff 00008180 00000000 ffffffff ffffffff
+wifi: OOBR +0x120: b4b3b000 00b7b6b5 ffffffff ffffffff 00000000 00000000 07010200 ffffffff
+wifi: OOBR +0x140: 0004f000 000030b0 00000001 00000000 00000000 ffffffff ffffffff ffffffff
+wifi: OOBR +0x160: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0x180: 00008180 8a888684 0000008b ffffffff 00938382 00000000 ffffffff ffffffff
+wifi: OOBR +0x1a0: 000000aa 00000000 ffffffff ffffffff 00030009 00000000 01090300 ffffffff
+wifi: OOBR +0x1c0: 0008503c 000030d0 00000001 00000000 00209100 ffffffff ffffffff ffffffff
+wifi: OOBR +0x1e0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0x200: 84828180 8b898785 008f8e8c ffffffff 00000084 00000000 ffffffff ffffffff
+wifi: OOBR +0x220: 00a2b0b0 00000000 ffffffff ffffffff 00000000 00000000 030b0100 ffffffff
+wifi: OOBR +0x240: 0000f047 00002104 00000021 00002000 00000000 ffffffff ffffffff ffffffff
+wifi: OOBR +0x260: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0x280: 87858280 008c8b89 00000000 ffffffff 00008685 00000000 ffffffff ffffffff
+wifi: OOBR +0x2a0: ac81a081 00b4b7ab ffffffff ffffffff 00000000 00000000 07080200 ffffffff
+wifi: OOBR +0x2c0: 00059012 00005118 00000000 00011002 00209100 ffffffff ffffffff ffffffff
+wifi: OOBR +0x2e0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0x300: 87858280 008c8b89 00000000 ffffffff 00008887 00000000 ffffffff ffffffff
+wifi: OOBR +0x320: ac81a181 00b3b5ab ffffffff ffffffff 00000000 00000000 07080200 ffffffff
+wifi: OOBR +0x340: 00059012 00005148 00000000 00011001 00209100 ffffffff ffffffff ffffffff
+wifi: OOBR +0x360: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0x380: 87858280 008c8b89 00000000 ffffffff 00008a89 00000000 ffffffff ffffffff
+wifi: OOBR +0x3a0: ac81a981 b4b6b5ab ffffffff ffffffff 00000000 00000000 08080200 ffffffff
+wifi: OOBR +0x3c0: 00059012 00003178 18000000 00011018 00209100 ffffffff ffffffff ffffffff
+wifi: OOBR +0x3e0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0x400: 00000000 00000000 00000000 ffffffff 0000008f 00000000 ffffffff ffffffff
+wifi: OOBR +0x420: 000000b0 00000000 ffffffff ffffffff 00000000 00000000 01010100 ffffffff
+wifi: OOBR +0x440: 00003063 00002198 00000000 00001000 00209100 ffffffff ffffffff ffffffff
+wifi: OOBR +0x460: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0x480: 00000000 00000000 00000000 ffffffff 0000008e 00000000 ffffffff ffffffff
+wifi: OOBR +0x4a0: 000000a2 00000000 ffffffff ffffffff 00000000 00000000 01010100 ffffffff
+wifi: OOBR +0x4c0: 00010049 000021ac 00000001 00008000 00000000 ffffffff ffffffff ffffffff
+wifi: OOBR +0x4e0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0x500: 80918392 00009381 00000000 ffffffff 0000008b 00000000 ffffffff ffffffff
+wifi: OOBR +0x520: acafabad b7b5b3af ffffffff ffffffff 00000000 00000000 08080800 ffffffff
+wifi: OOBR +0x540: 00013057 000021c4 00000000 00000000 00000000 ffffffff ffffffff ffffffff
+wifi: OOBR +0x560: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0x580: 00000000 00000000 00000000 ffffffff 00000000 00000000 ffffffff ffffffff
+wifi: OOBR +0x5a0: ac00abae b4b5b3af ffffffff ffffffff 00000000 00000000 08000000 ffffffff
+wifi: OOBR +0x5c0: 00013057 000001d8 00000000 00000000 00000000 ffffffff ffffffff ffffffff
+wifi: OOBR +0x5e0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0x600: 00008b80 00000000 00000000 ffffffff 00929190 00000000 ffffffff ffffffff
+wifi: OOBR +0x620: afb0b0ab 000000aa ffffffff ffffffff 00000000 00000000 05020300 ffffffff
+wifi: OOBR +0x640: 00020040 000031d8 00000001 00002000 00000000 ffffffff ffffffff ffffffff
+wifi: OOBR +0x660: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0x680: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0x6a0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0x6c0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0x6e0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0x700: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0x720: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0x740: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0x760: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0x780: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0x7a0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0x7c0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0x7e0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0x800: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0x820: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0x840: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0x860: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0x880: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0x8a0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0x8c0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0x8e0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0x900: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0x920: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0x940: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0x960: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0x980: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0x9a0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0x9c0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0x9e0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0xa00: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0xa20: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0xa40: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0xa60: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0xa80: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0xaa0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0xac0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0xae0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0xb00: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0xb20: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0xb40: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0xb60: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0xb80: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0xba0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0xbc0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0xbe0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0xc00: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0xc20: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0xc40: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0xc60: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0xc80: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0xca0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0xcc0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0xce0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0xd00: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0xd20: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0xd40: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0xd60: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0xd80: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0xda0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0xdc0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0xde0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0xe00: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0xe20: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0xe40: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0xe60: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0xe80: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0xea0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0xec0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0xee0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0xf00: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0xf20: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0xf40: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0xf60: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0xf80: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0xfa0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0xfc0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: OOBR +0xfe0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x000: 00000065 00001200 0003f03b 00001210 0003f03b 0000121c 0004003b 00001228
+wifi: EROM +0x020: 00030027 00001234 0000505f 00001240 0000905e 0000124c 0000905e 00001258
+wifi: EROM +0x040: 0000c055 00001264 0000c055 00001270 0000405c 0000127c 0000e041 00001288
+wifi: EROM +0x060: 0000e041 00001294 0000e041 000012a0 0000e041 000012ac 00300067 000012b8
+wifi: EROM +0x080: 00000068 000012c4 0820043b 000012d0 09200420 000012dc 0c20043b 000002ec
+wifi: EROM +0x0a0: 0a20043b 000002ec 0b20043b 000002ec 1851a000 14000140 1851e000 20200140
+wifi: EROM +0x0c0: 18000004 1851c000 20000140 1c000012 1851b000 140001c0 1851e000 302001c0
+wifi: EROM +0x0e0: 18001040 18003fff 1851d000 610001c0 08000013 00000020 80000000 ffffffff
+wifi: EROM +0x100: ffffffff 18504000 14000240 18516000 20400240 18080004 1850b000 140002c0
+wifi: EROM +0x120: 1850c000 140002c0 1850d000 140002c0 18516000 204002c0 18082005 18511000
+wifi: EROM +0x140: 200002c0 e800000f 18508000 14000340 18509000 14000340 1850a000 14000340
+wifi: EROM +0x160: 18516000 20400340 18084005 18510000 20000340 e880000f 1850e000 140003c0
+wifi: EROM +0x180: 18516000 204003c0 18086005 18512000 200003c0 e900000f 1850f000 14000440
+wifi: EROM +0x1a0: 18516000 20400440 18081004 18516000 204004c0 18088004 18505000 200004c0
+wifi: EROM +0x1c0: 00000013 18523000 14000540 18524000 20000540 19000010 1851f000 30300640
+wifi: EROM +0x1e0: 18010040 18014fff 18528000 30000640 1a000040 1a01efff 18527000 14000640
+wifi: EROM +0x200: 1851f000 38300000 1808d040 180e2fff 18514000 28000008 e780000d 18513000
+wifi: EROM +0x220: 28000010 e7a0000d 18515000 28000018 e7c0000e 1851f000 28300020 18018004
+wifi: EROM +0x240: 1851f000 28300028 18020007 1851f000 28300030 18019004 18516000 28400038
+wifi: EROM +0x260: 18089004 1851e000 28200040 18004004 1851e000 28200048 18005004 1851e000
+wifi: EROM +0x280: 28200050 18006005 1851e000 28200058 18009004 1851e000 28200060 1800a004
+wifi: EROM +0x2a0: 1851e000 28200068 1800b004 1851e000 28200070 1800c004 1851e000 28200078
+wifi: EROM +0x2c0: 1800d004 1851f000 28300080 1801a004 00000000 28000088 1850000a 18505000
+wifi: EROM +0x2e0: 08100090 18400008 ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x300: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x320: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x340: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x360: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x380: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x3a0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x3c0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x3e0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x400: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x420: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x440: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x460: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x480: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x4a0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x4c0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x4e0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x500: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x520: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x540: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x560: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x580: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x5a0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x5c0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x5e0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x600: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x620: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x640: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x660: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x680: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x6a0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x6c0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x6e0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x700: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x720: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x740: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x760: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x780: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x7a0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x7c0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x7e0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x800: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x820: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x840: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x860: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x880: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x8a0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x8c0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x8e0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x900: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x920: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x940: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x960: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x980: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x9a0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x9c0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0x9e0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0xa00: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0xa20: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0xa40: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0xa60: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0xa80: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0xaa0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0xac0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0xae0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0xb00: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0xb20: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0xb40: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0xb60: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0xb80: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0xba0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0xbc0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0xbe0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0xc00: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0xc20: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0xc40: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0xc60: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0xc80: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0xca0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0xcc0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0xce0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0xd00: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0xd20: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0xd40: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0xd60: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0xd80: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0xda0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0xdc0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0xde0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0xe00: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0xe20: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0xe40: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0xe60: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0xe80: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0xea0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0xec0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0xee0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0xf00: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0xf20: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0xf40: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0xf60: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0xf80: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0xfa0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0xfc0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: EROM +0xfe0: ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
+wifi: firmware 2516975 bytes, vars 18004 bytes
+wifi: firmware written in 3833 ms; first words ba62f2db bd0ef2b1, read back ba62f2db bd0ef2b1
+wifi: vars at 0x5bb9a8, token 0xee6a1195 at 0x5bfffc, RNG rTLV at 0x5bb920
+wifi: address 0 reads 0xb83ef001
+wifi: CA7 DMP control 0x21 -> 0x1: the firmware runs
+wifi: after 40 ms the last word is 0x0048a14c
+wifi: shared area at 0x48a14c: flags 0x00000109 (version 9), trap 0x0, assert 0x0 0x0 line 0, console 0x0, msgtrace 0x0
+wifi: +0 ms: flags 0x00000109, last word 0x0048a14c, CA7 +0 0x03000410, status 0x0810
+wifi: +855 ms: flags 0x00000000, last word 0x00581800, CA7 +0 0x03000410, status 0x0810
+wifi: 1 s later: link state 0x11, config +0x00 0x443814e4 +0x04 0x08100002, BAR0 window 0x18000000, BAR2 window 0x00400000
+wifi: the shared area moved to 0x581800
+wifi: shared +0x00: 70250109 00000000 00000000 00000000 00000000 00598734
+wifi: shared +0x18: 00000000 1836fc50 1a7f0096 00000000 00581e00 00581e04
+wifi: shared +0x30: 0058188c 00000000 00000000 00000000 00000000 00000000
+wifi: shared +0x48: 00000000 00000000 4de43001 00000000 00000000 00000000
+wifi: shared +0x60: 004a5e30 00000000 00000000 00000001 00000000 00000000
+wifi: shared +0x78: 00000000 00000008 0057055c 00000000 00000000 005818d8
+wifi: rings_info +0x00: 005818d8 00581c00 00581cc0 00581d80 00581dc0 00000000
+wifi: rings_info +0x18: 00000000 00000000 00000000 00000000 00000000 00000000
+wifi: rings_info +0x30: 00000000 002b0028 00000004 00000000 00000000 00000000
+wifi: rings_info +0x48: 00000000 00000000 00000000 00000000 00000000 00000000
+wifi: console at 0x598734: buffer 0x520104 size 0x2000 index 0x8bf
+wifi: fw| 000.000390454 pcie_hwhdr_rev 1
+wifi: fw| 000.026253866 gic_dist_init max_irq 64
+wifi: fw| 000.028321562 
+wifi: fw| RTE (PCIE-MSGBUF) 27.10.1121.57.18 (g205e49b b1 release24) on BCM4390 r5 @ 38.400/160.501/800.0MHz
+wifi: fw| 000.028511802 PCIEBUS_D2HTXCPL_ITEMCNT = 1024 PCIEBUS_MAXTXCPLQ = 512 
+wifi: fw| 000.030625744 EL: e6 d830
+wifi: fw| 000.033457499 pciemsgbuf0: Broadcom PCIE MSGBUF driver
+wifi: fw| 000.040045260 Coex cpu reset
+wifi: fw| 000.040066925 Coex cpu f/w download
+wifi: fw| 000.100425018 Reclaim section 3: returned 318844 bytes bootmem_inuse 137824 (free mem pre-reclaim: 533196) 
+wifi: fw| 000.100490245 EL: e6 d830
+wifi: fw| 000.103969380 Slice0: phy_radio_attach: RF Band Cap: 2G:0 5G:1
+wifi: fw| 000.288097837 macunit = 0, nrxd = 385, nrxbufpost = 384
+wifi: fw| 000.288111483 macunit = 0, ntxd_lfrag = 2500, ntxd_trig_max = 2500, ntxd_aqm_be = 384 
+wifi: fw|   *** macunit 0 wme 1 ntxd 2500 
+wifi: fw| 000.320067710 Coex cpu start
+wifi: fw| 000.320376061 coex debug info addr    : 0x1a018a00
+wifi: fw| 000.320385227 coex debug info magic   : 0x47424443
+wifi: fw| 000.320393455 coex debug info version : 0x00000001
+wifi: fw| 000.320903921 [DSA]: set profile idx 0:0
+wifi: fw| 000.321010578 DSA is disabled based on the defined algorithm revision 255,0
+wifi: fw| 000.321103823 SR Coex version: 2.0
+wifi: fw| 000.347306626 wl0: Broadcom BCM4390 802.11 Wireless Controller 27.10.1121.57.18 (g205e49b b1 release24)
+wifi: fw| 000.347388909 EL: e6 d830
+wifi: fw| 000.349804875 Slice1: phy_radio_attach: RF Band Cap: 2G:1 5G:0
+wifi: fw| 000.571596868 macunit = 1, nrxd = 155, nrxbufpost = 154
+wifi: fw| 000.571610409 macunit = 1, ntxd_lfrag = 640, ntxd_trig_max = 640, ntxd_aqm_be = 134 
+wifi: fw|   *** macunit 1 wme 1 ntxd 640 
+wifi: fw| 000.633230555 DSA is disabled based on the defined algorithm revision 255,0
+wifi: fw| 000.658118368 wl1: Broadcom BCM4390 802.11 Wireless Controller 27.10.1121.57.18 (g205e49b b1 release24)
+wifi: fw| 000.658193908 EL: e6 d830
+wifi: fw| 000.660178071 Slice2: phy_radio_attach: RF Band Cap: 2G:0 5G:1
+wifi: fw| 000.849425021 wl2: Broadcom BCM4390 802.11 Wireless Controller 27.10.1121.57.18 (g205e49b b1 release24)
+wifi: fw| 000.854547599 TCAM: 1920 used: 1359 exceed:0
+wifi: fw| 000.856402818 Reclaim section 2: returned 363608 bytes bootmem_inuse 186492 (free mem pre-reclaim: 122544) 
+wifi: fw| 000.857379953 Firmware boot took 891219 us
+wifi: fw| 000.857402242 ThreadX v5.6 initialized
+wifi: fw| 000.857420262 initing the fatal buf block: 0x004a5e30(65524)
+wifi: fw| 000.858447938 Notify host through MSI - FW boot complete
+wifi: msgbuf: host block at 0x8029d000 (0x114000 bytes); ringmem 0x5818d8, H2D w/r 0x581c00/0x581cc0, D2H w/r 0x581d80/0x581dc0
+wifi: WLC_GET_VERSION: status 0, version 2
+wifi: event 47 status 0 reason 0 flags 0x18, 3 bytes, peer 00:00:00:00:00:00
+wifi: CLM blob 26272 bytes loaded in 339 ms: last status 0, clmload_status 0
+wifi: event_msgs_ext: status 0
+wifi: MAC was 00:90:4c:5a:40:01 (0), now 02:1a:11:db:a8:ae: 0
+wifi: eht get (0): 01 68 74 00 00 00 04 00 00 00 00 00; set 0: 0
+wifi: rxbufpost_sz 2048 (0)
+wifi: WLC_UP: status 0
+wifi: scan_ver: status 0: version 1 length 6 scan interface major 4
+wifi: escan v4 (params 76 bytes): status 0
+wifi: network  0: "<masked>"  8a:a3:29:xx:xx:xx  RSSI -82 dBm  chanspec 0x1001
+wifi: network  1: "<masked>"  82:da:c2:xx:xx:xx  RSSI -82 dBm  chanspec 0x1001
+wifi: network  2: "<masked>"  42:0f:c1:xx:xx:xx  RSSI -49 dBm  chanspec 0x1001
+wifi: network  3: "<masked>"  6a:75:da:xx:xx:xx  RSSI -70 dBm  chanspec 0x1001
+wifi: network  4: "<masked>"  10:2c:b1:xx:xx:xx  RSSI -66 dBm  chanspec 0x1001
+wifi: network  5: "<masked>"  d4:6c:6d:xx:xx:xx  RSSI -68 dBm  chanspec 0x1001
+wifi: network  6: "<masked>"  c6:6c:6d:xx:xx:xx  RSSI -68 dBm  chanspec 0x1001
+wifi: network  7: "<masked>"  ce:6c:6d:xx:xx:xx  RSSI -68 dBm  chanspec 0x1001
+wifi: network  8: "<masked>"  d6:6c:6d:xx:xx:xx  RSSI -68 dBm  chanspec 0x1001
+wifi: network  9: "<masked>"  0a:c7:f5:xx:xx:xx  RSSI -74 dBm  chanspec 0xe12a
+wifi: network 10: "<masked>"  72:06:e6:xx:xx:xx  RSSI -88 dBm  chanspec 0xe12a
+wifi: network 11: "Rai Wifi45"  8a:77:79:xx:xx:xx  RSSI -39 dBm  chanspec 0xe12a
+wifi: network 12: "<masked>"  82:09:86:xx:xx:xx  RSSI -73 dBm  chanspec 0xe12a
+wifi: network 13: "<masked>"  42:0f:c1:xx:xx:xx  RSSI -47 dBm  chanspec 0x1001
+wifi: network 14: "<masked>"  42:0f:c1:xx:xx:xx  RSSI -48 dBm  chanspec 0x1001
+wifi: network 15: "<masked>"  0a:c7:f5:xx:xx:xx  RSSI -74 dBm  chanspec 0xe12a
+wifi: network 16: "<masked>"  82:09:86:xx:xx:xx  RSSI -72 dBm  chanspec 0xe12a
+wifi: network 17: "Rai Wifi45"  8a:77:79:xx:xx:xx  RSSI -39 dBm  chanspec 0xe12a
+wifi: network 18: "<masked>"  72:06:e6:xx:xx:xx  RSSI -87 dBm  chanspec 0xe12a
+wifi: network 19: "<masked>"  82:09:86:xx:xx:xx  RSSI -73 dBm  chanspec 0xe12a
+wifi: network 20: "<masked>"  82:09:86:xx:xx:xx  RSSI -73 dBm  chanspec 0xe12a
+wifi: network 21: "Rai Wifi45"  8a:77:79:xx:xx:xx  RSSI -39 dBm  chanspec 0xe12a
+wifi: network 22: "<masked>"  8a:77:79:xx:xx:xx  RSSI -42 dBm  chanspec 0xe12a
+wifi: network 23: "<masked>"  d4:6c:6d:xx:xx:xx  RSSI -73 dBm  chanspec 0xe22a
+wifi: network 24: "<masked>"  5a:cf:61:xx:xx:xx  RSSI -85 dBm  chanspec 0xe22a
+wifi: network 25: "<masked>"  42:0f:c1:xx:xx:xx  RSSI -65 dBm  chanspec 0xe22a
+wifi: network 26: "<masked>"  d4:6c:6d:xx:xx:xx  RSSI -73 dBm  chanspec 0xe22a
+wifi: network 27: "<masked>"  a8:a2:37:xx:xx:xx  RSSI -76 dBm  chanspec 0x1006
+wifi: network 28: "<masked>"  22:ea:0f:xx:xx:xx  RSSI -37 dBm  chanspec 0x1006
+wifi:   our network 22:ea:0f:xx:xx:xx chanspec 0x1006 RSN: 30 14 01 00 00 0f ac 04 01 00 00 0f ac 04 01 00 00 0f ac 02 0c 00
+wifi: network 29: "<masked>"  5a:cf:61:xx:xx:xx  RSSI -75 dBm  chanspec 0x1006
+wifi: network 30: "<masked>"  d6:92:5e:xx:xx:xx  RSSI -77 dBm  chanspec 0x1006
+wifi: network 31: "<masked>"  42:0f:c1:xx:xx:xx  RSSI -65 dBm  chanspec 0xe22a
+wifi: network 32: "<masked>"  d4:6c:6d:xx:xx:xx  RSSI -73 dBm  chanspec 0xe22a
+wifi: network 33: "<masked>"  5a:cf:61:xx:xx:xx  RSSI -85 dBm  chanspec 0xe22a
+wifi: network 34: "<masked>"  d4:6c:6d:xx:xx:xx  RSSI -73 dBm  chanspec 0xe22a
+wifi: network 35: "<masked>"  d4:6c:6d:xx:xx:xx  RSSI -73 dBm  chanspec 0xe22a
+wifi: network 36: "<masked>"  ce:6c:6d:xx:xx:xx  RSSI -73 dBm  chanspec 0xe22a
+wifi: network 37: "<masked>"  d6:6c:6d:xx:xx:xx  RSSI -73 dBm  chanspec 0xe22a
+wifi: network 38: "<masked>"  12:36:aa:xx:xx:xx  RSSI -89 dBm  chanspec 0xe22a
+wifi: network 39: "<masked>"  12:36:aa:xx:xx:xx  RSSI -91 dBm  chanspec 0xe22a
+wifi: network 40: "<masked>"  a2:27:a8:xx:xx:xx  RSSI -67 dBm  chanspec 0x1006
+wifi: network 41: "<masked>"  22:ea:0f:xx:xx:xx  RSSI -37 dBm  chanspec 0x1006
+wifi:   our network 22:ea:0f:xx:xx:xx chanspec 0x1006 RSN: 30 14 01 00 00 0f ac 04 01 00 00 0f ac 04 01 00 00 0f ac 02 0c 00
+wifi: network 42: "<masked>"  8a:cf:61:xx:xx:xx  RSSI -75 dBm  chanspec 0x1006
+wifi: network 43: "<masked>"  62:b7:bd:xx:xx:xx  RSSI -83 dBm  chanspec 0xe32a
+wifi: network 44: "<masked>"  04:09:86:xx:xx:xx  RSSI -74 dBm  chanspec 0xe32a
+wifi: network 45: "<masked>"  22:ea:0f:xx:xx:xx  RSSI -37 dBm  chanspec 0x1006
+wifi:   our network 22:ea:0f:xx:xx:xx chanspec 0x1006 RSN: 30 14 01 00 00 0f ac 04 01 00 00 0f ac 04 01 00 00 0f ac 02 0c 00
+wifi: network 46: "<masked>"  04:09:86:xx:xx:xx  RSSI -74 dBm  chanspec 0xe32a
+wifi: network 47: "<masked>"  82:09:86:xx:xx:xx  RSSI -74 dBm  chanspec 0xe32a
+wifi: network 48: "<masked>"  04:09:86:xx:xx:xx  RSSI -75 dBm  chanspec 0xe32a
+wifi: network 49: "<masked>"  62:b7:bd:xx:xx:xx  RSSI -82 dBm  chanspec 0xe32a
+wifi: network 50: "<masked>"  92:b7:bd:xx:xx:xx  RSSI -62 dBm  chanspec 0x100b
+wifi: network 51: "<masked>"  82:95:f8:xx:xx:xx  RSSI -78 dBm  chanspec 0xe09b
+wifi: network 52: "<masked>"  04:09:86:xx:xx:xx  RSSI -62 dBm  chanspec 0x100b
+wifi: network 53: "<masked>"  7a:09:86:xx:xx:xx  RSSI -61 dBm  chanspec 0x100b
+wifi: network 54: "<masked>"  62:b6:87:xx:xx:xx  RSSI -66 dBm  chanspec 0x100b
+wifi: network 55: "<masked>"  7a:09:86:xx:xx:xx  RSSI -57 dBm  chanspec 0x100b
+wifi: network 56: "<masked>"  0a:c7:f5:xx:xx:xx  RSSI -69 dBm  chanspec 0x100b
+wifi: network 57: "<masked>"  92:b7:bd:xx:xx:xx  RSSI -62 dBm  chanspec 0x100b
+wifi: network 58: "<masked>"  0a:c7:f5:xx:xx:xx  RSSI -66 dBm  chanspec 0x100b
+wifi: network 59: "<masked>"  54:af:97:xx:xx:xx  RSSI -90 dBm  chanspec 0xe19b
+wifi: network 60: "<masked>"  04:09:86:xx:xx:xx  RSSI -62 dBm  chanspec 0x100b
+wifi: network 61: "<masked>"  5a:af:97:xx:xx:xx  RSSI -91 dBm  chanspec 0xe19b
+wifi: network 62: "<masked>"  7a:09:86:xx:xx:xx  RSSI -62 dBm  chanspec 0x100b
+wifi: network 63: "<masked>"  0a:c7:f5:xx:xx:xx  RSSI -77 dBm  chanspec 0xe19b
+wifi: network 64: "Rai Wifi45"  92:77:79:xx:xx:xx  RSSI -43 dBm  chanspec 0x100b
+wifi: network 65: "<masked>"  04:09:86:xx:xx:xx  RSSI -44 dBm  chanspec 0x100b
+wifi: network 66: "<masked>"  62:b6:87:xx:xx:xx  RSSI -68 dBm  chanspec 0x100b
+wifi: network 67: "<masked>"  7a:09:86:xx:xx:xx  RSSI -62 dBm  chanspec 0x100b
+wifi: network 68: "<masked>"  0a:c7:f5:xx:xx:xx  RSSI -76 dBm  chanspec 0xe19b
+wifi: network 69: "<masked>"  7a:5a:b0:xx:xx:xx  RSSI -72 dBm  chanspec 0xe19b
+wifi: network 70: "<masked>"  54:af:97:xx:xx:xx  RSSI -84 dBm  chanspec 0xe19b
+wifi: network 71: "<masked>"  54:af:97:xx:xx:xx  RSSI -91 dBm  chanspec 0xe19b
+wifi: network 72: "<masked>"  82:da:c2:xx:xx:xx  RSSI -90 dBm  chanspec 0xe29b
+wifi: network 73: "<masked>"  82:da:c2:xx:xx:xx  RSSI -91 dBm  chanspec 0xe29b
+wifi: network 74: "<masked>"  12:a7:93:xx:xx:xx  RSSI -91 dBm  chanspec 0xe29b
+wifi: network 75: "<masked>"  12:a7:93:xx:xx:xx  RSSI -91 dBm  chanspec 0xe29b
+wifi: network 76: "<masked>"  12:a7:93:xx:xx:xx  RSSI -91 dBm  chanspec 0xe29b
+wifi: network 77: "<masked>"  04:09:86:xx:xx:xx  RSSI -73 dBm  chanspec 0xe29b
+wifi: network 78: "<masked>"  42:0f:c1:xx:xx:xx  RSSI -89 dBm  chanspec 0xe29b
+wifi: network 79: "<masked>"  42:0f:c1:xx:xx:xx  RSSI -89 dBm  chanspec 0xe29b
+wifi: network 80: "<masked>"  92:a3:29:xx:xx:xx  RSSI -90 dBm  chanspec 0xe39b
+wifi: network 81: "<masked>"  a8:a2:37:xx:xx:xx  RSSI -84 dBm  chanspec 0xe39b
+wifi: network 82: "<masked>"  34:19:4d:xx:xx:xx  RSSI -86 dBm  chanspec 0xe39b
+wifi: network 83: "<masked>"  ac:b6:87:xx:xx:xx  RSSI -85 dBm  chanspec 0xe03a
+wifi: network 84: "<masked>"  6a:b6:87:xx:xx:xx  RSSI -85 dBm  chanspec 0xe03a
+wifi: network 85: "<masked>"  a8:a2:37:xx:xx:xx  RSSI -91 dBm  chanspec 0xe03a
+wifi: network 86: "<masked>"  ac:b6:87:xx:xx:xx  RSSI -84 dBm  chanspec 0xe03a
+wifi: network 87: "<masked>"  34:19:4d:xx:xx:xx  RSSI -88 dBm  chanspec 0xe03a
+wifi: network 88: "<masked>"  34:19:4d:xx:xx:xx  RSSI -91 dBm  chanspec 0xe03a
+wifi: network 89: "<masked>"  ac:b6:87:xx:xx:xx  RSSI -85 dBm  chanspec 0xe03a
+wifi: network 90: "<masked>"  34:19:4d:xx:xx:xx  RSSI -92 dBm  chanspec 0xe03a
+wifi: network 91: "<masked>"  34:19:4d:xx:xx:xx  RSSI -88 dBm  chanspec 0xe03a
+wifi: network 92: "<masked>"  72:19:4d:xx:xx:xx  RSSI -88 dBm  chanspec 0xe03a
+wifi: network 93: "<masked>"  5a:af:97:xx:xx:xx  RSSI -68 dBm  chanspec 0x1907
+wifi: network 94: "<masked>"  72:15:db:xx:xx:xx  RSSI -87 dBm  chanspec 0xe06a
+wifi: network 95: "<masked>"  72:15:db:xx:xx:xx  RSSI -87 dBm  chanspec 0xe06a
+wifi: network 96: "<masked>"  9a:27:a8:xx:xx:xx  RSSI -81 dBm  chanspec 0xe06a
+wifi: network 97: "<masked>"  6a:95:f8:xx:xx:xx  RSSI -89 dBm  chanspec 0xe06a
+wifi: network 98: "<masked>"  72:15:db:xx:xx:xx  RSSI -87 dBm  chanspec 0xe06a
+wifi: network 99: "<masked>"  5a:af:97:xx:xx:xx  RSSI -71 dBm  chanspec 0x1907
+wifi: network 100: "<masked>"  76:5a:b0:xx:xx:xx  RSSI -67 dBm  chanspec 0x1907
+wifi: network 101: "<masked>"  6a:95:f8:xx:xx:xx  RSSI -89 dBm  chanspec 0xe06a
+wifi: network 102: "<masked>"  9a:27:a8:xx:xx:xx  RSSI -81 dBm  chanspec 0xe06a
+wifi: network 103: "<masked>"  76:5a:b0:xx:xx:xx  RSSI -67 dBm  chanspec 0x1907
+wifi: network 104: "<masked>"  72:15:db:xx:xx:xx  RSSI -87 dBm  chanspec 0xe06a
+wifi: network 105: "<masked>"  9a:27:a8:xx:xx:xx  RSSI -81 dBm  chanspec 0xe06a
+wifi: network 106: "<masked>"  9a:27:a8:xx:xx:xx  RSSI -81 dBm  chanspec 0xe06a
+wifi: network 107: "<masked>"  60:d5:61:xx:xx:xx  RSSI -67 dBm  chanspec 0x100d
+wifi: network 108: "<masked>"  7a:19:4d:xx:xx:xx  RSSI -86 dBm  chanspec 0xe08a
+wifi: network 109: "<masked>"  34:19:4d:xx:xx:xx  RSSI -86 dBm  chanspec 0xe08a
+wifi: network 110: "<masked>"  34:19:4d:xx:xx:xx  RSSI -86 dBm  chanspec 0xe08a
+wifi: network 111: "<masked>"  34:19:4d:xx:xx:xx  RSSI -85 dBm  chanspec 0xe08a
+wifi: network 112: "<masked>"  6e:15:db:xx:xx:xx  RSSI -85 dBm  chanspec 0x4080
+wifi: network 113: "<masked>"  6e:15:db:xx:xx:xx  RSSI -85 dBm  chanspec 0x4080
+wifi: network 114: "<masked>"  06:27:a8:xx:xx:xx  RSSI -87 dBm  chanspec 0x4080
+wifi: network 115: "<masked>"  06:27:a8:xx:xx:xx  RSSI -87 dBm  chanspec 0x4080
+wifi: network 116: "Rai Wifi45"  82:77:79:xx:xx:xx  RSSI -55 dBm  chanspec 0x4084
+wifi: network 117: "<masked>"  82:77:79:xx:xx:xx  RSSI -55 dBm  chanspec 0x4084
+wifi: network 118: "Rai Wifi45"  82:77:79:xx:xx:xx  RSSI -57 dBm  chanspec 0x4084
+wifi: network 119: "<masked>"  82:77:79:xx:xx:xx  RSSI -57 dBm  chanspec 0x4084
+wifi: network 120: "Rai Wifi45"  82:77:79:xx:xx:xx  RSSI -45 dBm  chanspec 0x4084
+wifi: network 121: "<masked>"  82:77:79:xx:xx:xx  RSSI -45 dBm  chanspec 0x4084
+wifi: network 122: "Rai Wifi45"  82:77:79:xx:xx:xx  RSSI -56 dBm  chanspec 0x4084
+wifi: network 123: "<masked>"  82:77:79:xx:xx:xx  RSSI -56 dBm  chanspec 0x4084
+wifi: network 124: "Rai Wifi45"  82:77:79:xx:xx:xx  RSSI -45 dBm  chanspec 0x4084
+wifi: network 125: "<masked>"  82:77:79:xx:xx:xx  RSSI -45 dBm  chanspec 0x4084
+wifi: network 126: "Rai Wifi45"  82:77:79:xx:xx:xx  RSSI -45 dBm  chanspec 0x4084
+wifi: network 127: "<masked>"  82:77:79:xx:xx:xx  RSSI -45 dBm  chanspec 0x4084
+wifi: network 128: "<masked>"  40:0f:c1:xx:xx:xx  RSSI -72 dBm  chanspec 0x694f
+wifi: network 129: "<masked>"  40:0f:c1:xx:xx:xx  RSSI -62 dBm  chanspec 0x694f
+wifi: network 130: "<masked>"  12:09:86:xx:xx:xx  RSSI -72 dBm  chanspec 0x6e6f
+wifi: network 131: "<masked>"  12:09:86:xx:xx:xx  RSSI -72 dBm  chanspec 0x6e6f
+wifi: network 132: "<masked>"  78:95:f8:xx:xx:xx  RSSI -89 dBm  chanspec 0x4082
+wifi: network 133: "<masked>"  78:95:f8:xx:xx:xx  RSSI -89 dBm  chanspec 0x4082
+wifi: scan finished, status 0, 134 networks seen
+wifi: scan: 4846 ms, 134 networks
+wifi: join: event_msgs_ext 0
+wifi: join: 480 receive buffers posted; bus:host_access=1: 0
+wifi: join: infra 1: 0
+wifi: join: auth open: 0
+wifi: join: wsec 0x4: 0
+wifi: join: wpa_auth 0x80: 0
+wifi: join: sup_wpa 1: 0
+wifi: join: mlo cap (0): 01 00 08 00 03 02 02 00 01 00 08 00 00 00 00 00
+wifi: join: mlo config off (3 links, 40 bytes): 0
+wifi: join: PMK (passphrase, 8 bytes): 0
+wifi: join: best 2.4 GHz BSS 22:ea:0f:xx:xx:xx, chanspec 0x1006, RSSI -37 dBm
+wifi: join: PM was 2 (0), set to 0: 0
+wifi: join: WLC_SET_SSID (20-character SSID): status 0
+wifi: RX frame 0: 199 bytes, ethertype 0xffff, from 00:00:40:xx:xx:xx
+wifi:   cmpl if 0 id 0x340 status 0x0 meta 0 len 199 off 0 flags 0x2
+wifi: RX frame 1: 273 bytes, ethertype 0x021a, from 00:00:50:xx:xx:xx
+wifi:   cmpl if 0 id 0x341 status 0x0 meta 0 len 273 off 0 flags 0x2
+wifi: RX frame 2: 273 bytes, ethertype 0x021a, from 00:00:50:xx:xx:xx
+wifi:   cmpl if 0 id 0x342 status 0x0 meta 0 len 273 off 0 flags 0x2
+wifi: event 3 status 0 reason 0 flags 0x0, 0 bytes, peer 22:ea:0f:e1:63:fb
+wifi: event 16 status 0 reason 0 flags 0x1, 22 bytes, peer 22:ea:0f:e1:63:fb
+wifi: event 7 status 0 reason 0 flags 0x0, 172 bytes, peer 22:ea:0f:e1:63:fb
+wifi: RX frame 3: 121 bytes, ethertype 0xa8ae, from 00:00:02:xx:xx:xx
+wifi:   cmpl if 0 id 0x4c3 status 0x0 meta 0 len 121 off 0 flags 0x2
+wifi: RX frame 4: 177 bytes, ethertype 0xa8ae, from 00:00:02:xx:xx:xx
+wifi:   cmpl if 0 id 0x4c4 status 0x0 meta 0 len 177 off 0 flags 0x2
+wifi: event 1 status 0 reason 0 flags 0x0, 0 bytes, peer 22:ea:0f:e1:63:fb
+wifi: event 0 status 0 reason 0 flags 0x0, 33 bytes, peer 22:ea:0f:e1:63:fb
+wifi: event 46 status 6 reason 0 flags 0x0, 30 bytes, peer 00:00:00:00:00:00
+wifi:   data +00: dd 1c 00 90 4c 39 01 00 00 00 8d 27 00 00 45 00
+wifi:   data +16: 00 00 56 2d 00 00 19 00 00 00 1e 7d 00 00 00 00
+wifi: JOINED in 5914 ms: BSSID 22:ea:0f:e1:63:fb, RSSI -38 dBm, WPA2 keys in place
+wifi: join: left the network, status 0
+wifi: event 11 status 0 reason 8 flags 0x0, 0 bytes, peer 22:ea:0f:e1:63:fb
+wifi: event 11 status 0 reason 8 flags 0x0, 0 bytes, peer 22:ea:0f:e1:63:fb
+wifi: event 16 status 0 reason 2 flags 0x0, 0 bytes, peer 22:ea:0f:e1:63:fb
+wifi: join: 5 frames received; RX post: host wr 485, firmware rd TCM 485 host 485
+wifi: join: 5 of 480 RX buffers written by the chip
+wifi:   buffer 64 +00: 01 00 bf 00 01 00 00 00 40 00 00 00 ff ff ff ff
+wifi:   buffer 64 +16: ff ff 02 1a 11 db a8 ae ff ff ff ff ff ff 60 f1
+wifi:   buffer 64 +32: 00 14 48 61 72 6b 61 6d 61 6c 27 73 20 53 32 36
+wifi:   buffer 64 +48: 20 55 6c 74 72 61 01 08 8c 12 98 24 b0 48 60 6c
+wifi:   buffer 64 +64: 2d 1a 6f 00 17 ff ff 00 00 00 00 00 00 00 00 00
+wifi:   buffer 64 +80: 00 00 00 00 00 00 00 00 00 00 00 00 7f 0b 04 00
+wifi: join: RX complete ring: firmware wr TCM 5 host 5, host rd 5
+wifi: join: wsec now 0x4 (0), wpa_auth 0x80 (0), sup_wpa 1 (0)
+wifi: join: assoc_info (0): req 181 bytes, resp 172 bytes, flags 0x0
+wifi: join: assoc_req_ies (0): 0/20 1/8 50/4 33/2 36/2 48/20 59/21 45/26 127/10 255.137/2 221/19 221/10 221/7 0/0 0/0
+wifi: join: our RSN IE: 30 14 01 00 00 0f ac 04 01 00 00 0f ac 04 01 00 00 0f ac 02 0c 00
+wifi: msgbuf: H2D ctrl w 63 (TCM r 63), D2H ctrl r 55; S2MPU fault 0x0; shared flags 0x70250109 trap 0x0
+wifi: core look 0x18006248: 00000021 00002000 00000000 ffffffff
+wifi: core look 0x180064c8: 00000001 00008000 00000000 ffffffff
+wifi: core look 0x18080000: 02000210 0000000c 000041e1 00000a41
+wifi: core look 0x18088000: 0b191000 ffffffff 00000f00 ffffffff
+wifi: core look 0x18504140: 00000002 00000000 00000000 00000000
+wifi: core look 0x18516140: 00000002 00000000 00000000 00000000
+wifi: core look 0x18505140: 00000002 00000000 00000000 00000000
+wifi: dongle RAM 0x5b0000 before: ffffffff ffffffff ffffffff ffffffff; last word 0x5bfffc: ffffffff
+wifi: dongle RAM 0x5b0000 after writing: ffffffff ffffffff ffffffff ffffffff (NOT as written)
+
+--- display ---
+display: DT drmdecon@19470000 (decon 0)
+display: DT decon node has no memory-region (no handover buffer declared)
+display: DECON0 main=0x19470000 win=0x19480000 wincon=0x194a0000 (14 windows)
+display: reading DECON0 main registers (a hang right after this line means
+         the DECON block is powered down)
+display: VERSION=0x07060000 FRAME_COUNT=5 GLOBAL_CON=0x00000133 (shadow 0x00000101) TRIG_CON=0x00003070
+display: mode=COMMAND enabled=yes run=1 idle=1
+display: reading WINCON 0..13
+display: window 5 ON: WINCON=0x00000001 chmap=0 -> dpp 0  pos (0,0)-(1279,2855)
+display:   reading RDMA @ 0x19900000
+display:   live   ENABLE=0x40000000 IN_CTRL_0=0xff400000 (fmt 0 BGRA8888)
+display:   live   SRC 1280x2856  OFFSET=0x00000000  IMG 1280x2856
+display:   live   BASEADDR_P0=0xfac00000 P1=0x00000000 STRIDE_0=0x00000000
+display:   shadow ENABLE=0x40000000 IN_CTRL_0=0xff400000 (fmt 0 BGRA8888)
+display:   shadow SRC 1280x2856  OFFSET=0x00000000  IMG 1280x2856
+display:   shadow BASEADDR_P0=0xfac00000 P1=0x00000000 STRIDE_0=0x00000000
+display: FRAME_COUNT 5 -> 5 over 100 ms (no new frames: idle/command mode)
+display: FRAME BUFFER: 0xfac00000  1280x2856  BGRA8888  stride 5120 bytes  (dpp 0)
+
+=== SUMMARY ===
+platform     : caiman (Pixel 9 Pro, Tensor G4 / zumapro), probe d433a4d-dirty
+entry        : EL2, MPIDR 0x81000000, image 0x80000000+0x3c1aa0, DTB 0x8a000000
+dram         : 8 range(s) from DT
+ramoops log  : console zone 0xfd3ff000 size 0x200000
+uart         : not usable
+psci         : version 0x10001, SYSTEM_RESET2 yes
+fb (regs)    : 0xfac00000 1280x2856 fmt 0 bpp 4 stride 5120 (dpp 0)
+fb (DT)      : no handover memory-region
+decon mode   : command, 0 frames in 100 ms
+watchdog     : RUNNING (bootloader left it armed), period 60050 ms, 51311 ms left at probe time
+aborted reads: 119
+
+finish: done; rebooting in 3000 ms (PSCI SYSTEM_RESET2 warm)
+=== caiman-probe end ===
+[   0.000000] [I] secure payload loading took 0ms
+[   0.000000] [I] platform info binded: true
+[   0.000000] [I] platform info: 060906010000
+[   9.735886] [I] 
+welcome to lk/MP
+
+[   9.735914] [I] boot args 0x1 0x0 0x0 0x0
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   9.736607] [I] acpm locks regulators
+[   9.736664] [I] Soc Product ID: 0x09875
+[   9.736698] [I] Soc rev: A1
+[   9.736727] [I] Soc ID: 0x12b44c577850
+[   9.736758] [I] DVFS version: 2
+[   9.736791] [E] vendor magic_number must be 0xcceeddff but 0x00000000
+[   9.736844] [E] magic_number must be 0xcceeddff but 0x00000000
+[   9.736927] [I] S2MPG_M CHIPID read: 0x10
+[   9.736990] [I] S2MPG_S CHIPID read: 0x10
+[   9.737054] [I] S2MPG_M PWRONSRC read: 0x4
+[   9.737120] [I] S2MPG_M OFFSRC1 read: 0x10
+[   9.737192] [I] S2MPG_M OFFSRC2 read: 0x0
+[   9.737256] [I] S2MPG_M RTC_WTSR read: 0x7e
+[   9.737298] [I] S2MPG_M INT1: 0x30
+[   9.737326] [I] S2MPG_M INT2: 0x0
+[   9.737352] [I] S2MPG_M INT3: 0x0
+[   9.737378] [I] S2MPG_M INT4: 0x0
+[   9.737408] [I] S2MPG_M INT5: 0x0
+[   9.737468] [I] S2MPG_S OFFSRC1 read: 0x11
+[   9.737508] [I] S2MPG_S INT1: 0x83
+[   9.737536] [I] S2MPG_S INT2: 0x80
+[   9.737562] [I] S2MPG_S INT3: 0x0
+[   9.737593] [I] S2MPG_S INT4: 0x0
+[   9.737619] [I] S2MPG_S INT5: 0x0
+APC Bootmetrics:
+  BL1: MT:1 / DT:ENTRY / 96528 us
+  BL1: MT:2 / DT:LOAD  / 7368 us
+  BL1: MT:F / DT:EXIT  / 147544 us
+  PBL: MT:1 / DT:ENTRY / 147680 us
+  PBL: MT:2 / DT:LOAD  / 19592 us
+  PBL: MT:F / DT:EXIT  / 212776 us
+  BL2: MT:1 / DT:ENTRY / 214344 us
+  BL2: MT:2 / DT:LOAD  / 160 us
+  BL2: MT:3 / DT:LOAD  / 152 us
+  BL2: MT:4 / DT:CHECK / 342384 us
+  BL2: MT:5 / DT:CHECK / 2096 us
+  BL2: MT:6 / DT:LOAD  / 8978344 us
+  BL2: MT:7 / DT:CHECK / 9073672 us
+  BL2: MT:8 / DT:CHECK / 9073816 us
+  BL2: MT:9 / DT:LOAD  / 44208 us
+  BL2: MT:A / DT:LOAD  / 31608 us
+  BL2: MT:B / DT:LOAD  / 330080 us
+  BL2: MT:C / DT:LOAD  / 8 us
+  BL2: MT:F / DT:EXIT  / 9529056 us
+  PBL: MT:3 / DT:LOAD  / 81256 us
+  PBL: MT:4 / DT:LOAD  / 28152 us
+  PBL: MT:5 / DT:LOAD  / 6184 us
+  PBL: MT:6 / DT:CHECK / 9659768 us
+  PBL: MT:7 / DT:CHECK / 9659896 us
+  EL3: MT:1 / DT:ENTRY / 9662672 us
+  EL3: MT:D / DT:CHECK / 9678232 us
+  EL3: MT:E / DT:CHECK / 9724760 us
+  EL3: MT:F / DT:EXIT  / 9724800 us
+APC Breadcrumbs(v2.4):
+ stages(S): 0000404F / 0000404F
+  flags(S): 000022C0 / 000022C0
+stages(NS): 00005FFE / 00005004
+ flags(NS): 0000D400 / 0000D400
+    status: 00000000 / 00000000
+    device: 00000001 / 00000001
+   tmutrip: 00000000 / 00000000
+     reset: 00180000 / 00180000
+[   9.738618] [E] GSA Breadcrumb:
+00000000 0000000d 00000000 00000000  |................|
+00000000 00000000 00000001           |............    |
+[   9.738754] [I] SBDP initialized: chipid allowed=0, dpm_state=0x0000
+[   9.738804] [E] check header failed
+[   9.738931] [I] initializing device i2c:usi00
+[   9.738974] [I] usi00: version 2.2
+[   9.739022] [I] initializing device i2c:usi04
+[   9.739064] [I] usi04: version 2.2
+[   9.739108] [I] initializing device i2c:usi06
+[   9.739149] [I] usi06: version 2.2
+[   9.739196] [I] initializing device i2c:usi09
+[   9.739234] [I] usi09: version 2.2
+[   9.739282] [I] initializing device i2cm:i2cm0
+[   9.739325] [I] DVFS init
+[   9.741584] [I] DVFS init done
+[   9.741613] [I] UFS EVT version 0
+[   9.741653] [I] controller version 3.0 found
+[   9.741688] [I] capabilities 0x1383ff1f
+[   9.741859] [I] UFS device found
+zuma_ufs_device_init_done
+[   9.741904] [E] ufshc_notify done
+[   9.741981] [I] ufshc_power_mode_change HS gear 4
+[   9.752175] [I] ufshc: bBootLunEn 0x1
+[   9.752317] [I] UFS device SAMSUNG KLUDG4UHGC-B0E1 version 3.1
+[   9.752362] [I] Enabled LUNs found 4
+[   9.752426] [I] UFS device total size 127984992256
+[   9.752531] [I] Temp too high enabled
+[   9.752629] [I] Temp too low enabled
+[   9.755372] [I] Write Booster: available buffer=0x5 lifetime=0x2 current buffer=0x1dcb
+[   9.755464] [I] boot slot: a
+[   9.757651] [I] slot data a: 0x00001e02
+[   9.757682] [I] slot data b: 0x00001000
+[   9.758480] [I] platform info: 060906010000
+[   9.758722] [I] initializing device cs40l2x:cs40l26
+[   9.769207] [I] CS40L26 found
+[   9.770868] [I] initializing device nfc:st21nfc
+[   9.772745] [I] tcpc vendor id 56
+[   9.773662] found 77779 on usi6
+[   9.773689] bms_init init usi10 as sec_i2c
+[   9.773724] [I] initializing device i2c:usi10
+[   9.773763] [I] usi10: version 2.2
+[   9.773959] [I] FG device name 0x5100
+[   9.774466] [I] [max77779fg] SOC(100), VCELL(4368), INOW(-374), IAVG(-328)
+[   9.775079] [I] fship 0x0
+[   9.775200] [I] master disconnect reason 0x0
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[   9.778019] [I] LCS state:PRODUCTION
+[   9.778312] [I] saving ddr training data
+[   9.780135] [I] no valid file
+[TMU:0] 53
+[TMU:1] 53
+[   9.783488] [I] dsim_probe dsim0+
+[   9.783525] [I] using data lane count(4)
+[   9.795514] [E] dsim0 wait phy pll stable
+[   9.796517] [E] [   1.923299] [I] -------------------- DSS LOGS START --------------------
+[PRE] reset message: APC Watchdog Early
+[PRE] RST_STAT: 0x80 - SYSTEM_SWRESET_SYSTEM
+[PRE] GSA_RESET_STATUS: 0x10 - GSA_INTERMEDIATE_RESET
+[PRE] Reboot reason: 0xcbea - APC Watchdog Early
+[PRE] Reboot mode: 0xfc - Bootloader
+[   1.925747] APC Breadcrumbs(v2.4):
+ stages(S): 0000404F / 00004030
+  flags(S): 000022C0 / 000022C0
+stages(NS): 00005FFE / 00005004
+ flags(NS): 0000D400 / 0000D400
+    status: 00000000 / 000000FC
+    device: 00000001 / 00000001
+   tmutrip: 00000000 / 00000000
+     reset: 00180000 / 00000080
+[   1.927076] [E] GSA Breadcrumb:
+00000000 fffd000d 00000000 00000000  |................|
+00000000 00000000 00000010           |............    |
+[   1.928608] [I] ACPM GPR DUMP - NOT AVAILABLE
+STATES_MIF|TOP - 0x27d78540 | 0x428dd039
+
+          pd-apm - 0xbb6d3124	          pd-cmu - 0x10522e21	       pd-cpucl0 - 0xdb870119	       pd-cpucl1 - 0xaa4b9fc	
+       pd-cpucl2 - 0x7f3fc310	          pd-g3d - 0x1a6cfb5b	pd-embedded_cpucl0 - 0xffeb4465	pd-embedded_cpucl1 - 0x2168bafa	
+pd-embedded_cpucl2 - 0x1bb76114	 pd-embedded_g3d - 0xe0c7f2f	         pd-dpub - 0x991d1c54	        pd-dpuf0 - 0x83bd76	
+        pd-dpuf1 - 0xfc3b82ee	          pd-g2d - 0x617d77	          pd-gdc - 0xffe310a1	          pd-gse - 0x81152fb3	
+         pd-mcsc - 0x817f8860	          pd-mfc - 0xac85eb62	         pd-rgbp - 0xca9c3154	          pd-tnr - 0x4114bdf7	
+         pd-yuvp - 0xf31e0180	          pd-aoc - 0xa8275b5f	          pd-aur - 0xd737978f	           pd-bw - 0xa32d374f	
+           pd-eh - 0xd9510040	        pd-ispfe - 0x1a124de3	          pd-tpu - 0x75850d15	         pd-mif0 - 0xf92ca1f9	
+         pd-mif1 - 0x6feb2310	         pd-mif2 - 0xc042cd7c	         pd-mif3 - 0xd7cb0630	         pd-misc - 0x1622bb7f	
+        pd-nocl0 - 0xf7134025	       pd-nocl1a - 0x2902c5e5	       pd-nocl1b - 0xceee1090	      pd-nocl2aa - 0x848cea3b	
+      pd-nocl2ab - 0x74eb4384	         pd-hsi0 - 0x12ba7f3b	         pd-hsi1 - 0x7beb0a10	         pd-hsi2 - 0xc38c36d5	
+       pd-peric0 - 0xbf3f4ac5	       pd-peric1 - 0x304185eb	          pd-s2d - 0x4bfa60a2	
+
+[UP] CUR_SEQ0 - 163114058
+[DOWN] CUR_SEQ0 - DONE
+APSOC_CNT - 86837
+APSOC|MIF_CNT_SLEEP- 96861 | 29081
+APSOC|MIF_CNT_SICD - 0 | 808989753
+CURR_POWERMODE - 875574834
+CPU_STAT - cpu0:on, cpu1:off, cpu2:off, cpu3:off, cpu4:on, cpu5:off, cpu6:off, cpu7:off
+SEQ_STAT - APSOC_SEQ_down, MIF_SEQ_down, CL0_off, CL1_off, CL2_off
+[UP] CUR_SEQ0 - 163114058
+[DOWN] CUR_SEQ0 - DONE
+access_type: CUR_SEQ1 - 670703901, index: 0
+hotplug_flag - cpu0:out, cpu1:in, cpu2:out, cpu3:in, cpu4:out, cpu5:in, cpu6:out, cpu7:in, 
+MIF REF_COUNT:0
+MIF REQ_MASTER - 
+CURR_POWERMODE - 875574834
+EHLD core status
+Core0:  (No Lockup)
+Core1:  (No Lockup)
+Core2:  (No Lockup)
+Core3:  (No Lockup)
+Core4:  (No Lockup)
+Core5:  (No Lockup)
+Core6:  (No Lockup)
+Core7:  (No Lockup)
+[   1.945943] [I] ***** S2D Info Block ********************************************************
+[   1.946640] [I] S2D Magic didn't detect - s2d validity check failed!
+[   1.947047] [I] Additional information:
+[   1.947426] [I]    S2D status: Not triggered
+[   1.947752] [I] *****************************************************************************
+[   1.948257] [I] Core reg status and PC:
+[   1.948547] [I]        /- Power state  - +:On -:Off
+[   1.948885] [I]        |/- Recorded by - P:panic A:arraydump S:s2d _:none
+[   1.949312] [I]        ||/- IRQ        - O:enabled X:disabled _:n/a
+[   1.949714] [I]        |||/- FIQ       - O:enabled X:disabled _:n/a
+[   1.950114] [I] core#  ||||
+[   1.950358] [I]   0    -___ N/A
+[   1.950693] [I]   1    -___ N/A
+[   1.951029] [I]   2    -___ N/A
+[   1.951364] [I]   3    -___ N/A
+[   1.951696] [I]   4    -___ N/A
+[   1.952028] [I]   5    -___ N/A
+[   1.952362] [I]   6    -___ N/A
+[   1.952696] [I]   7    -___ N/A
+[   1.953032] PCSR iteration magic is invalid: 000000
+APC cpu contexts:
+Core0 is off
+[   1.955714] [E] Discarding ramdump file gsa_sram_key.lst flag 0
+[   1.956180] [E] fail to add gsa_sram_key.lst to ramdump sub-file, -8
+[   1.957132] [E] Invalid bl31 log reserved region: bypass
+
+[   1.957573] [E] Invalid pbl log reserved region: bypass
+
+[   1.957941] PSCI Breadcrumbs(v2.0):
+[   1.958242] Core0: 00000000 / 00000000
+[   1.958641] Core1: 00000000 / 00000000
+[   1.959041] Core2: 00000000 / 00000000
+[   1.959439] Core3: 00000000 / 00000000
+[   1.959836] Core4: 00000000 / 00000000
+[   1.960234] Core5: 00000000 / 00000000
+[   1.960632] Core6: 00000000 / 00000000
+[   1.961030] Core7: 00000000 / 00000000
+[   1.961431] WDT FIQ info:
+[   1.961693] core# type    raw-magic   elr
+[   1.962049]     0-7   N/A
+[   1.962370] [I] linux debug info is not valid
+[   1.962704] [I] Last AVB: avb_ret=OK
+[   1.963018] [I] Last AVB: avb_veritymode=<unknown>
+[   1.963389] [I] Last AVB: avb_error_parts=
+RAMDUMP_MSG.txt:
+  reset message: APC Watchdog Early
+  UUID: 7cd2548c-ba70-544f-846d-51536330a533
+  last kernel version: N/A
+  aosp kernel version: N/A
+  build: caiman
+  RST_STAT: 0x80 - SYSTEM_SWRESET_SYSTEM
+  GSA_RESET_STATUS: 0x10 - GSA_INTERMEDIATE_RESET
+  Reboot reason: 0xcbea - APC Watchdog Early
+  Reboot mode: 0xfc - Bootloader
+[   1.966434] [I] -------------------- DSS LOGS END --------------------
+
+Reboot Info:
+  RST_STAT: 0x180000 - PIN_RESET | PO_RESET
+  GSA_RESET_STATUS: 0x1 - GSA_PINRESET
+  Reboot reason: 0xcbea - APC Watchdog Early
+  Reboot mode: 0xfc - Bootloader
+[   9.819533] [E] failed to get eUSB revision -62
+[   9.819568] [I] Set EUSB Ref clock auto
+[   9.819868] [I] LK build date: Apr 14 2026, time: 06:16:15
+[   9.819911] [I] BL version: ripcurrentpro-17.0-15199480
+[   9.819951] [I] BL type: official build
+starting app pixel_loader
+[   9.820416] [I] sota: empty signature.
+[   9.820449] [I] ABL start time (METRICS_BL3): 9724ms
+[   9.820490] [I] AB Decision: active slot boot ok
+[   9.820529] [I] AB Decisions: 00000000
+[   9.820759] [I] TCPC BC1.2, type: 2 val:2
+[   9.820962] [I] boot voltage threshold=3400mV
+[   9.821073] [I] bootloader message:
+[   9.821219] [I] fastboot enter reason: reboot bootloader
+starting app pixel_charger
+[   9.836548] [I] Succeeded to read panel product id : 0x22a8a00a
+[   9.836627] [E] is_compatible is not defined!
+[   9.836666] [I] panel_rev: 0x1000
+[   9.841858] [I] use panel google-cm4 for dsim0
+[   9.841894] [I] dsim_probe -: dsim0 driver(cmd mode) has been probed.
+[   9.841948] [I] dsim_probe dsim1+
+[   9.841984] [I] using data lane count(4)
+[   9.842054] [E] dsim1 wait phy pll stable
+[   9.893157] [E] timeout!! wait for DSIM interrupt (0x40300000)
+[   9.893249] [E] MIPI DSIM (id=6) read Timeout! 0x4
+[   9.893289] [E] dsim fail to get panel operation
+[   9.893362] [E] dsim has error.
+[   9.893393] [E] dsim_probe -: dsim1 probe failed.
+[   9.893429] [I] dsim1 probe was failed
+[   9.893460] [I] dsim_init -: set dsim0 driver as primary.
+[   9.904731] [E] dsim0 wait phy pll stable
+[   9.923900] [I] dpp_probe +
+[   9.923925] [I] dpp-0's attr is (0x004d0047)
+[   9.923961] [I] dpp(0) init resources.
+[   9.924023] [I] dpp_probe -: dpp0 is probed successfully
+[   9.924068] [I] decon-int: max win6, command mode, hw trigger
+[   9.924114] [I] single dsi mode
+[   9.924152] [I] [decon0] d_path(0xB1) DSCC DSC_ENC1 DSC_ENC0 OFIFO.0
+[   9.924269] [I] [decon0] sel(0x0) OFIFO.0 - dsim0 - google-cm4
+[   9.924317] [I] Display 1st window(5) xres(1280) yres(2856) win_start_pos(0) win_end_pos(b2704ff)
+[   9.973682] [I] port connected
+[   9.992329] [I] TCPC BC1.2, type: 2 val:2
+[  10.059590] [I] decon0 registered successfully
+[  10.095023] [I] version: g5400c-260317-260429-B-15308590
+USB Pipe3 Initialization...
+[dwc3_dptx] CR write failed to 0x31c5
+[dwc3_dptx] CR write failed to 0x32c5
+[dwc3_dptx] CR write failed to 0x402d
+[dwc3_dptx] CR write failed to 0x412d
+[dwc3_dptx] CR write failed to 0x422d
+[dwc3_dptx] CR write failed to 0x432d
+[dwc3_dptx] CR write failed to 0x2021
+[dwc3_dptx] CR write failed to 0x2024
+[dwc3_dptx] CR write failed to 0x2027
+[dwc3_dptx] CR write failed to 0x202a
+[dwc3_dptx] CR write failed to 0x202d
+[dwc3_dptx] CR write failed to 0x2030
+[dwc3_dptx] CR write failed to 0x2033
+[dwc3_dptx] CR write failed to 0x2036
+[dwc3_dptx] CR write failed to 0x2022
+[dwc3_dptx] CR write failed to 0x2025
+[dwc3_dptx] CR write failed to 0x2028
+[dwc3_dptx] CR write failed to 0x202b
+[dwc3_dptx] CR write failed to 0x202e
+[dwc3_dptx] CR write failed to 0x2031
+[dwc3_dptx] CR write failed to 0x2034
+[dwc3_dptx] CR write failed to 0x2037
+[dwc3_dptx] PMA version:0x4604
+[dwc3_dptx] PCS ID:0x6790
+[dwc3_dptx] Firmware ID:0x6044, 0x04b3
+[  10.170902] [I] TCPC BC1.2, type: 2 val:2
+[  10.444703] [I] TCPC BC1.2, type: 2 val:2
+[  10.457922] [I] new high-speed device found
+[  10.458089] [I] TCPC BC1.2, type: 2 val:2
+[  12.707089] [I] Accept cmd:download:04000000
+[  12.707193] [I] Downloading. Download size is 67108864 bytes
+[  12.707291] [I] DATA04000000
+[  14.222159] [I] OKAY
+[  14.222537] [I] Accept cmd:boot
+[  14.229704] [I] OKAY
+[  14.249558] [I] TCPC BC1.2, type: 2 val:2
+[  14.250379] [I] TCPC BC1.2, type: 2 val:2
+[  14.353420] [E] avb_property(com.android.build.system.os_version): not found
+[  14.353534] [E] system.os_version: can't find property
+[  14.353625] [E] avb_property(com.android.build.system.security_patch): not found
+[  14.353733] [E] system_spl: can't find property
+[  14.353806] [E] avb_property(com.android.build.boot.security_patch): not found
+[  14.353912] [E] boot_spl: can't find property
+[  14.353987] [I] boot_state: 000000:20000000:20000000
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[  14.357206] [I] using init_boot ramdisk
+[  14.357274] [I] using vendor_kernel_boot ramdisk
+[  14.357463] [I] kernel: addr:0xffff000090701000, size:fdbf49
+[  14.403670] [I] vendor kernel ramdisk copy
+[  14.403760] [I] ramdisk dst addr: 0xffff000086000000 src addr: 0xffff0000a5901000 size: 0x67591e(6773022)
+[  14.403935] [I] padding prepended: 0
+[  14.408200] [I] vendor ramdisk copy
+[  14.408268] [I] ramdisk dst addr: 0xffff00008667591e src addr: 0xffff0000a0001000 size: 0x1663ae2(23476962)
+[  14.408427] [I] padding prepended: 18
+[  14.420933] [I] ramdisk copy
+[  14.420997] [I] ramdisk dst addr: 0xffff000087cd9412 src addr: 0xffff0000a5101000 size: 0x250d04(2428164)
+[  14.421154] [I] padding prepended: 14
+[  14.422498] [I] Ramdisk load size with padding: 32678180
+[  14.422649] [I] rev: 09865.00.00
+[  14.422724] [I] rev: 09865.00.00
+[  14.422795] [I] rev: 09865.01.00
+[  14.422849] [I] rev: 09865.01.01
+[  14.422915] [I] rev: 09865.01.00
+[  14.422969] [I] rev: 09865.01.01
+[  14.423034] [I] rev: 09875.00.00
+[  14.423102] [I] rev: 09875.00.00
+[  14.423177] [I] rev: 09875.00.00
+[  14.423231] [I] rev: 09875.00.01
+[  14.423297] [I] rev: 09875.00.00
+[  14.423350] [I] rev: 09875.00.01
+[  14.423415] [I] SOC DTB: index:6
+[  14.423495] [I] DTBO match: id 0x60906, rev 0x10000
+[  14.445769] [I] dpm not merged
+[  14.448023] [I] MTE S: 0, NS: 0, tag base: 0x0
+[  14.460792] [I] kernel: total_time:103
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[  14.506842] [I] bootmode:
+[  14.506984] [I] DDR size: 16GiB
+[  14.507033] [I] DDR Manufacturer: Samsung
+[  14.509329] [I] ro.misctrl.16kb_before=0
+[  14.509417] [I] console is disabled
+[  14.509671] [I] secure dram base 0xb6200000, size 0x9e00000
+[  14.509812] [I] secure PGTBL base 0xe0000000, size 58720256
+[  14.514606] [I] MTE S: 0, NS: 0, tag base: 0x0
+[  14.517685] [I] device: /reserved-memory/debug_snapshot/log_s2d path not found (-1)
+[  14.517916] [I] device: /reserved-memory/debug_snapshot/log_array_reset path not found (-1)
+[  14.518165] [I] device: /reserved-memory/debug_snapshot/log_kevents path not found (-1)
+[  14.518413] [I] device: /reserved-memory/debug_snapshot/log_itmon path not found (-1)
+[  14.518655] [I] device: /reserved-memory/debug_snapshot/log_s2d_extract path not found (-1)
+[  14.520261] [I] device: /google,mitigation enabled ret=0
+[  14.541244] [I] ro.boot.hardware.cpu.pagesize=4096
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[  14.542200] [I] panel settings after overriding: google-cm4.22a8a00a@dsim0 null@dsim1
+[  14.557980] [I] linux,initrd-start: 0x86000000, linux,initrd-end: 0x87f32125
+[  14.570487] [E] avb_property(com.android.build.microdroid-vendor.root_digest): not found
+[  14.570612] [W] failed to get microdroid vendor hashtree digest from avb property, skip appending value
+trusty_dev_common.c: INFO selected trusty api version: 3 (requested 3)
+[  14.573059] [W] no avf debug policy, because dpm is NULL
+[  24.635726] [I] slot data a: 0x00001e02
+[  24.635790] [I] slot data b: 0x00001000
+[  24.639384] [E] avb_property(com.android.build.boot.fingerprint): not found
+[  24.639488] [E] fingerprint property not found 
+[  24.871387] [I] shutdown complete
