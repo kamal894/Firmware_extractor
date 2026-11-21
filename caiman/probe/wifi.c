@@ -459,9 +459,39 @@ static int wifi_iovar(struct mb *m, int set, const char *name, const void *val, 
 #if PROBE_WIFI >= 13
 static int wifi_handed;	/* the chip is the kernel's now: leave it running (wifi_link's teardown skipped) */
 
+static u64 hand_cfg, hand_bar2;	/* for the look just before XNU */
+static u32 hand_sh;
+
+/*
+ * The handed chip still there? Its shared area's flags read through BAR2 (0xffffffff: gone), the link state, the
+ * endpoint's command word. main.c calls it after each stage that follows wifi_probe, to find the one that takes the
+ * chip away (darwin-ws71, ws72: gone by the time XNU started).
+ */
+void wifi_handoff_look(const char *where)
+{
+	struct wifi_handoff *h = (struct wifi_handoff *)(wifi_mem + M_HANDOFF);
+
+	if (!wifi_handed)
+		return;
+	pr("wifi: after %s: shared flags 0x%08x, LTSSM 0x%x, config +4 0x%08x, rxpost RD %u (posted %u)\n", where,
+	   dram_r(hand_cfg, hand_bar2, hand_sh), rd32(0x13120000ULL + 0x2c8) & 0x3f, rd32(hand_cfg + 4),
+	   *(volatile u32 *)(wifi_mem + M_IDX + 0x100 + 4), h->rxwr);
+	h->bar2_win = win;	/* moved by that read */
+	__asm__ volatile("dsb sy" ::: "memory");
+}
+
+/* the page's address, or 0; the first call is just before XNU starts */
 u64 wifi_handoff_pa(void)
 {
-	return wifi_handed ? mem_pa(M_HANDOFF) : 0;
+	static int looked;
+
+	if (!wifi_handed)
+		return 0;
+	if (!looked) {
+		looked = 1;
+		wifi_handoff_look("everything, before XNU");
+	}
+	return mem_pa(M_HANDOFF);
 }
 
 /*
@@ -497,12 +527,28 @@ static int wifi_handoff(struct mb *m, u64 cfg, u64 bar2, u32 sh, u32 ri, u8 *mas
 			d2h_poll(m, 1000, never);
 		}
 	}
+	/*
+	 * the kernel's driver starts ~90 s after this (xnusys read, then XNU), and it never answers the dongle's
+	 * deep-sleep handshake: kept awake, or BAR2 read 0xffffffff by then (darwin-ws71)
+	 */
+	v = 1;
+	r = wifi_iovar(m, 1, "deepsleep_disable", &v, 4, 0, 0);
+	pr("wifi: handoff: deepsleep_disable %d\n", r);
 	v = 1;
 	r = wifi_iovar(m, 1, "bus:host_access", &v, 4, 0, 0);
 	pr("wifi: handoff: %u RX buffers posted (firmware RD %u), bus:host_access %d\n", N_RX,
 	   *(volatile u32 *)(wifi_mem + M_IDX + 0x100 + 4), r);
-	for (i = 0; i < sizeof(*h); i++)
-		((u8 *)h)[i] = 0;
+	/* the last ioctl before the page is filled: the rings' positions written below must come after it (darwin-ws74) */
+	{
+		u8 mac[6] = { 0 };
+		int mr = wifi_iovar(m, 0, "cur_etheraddr", 0, 0, mac, 6);
+
+		for (i = 0; i < sizeof(*h); i++)
+			((u8 *)h)[i] = 0;
+		for (i = 0; i < 6; i++)
+			h->mac[i] = mac[i];
+		r = mr;
+	}
 	h->magic = WIFI_HANDOFF_MAGIC;
 	h->version = WIFI_HANDOFF_VERSION;
 	h->size = sizeof(*h);
@@ -547,12 +593,14 @@ static int wifi_handoff(struct mb *m, u64 cfg, u64 bar2, u32 sh, u32 ri, u8 *mas
 	h->rx_epoch = m->rx_epoch;
 	h->rxc_epoch = m->rxc_epoch;
 	h->txc_epoch = 1;
-	r = wifi_iovar(m, 0, "cur_etheraddr", 0, 0, h->mac, 6);
 	h->max_h2d = dram_r(cfg, bar2, ri + 0x34) >> 16;	/* LE16 +0x36, +0x38 */
 	h->max_d2h = dram_r(cfg, bar2, ri + 0x38) & 0xffff;
 	pr("wifi: handoff: page at 0x%llx, MAC %02x:%02x:%02x:xx:xx:xx (%d), rings H2D %u D2H %u; the chip is the kernel's\n",
 	   mem_pa(M_HANDOFF), h->mac[0], h->mac[1], h->mac[2], r, h->max_h2d, h->max_d2h);
 	__asm__ volatile("dsb sy" ::: "memory");
+	hand_cfg = cfg;
+	hand_bar2 = bar2;
+	hand_sh = sh;
 	wifi_handed = 1;
 	return 0;
 }
@@ -1157,6 +1205,10 @@ static void wifi_boot(u64 cfg, u64 bar0, u64 bar2)
 		wifi_look(cfg, bar2, p);
 #endif
 	}
+#if PROBE_WIFI >= 13
+	if (wifi_handed)
+		return;	/* running, the kernel's: halting it here is what took it away in darwin-ws71..73 */
+#endif
 	/* the ARM halted again before the chip goes off */
 	wr32(cfg + 0x80, 0x18006000);
 	(void)rd32(cfg + 0x80);

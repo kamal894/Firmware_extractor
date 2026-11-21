@@ -105,6 +105,7 @@ void panel_probe(void);
 void battery_probe(void);
 int battery_poll(int say);
 u64 battery_shared_pa(void);
+void wifi_handoff_look(const char *where);	/* PROBE_WIFI=13: is the handed chip still answering */
 u64 wifi_handoff_pa(void);	/* PROBE_WIFI=13: the page for the kernel's BCM4390 driver, or 0 */
 
 /* ---- fdt.c ------------------------------------------------------------ */

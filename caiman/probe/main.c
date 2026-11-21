@@ -503,11 +503,20 @@ void c_entry(u64 dtb, u64 load_base, u64 cur_el)
 #if PROBE_WIFI
 	wifi_probe();
 #endif
+#if PROBE_WIFI >= 13
+	wifi_handoff_look("wifi_probe");
+#endif
 #if PROBE_GPU
 	gpu_probe();
 #endif
+#if PROBE_WIFI >= 13
+	wifi_handoff_look("gpu_probe");
+#endif
 
 	display_probe();
+#if PROBE_WIFI >= 13
+	wifi_handoff_look("display_probe");
+#endif
 
 	summary();
 	log_flush();
